@@ -10,6 +10,7 @@ import DatabaseTest from "./components/DatabaseTest"; // Import the test compone
 import EtatSortie from "./pages/EtatSortie";
 import NotFound from "./pages/NotFound";
 import NewEtatDesLieux from "./pages/NewEtatDesLieux";
+import MonCalendrierPage from "./pages/MonCalendrier"; // Import the new calendar page
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
             <Route index element={<><DatabaseTest /><Index /></>} />
             <Route path="new-etat-des-lieux" element={<NewEtatDesLieux />} />
             <Route path="sortie/:id" element={<EtatSortie />} />
+            <Route path="mon-calendrier" element={<MonCalendrierPage />} /> {/* Add route for the calendar page */}
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
