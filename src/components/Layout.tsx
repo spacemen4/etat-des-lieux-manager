@@ -17,6 +17,9 @@ const Layout = () => {
               <a href="/" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
                 Accueil
               </a>
+              <a href="/mon-calendrier" className="text-slate-600 hover:text-slate-900 px-3 py-2 rounded-md text-sm font-medium">
+                Mon calendrier de rendez-vous
+              </a>
             </nav>
           </div>
         </div>
