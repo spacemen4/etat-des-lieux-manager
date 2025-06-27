@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Index from "./pages/Index";
 import NewSortie from "./pages/NewSortie";
+import DatabaseTest from "./components/DatabaseTest"; // Import the test component
 import EtatSortie from "./pages/EtatSortie";
 import NotFound from "./pages/NotFound";
 
@@ -20,7 +21,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout />}>
-            <Route index element={<Index />} />
+            <Route index element={<><DatabaseTest /><Index /></>} /> {/* Add DatabaseTest here */}
             <Route path="new-sortie" element={<NewSortie />} />
             <Route path="sortie/:id" element={<EtatSortie />} />
           </Route>
