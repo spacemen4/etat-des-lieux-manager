@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +9,7 @@ import NewSortie from "./pages/NewSortie";
 import DatabaseTest from "./components/DatabaseTest"; // Import the test component
 import EtatSortie from "./pages/EtatSortie";
 import NotFound from "./pages/NotFound";
+import NewEtatDesLieux from "./pages/NewEtatDesLieux";
 
 const queryClient = new QueryClient();
 
@@ -21,8 +21,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout />}>
-            <Route index element={<><DatabaseTest /><Index /></>} /> {/* Add DatabaseTest here */}
-            <Route path="new-sortie" element={<NewSortie />} />
+            <Route index element={<><DatabaseTest /><Index /></>} />
+            <Route path="new-etat-des-lieux" element={<NewEtatDesLieux />} />
             <Route path="sortie/:id" element={<EtatSortie />} />
           </Route>
           <Route path="*" element={<NotFound />} />

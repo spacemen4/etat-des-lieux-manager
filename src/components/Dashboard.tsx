@@ -30,13 +30,18 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold text-slate-900 mb-2">
-          Tableau de bord
-        </h2>
-        <p className="text-slate-600">
-          Gérez vos états des lieux d'entrée et de sortie
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">
+            Tableau de bord
+          </h2>
+          <p className="text-slate-600">
+            Gérez vos états des lieux d'entrée et de sortie
+          </p>
+        </div>
+        <Button asChild className="bg-blue-600 hover:bg-blue-700">
+          <a href="/new-etat-des-lieux">Créer un état des lieux</a>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
