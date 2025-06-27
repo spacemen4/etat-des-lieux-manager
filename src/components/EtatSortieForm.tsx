@@ -1,13 +1,25 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
 import FormProgress from './FormProgress';
 import { toast } from '@/hooks/use-toast';
+import { 
+  useEtatDesLieuxById, 
+  usePiecesByEtatId, 
+  useReleveCompteursByEtatId,
+  useClesByEtatId,
+  useUpdateEtatSortie,
+  useUpdateReleveCompteurs,
+  useUpdatePiece,
+  useUpdateCles
+} from '@/hooks/useEtatDesLieux';
 
 const STEPS = [
   { id: 'info', title: 'Informations générales', completed: false, current: true },
@@ -18,77 +30,71 @@ const STEPS = [
 ];
 
 const EtatSortieForm = () => {
+  const { id } = useParams<{ id: string }>();
   const [currentStep, setCurrentStep] = useState(0);
   const [steps, setSteps] = useState(STEPS);
-  const [formData, setFormData] = useState({
-    date_sortie: '',
-    releveCompteurs: {
-      electricite_h_pleines: '',
-      electricite_h_creuses: '',
-      gaz_naturel_releve: '',
-      eau_chaude_m3: '',
-      eau_froide_m3: '',
-    },
-    pieces: {
-      salon: {
-        revetements_sols_sortie: '',
-        murs_menuiseries_sortie: '',
-        plafond_sortie: '',
-        electricite_plomberie_sortie: '',
-        commentaires: '',
-      },
-      cuisine: {
-        revetements_sols_sortie: '',
-        murs_menuiseries_sortie: '',
-        plafond_sortie: '',
-        meubles_cuisine_sortie: '',
-        plaque_cuisson_sortie: '',
-        commentaires: '',
-      },
-      salle_bain: {
-        revetements_sols_sortie: '',
-        murs_menuiseries_sortie: '',
-        plafond_sortie: '',
-        baignoire_douche_sortie: '',
-        eviers_robinetterie_sortie: '',
-        commentaires: '',
-      },
-    },
-    cles: {
-      appartement: { nombre: 0, commentaires: '' },
-      boite_lettres: { nombre: 0, commentaires: '' },
-      badge_acces: { nombre: 0, commentaires: '' },
-    }
+  const [dateSortie, setDateSortie] = useState('');
+
+  // Hooks pour récupérer les données
+  const { data: etatDesLieux, isLoading: loadingEtat } = useEtatDesLieuxById(id || '');
+  const { data: pieces, isLoading: loadingPieces } = usePiecesByEtatId(id || '');
+  const { data: releveCompteurs } = useReleveCompteursByEtatId(id || '');
+  const { data: cles } = useClesByEtatId(id || '');
+
+  // Mutations
+  const updateEtatSortie = useUpdateEtatSortie();
+  const updateReleveCompteurs = useUpdateReleveCompteurs();
+  const updatePiece = useUpdatePiece();
+  const updateCles = useUpdateCles();
+
+  // État local pour les formulaires
+  const [releveData, setReleveData] = useState({
+    electricite_h_pleines: '',
+    electricite_h_creuses: '',
+    gaz_naturel_releve: '',
+    eau_chaude_m3: '',
+    eau_froide_m3: '',
   });
 
-  // Mock data pour l'état d'entrée
-  const mockEntreeData = {
-    adresse_bien: "123 Avenue des Champs, 75008 Paris",
-    locataire_nom: "Martin Dupont",
-    date_entree: "2023-01-15",
-    pieces: {
-      salon: {
-        revetements_sols_entree: "Bon état",
-        murs_menuiseries_entree: "Excellent état",
-        plafond_entree: "Bon état",
-        electricite_plomberie_entree: "Bon état",
-      },
-      cuisine: {
-        revetements_sols_entree: "Bon état",
-        murs_menuiseries_entree: "Bon état",
-        plafond_entree: "Bon état",
-        meubles_cuisine_entree: "Excellent état",
-        plaque_cuisson_entree: "Bon état",
-      },
-      salle_bain: {
-        revetements_sols_entree: "Bon état",
-        murs_menuiseries_entree: "Bon état",
-        plafond_entree: "Bon état",
-        baignoire_douche_entree: "Excellent état",
-        eviers_robinetterie_entree: "Bon état",
-      },
+  const [clesData, setClesData] = useState([
+    { type_cle_badge: 'Appartement', nombre: 0, commentaires: '' },
+    { type_cle_badge: 'Boîte aux lettres', nombre: 0, commentaires: '' },
+    { type_cle_badge: 'Badge accès', nombre: 0, commentaires: '' },
+  ]);
+
+  useEffect(() => {
+    if (etatDesLieux?.date_sortie) {
+      setDateSortie(etatDesLieux.date_sortie);
     }
-  };
+  }, [etatDesLieux]);
+
+  useEffect(() => {
+    if (releveCompteurs) {
+      setReleveData({
+        electricite_h_pleines: releveCompteurs.electricite_h_pleines || '',
+        electricite_h_creuses: releveCompteurs.electricite_h_creuses || '',
+        gaz_naturel_releve: releveCompteurs.gaz_naturel_releve || '',
+        eau_chaude_m3: releveCompteurs.eau_chaude_m3 || '',
+        eau_froide_m3: releveCompteurs.eau_froide_m3 || '',
+      });
+    }
+  }, [releveCompteurs]);
+
+  if (loadingEtat || loadingPieces) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!etatDesLieux) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600">État des lieux non trouvé</p>
+      </div>
+    );
+  }
 
   const updateSteps = (stepIndex: number) => {
     setSteps(prev => prev.map((step, index) => ({
@@ -118,11 +124,43 @@ const EtatSortieForm = () => {
     }
   };
 
-  const handleSave = () => {
-    toast({
-      title: "État des lieux sauvegardé",
-      description: "L'état des lieux de sortie a été enregistré avec succès.",
-    });
+  const handleSaveEtat = async () => {
+    if (dateSortie && id) {
+      try {
+        await updateEtatSortie.mutateAsync({ id, date_sortie: dateSortie });
+        toast({
+          title: "Date de sortie sauvegardée",
+          description: "La date de sortie a été enregistrée avec succès.",
+        });
+      } catch (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de sauvegarder la date de sortie.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleSaveReleve = async () => {
+    if (id) {
+      try {
+        await updateReleveCompteurs.mutateAsync({
+          etat_des_lieux_id: id,
+          ...releveData,
+        });
+        toast({
+          title: "Relevé sauvegardé",
+          description: "Le relevé des compteurs a été enregistré avec succès.",
+        });
+      } catch (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de sauvegarder le relevé des compteurs.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const renderStepContent = () => {
@@ -140,29 +178,29 @@ const EtatSortieForm = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Adresse du bien</Label>
-                  <Input value={mockEntreeData.adresse_bien} disabled />
+                  <Input value={etatDesLieux.adresse_bien} disabled />
                 </div>
                 <div>
                   <Label>Locataire</Label>
-                  <Input value={mockEntreeData.locataire_nom} disabled />
+                  <Input value={etatDesLieux.locataire_nom || ''} disabled />
                 </div>
                 <div>
                   <Label>Date d'entrée</Label>
-                  <Input value={mockEntreeData.date_entree} disabled />
+                  <Input value={etatDesLieux.date_entree || ''} disabled />
                 </div>
                 <div>
                   <Label htmlFor="date_sortie">Date de sortie</Label>
                   <Input 
                     id="date_sortie"
                     type="date" 
-                    value={formData.date_sortie}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      date_sortie: e.target.value
-                    }))}
+                    value={dateSortie}
+                    onChange={(e) => setDateSortie(e.target.value)}
                   />
                 </div>
               </div>
+              <Button onClick={handleSaveEtat} disabled={!dateSortie}>
+                Sauvegarder la date de sortie
+              </Button>
             </CardContent>
           </Card>
         );
@@ -182,13 +220,10 @@ const EtatSortieForm = () => {
                   <Label htmlFor="elec_pleines">Électricité - Heures pleines</Label>
                   <Input 
                     id="elec_pleines"
-                    value={formData.releveCompteurs.electricite_h_pleines}
-                    onChange={(e) => setFormData(prev => ({
+                    value={releveData.electricite_h_pleines}
+                    onChange={(e) => setReleveData(prev => ({
                       ...prev,
-                      releveCompteurs: {
-                        ...prev.releveCompteurs,
-                        electricite_h_pleines: e.target.value
-                      }
+                      electricite_h_pleines: e.target.value
                     }))}
                   />
                 </div>
@@ -196,13 +231,10 @@ const EtatSortieForm = () => {
                   <Label htmlFor="elec_creuses">Électricité - Heures creuses</Label>
                   <Input 
                     id="elec_creuses"
-                    value={formData.releveCompteurs.electricite_h_creuses}
-                    onChange={(e) => setFormData(prev => ({
+                    value={releveData.electricite_h_creuses}
+                    onChange={(e) => setReleveData(prev => ({
                       ...prev,
-                      releveCompteurs: {
-                        ...prev.releveCompteurs,
-                        electricite_h_creuses: e.target.value
-                      }
+                      electricite_h_creuses: e.target.value
                     }))}
                   />
                 </div>
@@ -210,13 +242,10 @@ const EtatSortieForm = () => {
                   <Label htmlFor="gaz">Gaz naturel</Label>
                   <Input 
                     id="gaz"
-                    value={formData.releveCompteurs.gaz_naturel_releve}
-                    onChange={(e) => setFormData(prev => ({
+                    value={releveData.gaz_naturel_releve}
+                    onChange={(e) => setReleveData(prev => ({
                       ...prev,
-                      releveCompteurs: {
-                        ...prev.releveCompteurs,
-                        gaz_naturel_releve: e.target.value
-                      }
+                      gaz_naturel_releve: e.target.value
                     }))}
                   />
                 </div>
@@ -224,13 +253,10 @@ const EtatSortieForm = () => {
                   <Label htmlFor="eau_chaude">Eau chaude (m³)</Label>
                   <Input 
                     id="eau_chaude"
-                    value={formData.releveCompteurs.eau_chaude_m3}
-                    onChange={(e) => setFormData(prev => ({
+                    value={releveData.eau_chaude_m3}
+                    onChange={(e) => setReleveData(prev => ({
                       ...prev,
-                      releveCompteurs: {
-                        ...prev.releveCompteurs,
-                        eau_chaude_m3: e.target.value
-                      }
+                      eau_chaude_m3: e.target.value
                     }))}
                   />
                 </div>
@@ -238,17 +264,17 @@ const EtatSortieForm = () => {
                   <Label htmlFor="eau_froide">Eau froide (m³)</Label>
                   <Input 
                     id="eau_froide"
-                    value={formData.releveCompteurs.eau_froide_m3}
-                    onChange={(e) => setFormData(prev => ({
+                    value={releveData.eau_froide_m3}
+                    onChange={(e) => setReleveData(prev => ({
                       ...prev,
-                      releveCompteurs: {
-                        ...prev.releveCompteurs,
-                        eau_froide_m3: e.target.value
-                      }
+                      eau_froide_m3: e.target.value
                     }))}
                   />
                 </div>
               </div>
+              <Button onClick={handleSaveReleve}>
+                Sauvegarder le relevé
+              </Button>
             </CardContent>
           </Card>
         );
@@ -256,72 +282,96 @@ const EtatSortieForm = () => {
       case 2: // État des pièces
         return (
           <div className="space-y-6">
-            {Object.entries(mockEntreeData.pieces).map(([pieceKey, pieceEntree]) => {
-              const pieceNames = {
-                salon: 'Salon / Pièce à vivre',
-                cuisine: 'Cuisine',
-                salle_bain: 'Salle de bain'
-              };
-              
-              return (
-                <Card key={pieceKey}>
-                  <CardHeader>
-                    <CardTitle>{pieceNames[pieceKey as keyof typeof pieceNames]}</CardTitle>
-                    <CardDescription>
-                      Comparez l'état d'entrée avec l'état de sortie
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                      <div className="space-y-4">
-                        <h4 className="font-medium text-slate-900">État d'entrée</h4>
-                        {Object.entries(pieceEntree).map(([key, value]) => (
-                          <div key={key}>
-                            <Label className="text-sm text-slate-600 capitalize">
-                              {key.replace(/_/g, ' ').replace('entree', '')}
-                            </Label>
-                            <Input value={value as string} disabled className="bg-slate-50" />
-                          </div>
-                        ))}
+            {pieces?.map((piece) => (
+              <Card key={piece.id}>
+                <CardHeader>
+                  <CardTitle>{piece.nom_piece}</CardTitle>
+                  <CardDescription>
+                    Comparez l'état d'entrée avec l'état de sortie
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-slate-900">État d'entrée</h4>
+                      {piece.revetements_sols_entree && (
+                        <div>
+                          <Label className="text-sm text-slate-600">Revêtements sols</Label>
+                          <Input value={piece.revetements_sols_entree} disabled className="bg-slate-50" />
+                        </div>
+                      )}
+                      {piece.murs_menuiseries_entree && (
+                        <div>
+                          <Label className="text-sm text-slate-600">Murs menuiseries</Label>
+                          <Input value={piece.murs_menuiseries_entree} disabled className="bg-slate-50" />
+                        </div>
+                      )}
+                      {piece.plafond_entree && (
+                        <div>
+                          <Label className="text-sm text-slate-600">Plafond</Label>
+                          <Input value={piece.plafond_entree} disabled className="bg-slate-50" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-slate-900">État de sortie</h4>
+                      <div>
+                        <Label className="text-sm">Revêtements sols</Label>
+                        <Select defaultValue={piece.revetements_sols_sortie || ''}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner l'état" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="excellent">Excellent état</SelectItem>
+                            <SelectItem value="bon">Bon état</SelectItem>
+                            <SelectItem value="moyen">État moyen</SelectItem>
+                            <SelectItem value="mauvais">Mauvais état</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      
-                      <div className="space-y-4">
-                        <h4 className="font-medium text-slate-900">État de sortie</h4>
-                        {Object.entries(pieceEntree).map(([key]) => {
-                          const sortieKey = key.replace('entree', 'sortie');
-                          return (
-                            <div key={sortieKey}>
-                              <Label className="text-sm capitalize">
-                                {key.replace(/_/g, ' ').replace('entree', '')}
-                              </Label>
-                              <Select>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionner l'état" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="excellent">Excellent état</SelectItem>
-                                  <SelectItem value="bon">Bon état</SelectItem>
-                                  <SelectItem value="moyen">État moyen</SelectItem>
-                                  <SelectItem value="mauvais">Mauvais état</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          );
-                        })}
+                      <div>
+                        <Label className="text-sm">Murs menuiseries</Label>
+                        <Select defaultValue={piece.murs_menuiseries_sortie || ''}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner l'état" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="excellent">Excellent état</SelectItem>
+                            <SelectItem value="bon">Bon état</SelectItem>
+                            <SelectItem value="moyen">État moyen</SelectItem>
+                            <SelectItem value="mauvais">Mauvais état</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-
-                      <div className="space-y-4">
-                        <h4 className="font-medium text-slate-900">Commentaires</h4>
-                        <Textarea 
-                          placeholder="Observations particulières..."
-                          className="min-h-[200px]"
-                        />
+                      <div>
+                        <Label className="text-sm">Plafond</Label>
+                        <Select defaultValue={piece.plafond_sortie || ''}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner l'état" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="excellent">Excellent état</SelectItem>
+                            <SelectItem value="bon">Bon état</SelectItem>
+                            <SelectItem value="moyen">État moyen</SelectItem>
+                            <SelectItem value="mauvais">Mauvais état</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-slate-900">Commentaires</h4>
+                      <Textarea 
+                        placeholder="Observations particulières..."
+                        className="min-h-[200px]"
+                        defaultValue={piece.commentaires || ''}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         );
 
@@ -335,49 +385,35 @@ const EtatSortieForm = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {[
-                { key: 'appartement', label: 'Clés appartement' },
-                { key: 'boite_lettres', label: 'Clés boîte aux lettres' },
-                { key: 'badge_acces', label: 'Badge accès immeuble' }
-              ].map(({ key, label }) => (
-                <div key={key} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg">
+              {clesData.map((cle, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg">
                   <div>
-                    <Label>{label}</Label>
+                    <Label>{cle.type_cle_badge}</Label>
                   </div>
                   <div>
-                    <Label htmlFor={`${key}_nombre`}>Nombre</Label>
+                    <Label htmlFor={`cle_${index}_nombre`}>Nombre</Label>
                     <Input 
-                      id={`${key}_nombre`}
+                      id={`cle_${index}_nombre`}
                       type="number" 
                       min="0"
-                      value={formData.cles[key as keyof typeof formData.cles].nombre}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        cles: {
-                          ...prev.cles,
-                          [key]: {
-                            ...prev.cles[key as keyof typeof prev.cles],
-                            nombre: parseInt(e.target.value) || 0
-                          }
-                        }
-                      }))}
+                      value={cle.nombre}
+                      onChange={(e) => {
+                        const newClesData = [...clesData];
+                        newClesData[index].nombre = parseInt(e.target.value) || 0;
+                        setClesData(newClesData);
+                      }}
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`${key}_commentaires`}>Commentaires</Label>
+                    <Label htmlFor={`cle_${index}_commentaires`}>Commentaires</Label>
                     <Input 
-                      id={`${key}_commentaires`}
-                      value={formData.cles[key as keyof typeof formData.cles].commentaires}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        cles: {
-                          ...prev.cles,
-                          [key]: {
-                            ...prev.cles[key as keyof typeof prev.cles],
-                            commentaires: e.target.value
-                          }
-                        }
-                      }))}
+                      id={`cle_${index}_commentaires`}
+                      value={cle.commentaires}
+                      onChange={(e) => {
+                        const newClesData = [...clesData];
+                        newClesData[index].commentaires = e.target.value;
+                        setClesData(newClesData);
+                      }}
                     />
                   </div>
                 </div>
@@ -399,9 +435,9 @@ const EtatSortieForm = () => {
               <div className="bg-slate-50 p-4 rounded-lg">
                 <h4 className="font-medium mb-2">Résumé</h4>
                 <div className="space-y-2 text-sm">
-                  <p><strong>Bien :</strong> {mockEntreeData.adresse_bien}</p>
-                  <p><strong>Locataire :</strong> {mockEntreeData.locataire_nom}</p>
-                  <p><strong>Date de sortie :</strong> {formData.date_sortie || 'Non renseignée'}</p>
+                  <p><strong>Bien :</strong> {etatDesLieux.adresse_bien}</p>
+                  <p><strong>Locataire :</strong> {etatDesLieux.locataire_nom}</p>
+                  <p><strong>Date de sortie :</strong> {dateSortie || 'Non renseignée'}</p>
                 </div>
               </div>
               
@@ -427,7 +463,7 @@ const EtatSortieForm = () => {
           État des lieux de sortie
         </h2>
         <p className="text-slate-600">
-          {mockEntreeData.adresse_bien} - {mockEntreeData.locataire_nom}
+          {etatDesLieux.adresse_bien} - {etatDesLieux.locataire_nom}
         </p>
       </div>
 
@@ -447,12 +483,8 @@ const EtatSortieForm = () => {
         </Button>
         
         <div className="space-x-2">
-          <Button variant="outline" onClick={handleSave}>
-            Sauvegarder
-          </Button>
-          
           {currentStep === steps.length - 1 ? (
-            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
+            <Button className="bg-green-600 hover:bg-green-700">
               Finaliser l'état des lieux
             </Button>
           ) : (

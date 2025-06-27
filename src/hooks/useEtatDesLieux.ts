@@ -1,0 +1,217 @@
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+
+export interface EtatDesLieux {
+  id: string;
+  date_entree: string | null;
+  date_sortie: string | null;
+  adresse_bien: string;
+  bailleur_nom: string | null;
+  bailleur_adresse: string | null;
+  locataire_nom: string | null;
+  locataire_adresse: string | null;
+}
+
+export interface Piece {
+  id: string;
+  etat_des_lieux_id: string;
+  nom_piece: string;
+  revetements_sols_entree: string | null;
+  revetements_sols_sortie: string | null;
+  murs_menuiseries_entree: string | null;
+  murs_menuiseries_sortie: string | null;
+  plafond_entree: string | null;
+  plafond_sortie: string | null;
+  electricite_plomberie_entree: string | null;
+  electricite_plomberie_sortie: string | null;
+  meubles_cuisine_entree: string | null;
+  meubles_cuisine_sortie: string | null;
+  plaque_cuisson_entree: string | null;
+  plaque_cuisson_sortie: string | null;
+  baignoire_douche_entree: string | null;
+  baignoire_douche_sortie: string | null;
+  eviers_robinetterie_entree: string | null;
+  eviers_robinetterie_sortie: string | null;
+  commentaires: string | null;
+}
+
+export interface ReleveCompteurs {
+  id: string;
+  etat_des_lieux_id: string;
+  electricite_h_pleines: string | null;
+  electricite_h_creuses: string | null;
+  gaz_naturel_releve: string | null;
+  eau_chaude_m3: string | null;
+  eau_froide_m3: string | null;
+}
+
+export interface Cles {
+  id: string;
+  etat_des_lieux_id: string;
+  type_cle_badge: string;
+  nombre: number;
+  commentaires: string | null;
+}
+
+export const useEtatDesLieux = () => {
+  return useQuery({
+    queryKey: ['etat-des-lieux'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('etat_des_lieux')
+        .select('*')
+        .order('date_entree', { ascending: false });
+      
+      if (error) throw error;
+      return data as EtatDesLieux[];
+    },
+  });
+};
+
+export const useEtatDesLieuxById = (id: string) => {
+  return useQuery({
+    queryKey: ['etat-des-lieux', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('etat_des_lieux')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      return data as EtatDesLieux;
+    },
+    enabled: !!id,
+  });
+};
+
+export const usePiecesByEtatId = (etatId: string) => {
+  return useQuery({
+    queryKey: ['pieces', etatId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pieces')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId);
+      
+      if (error) throw error;
+      return data as Piece[];
+    },
+    enabled: !!etatId,
+  });
+};
+
+export const useReleveCompteursByEtatId = (etatId: string) => {
+  return useQuery({
+    queryKey: ['releve-compteurs', etatId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('releve_compteurs')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId)
+        .single();
+      
+      if (error) throw error;
+      return data as ReleveCompteurs;
+    },
+    enabled: !!etatId,
+  });
+};
+
+export const useClesByEtatId = (etatId: string) => {
+  return useQuery({
+    queryKey: ['cles', etatId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cles')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId);
+      
+      if (error) throw error;
+      return data as Cles[];
+    },
+    enabled: !!etatId,
+  });
+};
+
+export const useUpdateEtatSortie = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, date_sortie }: { id: string; date_sortie: string }) => {
+      const { data, error } = await supabase
+        .from('etat_des_lieux')
+        .update({ date_sortie })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['etat-des-lieux'] });
+    },
+  });
+};
+
+export const useUpdateReleveCompteurs = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (releveData: Partial<ReleveCompteurs>) => {
+      const { data, error } = await supabase
+        .from('releve_compteurs')
+        .upsert(releveData)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['releve-compteurs', data?.etat_des_lieux_id] });
+    },
+  });
+};
+
+export const useUpdatePiece = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (pieceData: Partial<Piece>) => {
+      const { data, error } = await supabase
+        .from('pieces')
+        .upsert(pieceData)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['pieces', data?.etat_des_lieux_id] });
+    },
+  });
+};
+
+export const useUpdateCles = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (clesData: Partial<Cles>) => {
+      const { data, error } = await supabase
+        .from('cles')
+        .upsert(clesData)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['cles', data?.etat_des_lieux_id] });
+    },
+  });
+};
