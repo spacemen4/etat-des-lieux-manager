@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -86,9 +85,15 @@ const Dashboard = () => {
           <h3 className="text-xl font-semibold text-slate-900">
             États des lieux récents
           </h3>
-          <Button asChild>
-            <a href="/new-sortie">Créer un état de sortie</a>
-          </Button>
+          {etatsEnCours.length > 0 ? (
+            <div className="text-sm text-slate-600">
+              Sélectionnez un bien en cours pour faire l'état de sortie
+            </div>
+          ) : (
+            <div className="text-sm text-slate-600">
+              Aucun bien en cours de location
+            </div>
+          )}
         </div>
 
         {etatsDesLieux?.length === 0 ? (
