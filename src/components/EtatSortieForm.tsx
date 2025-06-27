@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -35,6 +34,7 @@ const EtatSortieForm = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [steps, setSteps] = useState(STEPS);
   const [dateSortie, setDateSortie] = useState('');
+  const [isValidated, setIsValidated] = useState(false);
 
   // Hooks pour récupérer les données
   const { data: etatDesLieux, isLoading: loadingEtat } = useEtatDesLieuxById(id || '');
@@ -158,6 +158,43 @@ const EtatSortieForm = () => {
         toast({
           title: "Erreur",
           description: "Impossible de sauvegarder le relevé des compteurs.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleFinalize = async () => {
+    if (!isValidated) {
+      toast({
+        title: "Validation requise",
+        description: "Veuillez cocher la case de validation avant de finaliser.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (id) {
+      try {
+        // Marquer l'état des lieux comme finalisé en ajoutant une date de sortie si pas déjà fait
+        if (!dateSortie) {
+          const today = new Date().toISOString().split('T')[0];
+          await updateEtatSortie.mutateAsync({ id, date_sortie: today });
+        }
+        
+        toast({
+          title: "État des lieux finalisé",
+          description: "L'état des lieux de sortie a été finalisé avec succès.",
+        });
+        
+        // Rediriger vers le dashboard après finalisation
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+      } catch (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de finaliser l'état des lieux.",
           variant: "destructive",
         });
       }
@@ -443,7 +480,13 @@ const EtatSortieForm = () => {
               </div>
               
               <div className="flex items-center space-x-2">
-                <input type="checkbox" id="validation" className="rounded" />
+                <input 
+                  type="checkbox" 
+                  id="validation" 
+                  className="rounded" 
+                  checked={isValidated}
+                  onChange={(e) => setIsValidated(e.target.checked)}
+                />
                 <Label htmlFor="validation">
                   Je certifie que toutes les informations renseignées sont exactes et que l'état des lieux a été réalisé en présence du locataire.
                 </Label>
@@ -485,8 +528,12 @@ const EtatSortieForm = () => {
         
         <div className="space-x-2">
           {currentStep === steps.length - 1 ? (
-            <Button className="bg-green-600 hover:bg-green-700">
-              Finaliser l'état des lieux
+            <Button 
+              className="bg-green-600 hover:bg-green-700"
+              onClick={handleFinalize}
+              disabled={!isValidated || updateEtatSortie.isPending}
+            >
+              {updateEtatSortie.isPending ? 'Finalisation...' : 'Finaliser l\'état des lieux'}
             </Button>
           ) : (
             <Button onClick={nextStep}>
