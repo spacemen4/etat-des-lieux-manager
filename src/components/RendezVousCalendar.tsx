@@ -35,8 +35,8 @@ interface RendezVous {
   latitude?: number;
   longitude?: number;
   note_personnelle?: string; // Changed from notePersonnelle
-  typeEtatDesLieux?: string;
-  typeBien?: string;
+  type_etat_des_lieux?: string; // Schema alignment
+  type_bien?: string;         // Schema alignment
 }
 
 export function RendezVousCalendar() {
@@ -103,8 +103,8 @@ export function RendezVousCalendar() {
         latitude: latitude,
         longitude: longitude,
         note_personnelle: note_personnelle, // Changed from notePersonnelle
-        typeEtatDesLieux: typeEtatDesLieux,
-        typeBien: typeBien,
+        type_etat_des_lieux: typeEtatDesLieux, // Schema alignment
+        type_bien: typeBien,                 // Schema alignment
         // Supabase will generate id, created_at, updated_at
       };
 
@@ -392,8 +392,8 @@ export function RendezVousCalendar() {
                       {rv.date.toLocaleDateString()} à {rv.heure} (Durée: {rv.duree})
                     </p>
                     <p className="text-sm text-gray-600">{rv.description}</p>
-                    {rv.typeEtatDesLieux && <p className="text-sm text-gray-600">Type d'EDL: {rv.typeEtatDesLieux}</p>}
-                    {rv.typeBien && <p className="text-sm text-gray-600">Type de bien: {rv.typeBien}</p>}
+                    {rv.type_etat_des_lieux && <p className="text-sm text-gray-600">Type d'EDL: {rv.type_etat_des_lieux}</p>}
+                    {rv.type_bien && <p className="text-sm text-gray-600">Type de bien: {rv.type_bien}</p>}
                     <p className="text-sm text-gray-600">
                       Adresse: {rv.adresse}, {rv.code_postal} {rv.ville} {/* Changed rv.codePostal */}
                     </p>
