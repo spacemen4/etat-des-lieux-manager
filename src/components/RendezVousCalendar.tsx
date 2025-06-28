@@ -25,7 +25,7 @@ interface RendezVous {
   date: Date;
   description: string;
   adresse: string;
-  codePostal: string;
+  code_postal: string; // Changed from codePostal
   ville: string;
   nomContact: string;
   telephoneContact: string;
@@ -44,7 +44,7 @@ export function RendezVousCalendar() {
   const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
   const [description, setDescription] = useState('');
   const [adresse, setAdresse] = useState('');
-  const [codePostal, setCodePostal] = useState('');
+  const [code_postal, setCode_postal] = useState(''); // Changed from codePostal
   const [ville, setVille] = useState('');
   const [nomContact, setNomContact] = useState('');
   const [telephoneContact, setTelephoneContact] = useState('');
@@ -74,9 +74,11 @@ export function RendezVousCalendar() {
         });
       } else if (data) {
         // Ensure date strings are converted to Date objects
-        const formattedData = data.map(item => ({
+        // And ensure all fields match the RendezVous interface, including code_postal
+        const formattedData: RendezVous[] = data.map(item => ({
           ...item,
           date: new Date(item.date),
+          code_postal: item.code_postal, // Ensure this mapping if it's not automatic
         }));
         setRendezVous(formattedData);
       }
@@ -86,12 +88,12 @@ export function RendezVousCalendar() {
   }, []); // Empty dependency array means this runs once on mount
 
   const handleAddRendezVous = async () => { // Made async to handle Supabase call
-    if (date && description && adresse && codePostal && ville && nomContact && telephoneContact && emailContact && heure && duree && typeEtatDesLieux && typeBien) {
+    if (date && description && adresse && code_postal && ville && nomContact && telephoneContact && emailContact && heure && duree && typeEtatDesLieux && typeBien) { // Changed codePostal to code_postal
       const newRendezVousData = {
         date: date.toISOString().split('T')[0], // Format date as YYYY-MM-DD for Supabase
         description,
         adresse,
-        codePostal,
+        code_postal: code_postal, // Changed codePostal to code_postal
         ville,
         nomContact,
         telephoneContact,
@@ -130,7 +132,7 @@ export function RendezVousCalendar() {
         // Reset form fields
         setDescription('');
         setAdresse('');
-        setCodePostal('');
+        setCode_postal(''); // Changed from setCodePostal
         setVille('');
         setLatitude(undefined);
         setLongitude(undefined);
@@ -160,12 +162,12 @@ export function RendezVousCalendar() {
 
   // Original handleAddRendezVous for reference before Supabase integration
   // const handleAddRendezVous_local = () => {
-  //   if (date && description && adresse && codePostal && ville && nomContact && telephoneContact && emailContact && heure && duree && typeEtatDesLieux && typeBien) {
+  //   if (date && description && adresse && code_postal && ville && nomContact && telephoneContact && emailContact && heure && duree && typeEtatDesLieux && typeBien) { // Changed codePostal
   //     const newRendezVous: RendezVous = {
   // date,
   // description,
   // adresse,
-  // codePostal,
+  // code_postal, // Changed codePostal
   // ville,
   // nomContact,
   // telephoneContact,
@@ -291,12 +293,12 @@ export function RendezVousCalendar() {
             />
           </div>
           <div className="mt-4">
-            <Label htmlFor="codePostal">Code Postal</Label>
+            <Label htmlFor="code_postal">Code Postal</Label> {/* Changed htmlFor */}
             <Input
-              id="codePostal"
+              id="code_postal" // Changed id
               type="text"
-              value={codePostal}
-              onChange={(e) => setCodePostal(e.target.value)}
+              value={code_postal} // Changed value
+              onChange={(e) => setCode_postal(e.target.value)} // Changed onChange
               placeholder="75000"
               className="mt-1"
             />
@@ -393,7 +395,7 @@ export function RendezVousCalendar() {
                     {rv.typeEtatDesLieux && <p className="text-sm text-gray-600">Type d'EDL: {rv.typeEtatDesLieux}</p>}
                     {rv.typeBien && <p className="text-sm text-gray-600">Type de bien: {rv.typeBien}</p>}
                     <p className="text-sm text-gray-600">
-                      Adresse: {rv.adresse}, {rv.codePostal} {rv.ville}
+                      Adresse: {rv.adresse}, {rv.code_postal} {rv.ville} {/* Changed rv.codePostal */}
                     </p>
                     <p className="text-sm text-gray-600">
                       Contact: {rv.nomContact} - {rv.telephoneContact} - {rv.emailContact}
