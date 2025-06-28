@@ -15,6 +15,7 @@ L.Icon.Default.mergeOptions({
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from '@/components/ui/use-toast';
 
@@ -31,6 +32,7 @@ interface RendezVous {
   duree: string;
   latitude?: number;
   longitude?: number;
+  notePersonnelle?: string;
 }
 
 export function RendezVousCalendar() {
@@ -47,6 +49,7 @@ export function RendezVousCalendar() {
   const [duree, setDuree] = useState('');
   const [latitude, setLatitude] = useState<number | undefined>(undefined);
   const [longitude, setLongitude] = useState<number | undefined>(undefined);
+  const [notePersonnelle, setNotePersonnelle] = useState('');
 
   const handleAddRendezVous = () => {
     if (date && description && adresse && codePostal && ville && nomContact && telephoneContact && emailContact && heure && duree) {
@@ -63,6 +66,7 @@ export function RendezVousCalendar() {
         duree,
         latitude: latitude,
         longitude: longitude,
+        notePersonnelle: notePersonnelle,
       };
       setRendezVous([...rendezVous, newRendezVous]);
       setDescription('');
@@ -76,6 +80,7 @@ export function RendezVousCalendar() {
       setEmailContact('');
       setHeure('');
       setDuree('');
+      setNotePersonnelle('');
       toast({
         title: "Rendez-vous ajouté",
         description: `Rendez-vous pour le ${date.toLocaleDateString()} à ${heure} avec ${nomContact}.`,
@@ -215,6 +220,16 @@ export function RendezVousCalendar() {
               className="mt-1"
             />
           </div>
+          <div className="mt-4">
+            <Label htmlFor="notePersonnelle">Note personnelle</Label>
+            <Textarea
+              id="notePersonnelle"
+              value={notePersonnelle}
+              onChange={(e) => setNotePersonnelle(e.target.value)}
+              placeholder="Ajouter une note personnelle ici..."
+              className="mt-1"
+            />
+          </div>
           <Button onClick={handleAddRendezVous} className="mt-4">
             Ajouter un rendez-vous
           </Button>
@@ -243,6 +258,11 @@ export function RendezVousCalendar() {
                       <p className="text-sm text-gray-600">
                         Coordonnées: {rv.latitude}{rv.latitude && rv.longitude && ', '}
                         {rv.longitude}
+                      </p>
+                    )}
+                    {rv.notePersonnelle && (
+                      <p className="text-sm text-gray-500 mt-1 italic">
+                        Note: {rv.notePersonnelle}
                       </p>
                     )}
                   </li>
