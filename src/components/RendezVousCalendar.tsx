@@ -1,6 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix for default marker icon issue with bundlers
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+});
+
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -33,8 +45,8 @@ export function RendezVousCalendar() {
   const [emailContact, setEmailContact] = useState('');
   const [heure, setHeure] = useState('');
   const [duree, setDuree] = useState('');
-  const [latitude, setLatitude] = useState('');
-  const [longitude, setLongitude] = useState('');
+  const [latitude, setLatitude] = useState<number | undefined>(undefined);
+  const [longitude, setLongitude] = useState<number | undefined>(undefined);
 
   const handleAddRendezVous = () => {
     if (date && description && adresse && codePostal && ville && nomContact && telephoneContact && emailContact && heure && duree) {
@@ -49,16 +61,16 @@ export function RendezVousCalendar() {
         emailContact,
         heure,
         duree,
-        latitude: latitude ? parseFloat(latitude) : undefined,
-        longitude: longitude ? parseFloat(longitude) : undefined,
+        latitude: latitude,
+        longitude: longitude,
       };
       setRendezVous([...rendezVous, newRendezVous]);
       setDescription('');
       setAdresse('');
       setCodePostal('');
       setVille('');
-      setLatitude('');
-      setLongitude('');
+      setLatitude(undefined);
+      setLongitude(undefined);
       setNomContact('');
       setTelephoneContact('');
       setEmailContact('');
@@ -153,27 +165,22 @@ export function RendezVousCalendar() {
               className="mt-1"
             />
           </div>
+          {/* Location Picker */}
           <div className="mt-4">
-            <Label htmlFor="latitude">Latitude</Label>
-            <Input
-              id="latitude"
-              type="number"
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              placeholder="Ex: 48.8566"
-              className="mt-1"
+            <Label>Localisation du rendez-vous</Label>
+            <LocationPicker
+              latitude={latitude}
+              longitude={longitude}
+              onLocationChange={(lat, lng) => {
+                setLatitude(lat);
+                setLongitude(lng);
+              }}
             />
-          </div>
-          <div className="mt-4">
-            <Label htmlFor="longitude">Longitude</Label>
-            <Input
-              id="longitude"
-              type="number"
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              placeholder="Ex: 2.3522"
-              className="mt-1"
-            />
+            {latitude !== undefined && longitude !== undefined && (
+              <div className="mt-2 text-sm text-gray-600">
+                Latitude: {latitude.toFixed(6)}, Longitude: {longitude.toFixed(6)}
+              </div>
+            )}
           </div>
           <div className="mt-4">
             <Label htmlFor="nomContact">Personne à contacter (Nom)</Label>
@@ -245,5 +252,65 @@ export function RendezVousCalendar() {
         </div>
       </div>
     </div>
+  );
+}
+
+// --- LocationPicker Component ---
+interface LocationPickerProps {
+  latitude: number | undefined;
+  longitude: number | undefined;
+  onLocationChange: (lat: number, lng: number) => void;
+}
+
+function LocationPicker({ latitude, longitude, onLocationChange }: LocationPickerProps) {
+  const defaultCenter: L.LatLngExpression = [46.603354, 1.888334]; // Center of France
+  const defaultZoom = 6;
+
+  const [markerPosition, setMarkerPosition] = useState<L.LatLng | null>(null);
+
+  useEffect(() => {
+    if (latitude !== undefined && longitude !== undefined) {
+      setMarkerPosition(L.latLng(latitude, longitude));
+    } else {
+      setMarkerPosition(null);
+    }
+  }, [latitude, longitude]);
+
+  function MapClickHandler() {
+    useMapEvents({
+      click(e) {
+        onLocationChange(e.latlng.lat, e.latlng.lng);
+      },
+    });
+    return null;
+  }
+
+  // This is to ensure the map renders correctly after initial load or tab switches
+  const [map, setMap] = useState<L.Map | null>(null);
+  useEffect(() => {
+    if (map) {
+      const timer = setTimeout(() => {
+        map.invalidateSize();
+      }, 100); // Small delay to ensure container is sized
+      return () => clearTimeout(timer);
+    }
+  }, [map]);
+
+
+  return (
+    <MapContainer
+      center={markerPosition || defaultCenter}
+      zoom={markerPosition ? 13 : defaultZoom}
+      scrollWheelZoom={true}
+      style={{ height: '300px', width: '100%', marginTop: '0.5rem', borderRadius: '0.375rem' }}
+      whenCreated={setMap}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <MapClickHandler />
+      {markerPosition && <Marker position={markerPosition}></Marker>}
+    </MapContainer>
   );
 }
