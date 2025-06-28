@@ -9,26 +9,61 @@ import { toast } from '@/components/ui/use-toast';
 interface RendezVous {
   date: Date;
   description: string;
+  adresse: string;
+  codePostal: string;
+  ville: string;
+  nomContact: string;
+  telephoneContact: string;
+  emailContact: string;
+  heure: string;
+  duree: string;
 }
 
 export function RendezVousCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
   const [description, setDescription] = useState('');
+  const [adresse, setAdresse] = useState('');
+  const [codePostal, setCodePostal] = useState('');
+  const [ville, setVille] = useState('');
+  const [nomContact, setNomContact] = useState('');
+  const [telephoneContact, setTelephoneContact] = useState('');
+  const [emailContact, setEmailContact] = useState('');
+  const [heure, setHeure] = useState('');
+  const [duree, setDuree] = useState('');
 
   const handleAddRendezVous = () => {
-    if (date && description) {
-      const newRendezVous: RendezVous = { date, description };
+    if (date && description && adresse && codePostal && ville && nomContact && telephoneContact && emailContact && heure && duree) {
+      const newRendezVous: RendezVous = {
+        date,
+        description,
+        adresse,
+        codePostal,
+        ville,
+        nomContact,
+        telephoneContact,
+        emailContact,
+        heure,
+        duree,
+      };
       setRendezVous([...rendezVous, newRendezVous]);
       setDescription('');
+      setAdresse('');
+      setCodePostal('');
+      setVille('');
+      setNomContact('');
+      setTelephoneContact('');
+      setEmailContact('');
+      setHeure('');
+      setDuree('');
       toast({
         title: "Rendez-vous ajouté",
-        description: `Rendez-vous pour le ${date.toLocaleDateString()} avec la description : ${description}`,
+        description: `Rendez-vous pour le ${date.toLocaleDateString()} à ${heure} avec ${nomContact}.`,
       });
     } else {
       toast({
         title: "Erreur",
-        description: "Veuillez sélectionner une date et entrer une description.",
+        description: "Veuillez remplir tous les champs obligatoires.",
         variant: "destructive",
       });
     }
@@ -56,6 +91,93 @@ export function RendezVousCalendar() {
               className="mt-1"
             />
           </div>
+          <div className="mt-4">
+            <Label htmlFor="heure">Heure du rendez-vous</Label>
+            <Input
+              id="heure"
+              type="time"
+              value={heure}
+              onChange={(e) => setHeure(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div className="mt-4">
+            <Label htmlFor="duree">Durée prévue (ex: 1h30)</Label>
+            <Input
+              id="duree"
+              type="text"
+              value={duree}
+              onChange={(e) => setDuree(e.target.value)}
+              placeholder="1h30"
+              className="mt-1"
+            />
+          </div>
+          <div className="mt-4">
+            <Label htmlFor="adresse">Adresse</Label>
+            <Input
+              id="adresse"
+              type="text"
+              value={adresse}
+              onChange={(e) => setAdresse(e.target.value)}
+              placeholder="123 rue de la Paix"
+              className="mt-1"
+            />
+          </div>
+          <div className="mt-4">
+            <Label htmlFor="codePostal">Code Postal</Label>
+            <Input
+              id="codePostal"
+              type="text"
+              value={codePostal}
+              onChange={(e) => setCodePostal(e.target.value)}
+              placeholder="75000"
+              className="mt-1"
+            />
+          </div>
+          <div className="mt-4">
+            <Label htmlFor="ville">Ville</Label>
+            <Input
+              id="ville"
+              type="text"
+              value={ville}
+              onChange={(e) => setVille(e.target.value)}
+              placeholder="Paris"
+              className="mt-1"
+            />
+          </div>
+          <div className="mt-4">
+            <Label htmlFor="nomContact">Personne à contacter (Nom)</Label>
+            <Input
+              id="nomContact"
+              type="text"
+              value={nomContact}
+              onChange={(e) => setNomContact(e.target.value)}
+              placeholder="Jean Dupont"
+              className="mt-1"
+            />
+          </div>
+          <div className="mt-4">
+            <Label htmlFor="telephoneContact">Téléphone du contact</Label>
+            <Input
+              id="telephoneContact"
+              type="tel"
+              value={telephoneContact}
+              onChange={(e) => setTelephoneContact(e.target.value)}
+              placeholder="0612345678"
+              className="mt-1"
+            />
+          </div>
+          <div className="mt-4">
+            <Label htmlFor="emailContact">Email du contact</Label>
+            <Input
+              id="emailContact"
+              type="email"
+              value={emailContact}
+              onChange={(e) => setEmailContact(e.target.value)}
+              placeholder="jean.dupont@example.com"
+              className="mt-1"
+            />
+          </div>
           <Button onClick={handleAddRendezVous} className="mt-4">
             Ajouter un rendez-vous
           </Button>
@@ -70,8 +192,16 @@ export function RendezVousCalendar() {
                 .sort((a, b) => a.date.getTime() - b.date.getTime())
                 .map((rv, index) => (
                   <li key={index} className="p-2 border rounded-md">
-                    <p className="font-medium">{rv.date.toLocaleDateString()}</p>
+                    <p className="font-medium">
+                      {rv.date.toLocaleDateString()} à {rv.heure} (Durée: {rv.duree})
+                    </p>
                     <p className="text-sm text-gray-600">{rv.description}</p>
+                    <p className="text-sm text-gray-600">
+                      Adresse: {rv.adresse}, {rv.codePostal} {rv.ville}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Contact: {rv.nomContact} - {rv.telephoneContact} - {rv.emailContact}
+                    </p>
                   </li>
                 ))}
             </ul>
