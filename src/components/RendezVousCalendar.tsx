@@ -27,9 +27,9 @@ interface RendezVous {
   adresse: string;
   code_postal: string; // Changed from codePostal
   ville: string;
-  nomContact: string;
-  telephoneContact: string;
-  emailContact: string;
+  nom_contact: string;
+  telephone_contact: string;
+  email_contact: string;
   heure: string;
   duree: string;
   latitude?: number;
@@ -46,9 +46,9 @@ export function RendezVousCalendar() {
   const [adresse, setAdresse] = useState('');
   const [code_postal, setCode_postal] = useState(''); // Changed from codePostal
   const [ville, setVille] = useState('');
-  const [nomContact, setNomContact] = useState('');
-  const [telephoneContact, setTelephoneContact] = useState('');
-  const [emailContact, setEmailContact] = useState('');
+  const [nom_contact, setNom_contact] = useState('');
+  const [telephone_contact, setTelephone_contact] = useState('');
+  const [email_contact, setEmail_contact] = useState('');
   const [heure, setHeure] = useState('');
   const [duree, setDuree] = useState('');
   const [latitude, setLatitude] = useState<number | undefined>(undefined);
@@ -88,16 +88,16 @@ export function RendezVousCalendar() {
   }, []); // Empty dependency array means this runs once on mount
 
   const handleAddRendezVous = async () => { // Made async to handle Supabase call
-    if (date && description && adresse && code_postal && ville && nomContact && telephoneContact && emailContact && heure && duree && typeEtatDesLieux && typeBien) { // Changed codePostal to code_postal
+    if (date && description && adresse && code_postal && ville && nom_contact && telephone_contact && email_contact && heure && duree && typeEtatDesLieux && typeBien) { // Changed codePostal to code_postal
       const newRendezVousData = {
         date: date.toISOString().split('T')[0], // Format date as YYYY-MM-DD for Supabase
         description,
         adresse,
         code_postal: code_postal, // Changed codePostal to code_postal
         ville,
-        nomContact,
-        telephoneContact,
-        emailContact,
+        nom_contact: nom_contact,
+        telephone_contact: telephone_contact,
+        email_contact: email_contact,
         heure,
         duree,
         latitude: latitude,
@@ -136,9 +136,9 @@ export function RendezVousCalendar() {
         setVille('');
         setLatitude(undefined);
         setLongitude(undefined);
-        setNomContact('');
-        setTelephoneContact('');
-        setEmailContact('');
+        setNom_contact('');
+        setTelephone_contact('');
+        setEmail_contact('');
         setHeure('');
         setDuree('');
         setNotePersonnelle('');
@@ -148,7 +148,7 @@ export function RendezVousCalendar() {
 
         toast({
           title: "Rendez-vous ajouté",
-          description: `Rendez-vous pour le ${date.toLocaleDateString()} à ${heure} avec ${nomContact} a été enregistré.`,
+          description: `Rendez-vous pour le ${date.toLocaleDateString()} à ${heure} avec ${nom_contact} a été enregistré.`,
         });
       }
     } else {
@@ -162,16 +162,16 @@ export function RendezVousCalendar() {
 
   // Original handleAddRendezVous for reference before Supabase integration
   // const handleAddRendezVous_local = () => {
-  //   if (date && description && adresse && code_postal && ville && nomContact && telephoneContact && emailContact && heure && duree && typeEtatDesLieux && typeBien) { // Changed codePostal
+  //   if (date && description && adresse && code_postal && ville && nom_contact && telephone_contact && email_contact && heure && duree && typeEtatDesLieux && typeBien) { // Changed codePostal
   //     const newRendezVous: RendezVous = {
   // date,
   // description,
   // adresse,
   // code_postal, // Changed codePostal
   // ville,
-  // nomContact,
-  // telephoneContact,
-  // emailContact,
+  // nom_contact,
+  // telephone_contact,
+  // email_contact,
   // heure,
   // duree,
   // latitude: latitude,
@@ -187,9 +187,9 @@ export function RendezVousCalendar() {
   //     setVille('');
   //     setLatitude(undefined);
   //     setLongitude(undefined);
-  //     setNomContact('');
-  //     setTelephoneContact('');
-  //     setEmailContact('');
+  //     setNom_contact('');
+  //     setTelephone_contact('');
+  //     setEmail_contact('');
   //     setHeure('');
   //     setDuree('');
   //     setNotePersonnelle('');
@@ -197,7 +197,7 @@ export function RendezVousCalendar() {
   //     setTypeBien(undefined);
   //     toast({
   //       title: "Rendez-vous ajouté",
-  //       description: `Rendez-vous pour le ${date.toLocaleDateString()} à ${heure} avec ${nomContact}.`,
+  //       description: `Rendez-vous pour le ${date.toLocaleDateString()} à ${heure} avec ${nom_contact}.`,
   //     });
   //   } else {
   //     toast({
@@ -332,34 +332,34 @@ export function RendezVousCalendar() {
             )}
           </div>
           <div className="mt-4">
-            <Label htmlFor="nomContact">Personne à contacter (Nom)</Label>
+            <Label htmlFor="nom_contact">Personne à contacter (Nom)</Label>
             <Input
-              id="nomContact"
+              id="nom_contact"
               type="text"
-              value={nomContact}
-              onChange={(e) => setNomContact(e.target.value)}
+              value={nom_contact}
+              onChange={(e) => setNom_contact(e.target.value)}
               placeholder="Jean Dupont"
               className="mt-1"
             />
           </div>
           <div className="mt-4">
-            <Label htmlFor="telephoneContact">Téléphone du contact</Label>
+            <Label htmlFor="telephone_contact">Téléphone du contact</Label>
             <Input
-              id="telephoneContact"
+              id="telephone_contact"
               type="tel"
-              value={telephoneContact}
-              onChange={(e) => setTelephoneContact(e.target.value)}
+              value={telephone_contact}
+              onChange={(e) => setTelephone_contact(e.target.value)}
               placeholder="0612345678"
               className="mt-1"
             />
           </div>
           <div className="mt-4">
-            <Label htmlFor="emailContact">Email du contact</Label>
+            <Label htmlFor="email_contact">Email du contact</Label>
             <Input
-              id="emailContact"
+              id="email_contact"
               type="email"
-              value={emailContact}
-              onChange={(e) => setEmailContact(e.target.value)}
+              value={email_contact}
+              onChange={(e) => setEmail_contact(e.target.value)}
               placeholder="jean.dupont@example.com"
               className="mt-1"
             />
@@ -398,7 +398,7 @@ export function RendezVousCalendar() {
                       Adresse: {rv.adresse}, {rv.code_postal} {rv.ville} {/* Changed rv.codePostal */}
                     </p>
                     <p className="text-sm text-gray-600">
-                      Contact: {rv.nomContact} - {rv.telephoneContact} - {rv.emailContact}
+                      Contact: {rv.nom_contact} - {rv.telephone_contact} - {rv.email_contact}
                     </p>
                     {(rv.latitude || rv.longitude) && (
                       <p className="text-sm text-gray-600">
