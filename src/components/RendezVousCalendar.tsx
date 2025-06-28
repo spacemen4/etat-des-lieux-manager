@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase'; // Import Supabase client
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -56,10 +57,38 @@ export function RendezVousCalendar() {
   const [typeEtatDesLieux, setTypeEtatDesLieux] = useState<string | undefined>(undefined);
   const [typeBien, setTypeBien] = useState<string | undefined>(undefined);
 
-  const handleAddRendezVous = () => {
+  // Fetch existing rendez-vous from Supabase
+  useEffect(() => {
+    const fetchRendezVous = async () => {
+      const { data, error } = await supabase
+        .from('rendez_vous')
+        .select('*')
+        .order('date', { ascending: true }); // Assuming you want them ordered by date
+
+      if (error) {
+        console.error('Error fetching rendez-vous:', error);
+        toast({
+          title: "Erreur de chargement",
+          description: "Impossible de charger les rendez-vous depuis la base de données.",
+          variant: "destructive",
+        });
+      } else if (data) {
+        // Ensure date strings are converted to Date objects
+        const formattedData = data.map(item => ({
+          ...item,
+          date: new Date(item.date),
+        }));
+        setRendezVous(formattedData);
+      }
+    };
+
+    fetchRendezVous();
+  }, []); // Empty dependency array means this runs once on mount
+
+  const handleAddRendezVous = async () => { // Made async to handle Supabase call
     if (date && description && adresse && codePostal && ville && nomContact && telephoneContact && emailContact && heure && duree && typeEtatDesLieux && typeBien) {
-      const newRendezVous: RendezVous = {
-        date,
+      const newRendezVousData = {
+        date: date.toISOString().split('T')[0], // Format date as YYYY-MM-DD for Supabase
         description,
         adresse,
         codePostal,
@@ -74,34 +103,108 @@ export function RendezVousCalendar() {
         notePersonnelle: notePersonnelle,
         typeEtatDesLieux: typeEtatDesLieux,
         typeBien: typeBien,
+        // Supabase will generate id, created_at, updated_at
       };
-      setRendezVous([...rendezVous, newRendezVous]);
-      setDescription('');
-      setAdresse('');
-      setCodePostal('');
-      setVille('');
-      setLatitude(undefined);
-      setLongitude(undefined);
-      setNomContact('');
-      setTelephoneContact('');
-      setEmailContact('');
-      setHeure('');
-      setDuree('');
-      setNotePersonnelle('');
-      setTypeEtatDesLieux(undefined);
-      setTypeBien(undefined);
-      toast({
-        title: "Rendez-vous ajouté",
-        description: `Rendez-vous pour le ${date.toLocaleDateString()} à ${heure} avec ${nomContact}.`,
-      });
+
+      const { data: insertedData, error } = await supabase
+        .from('rendez_vous')
+        .insert([newRendezVousData])
+        .select(); // .select() returns the inserted row(s)
+
+      if (error) {
+        console.error('Error adding rendez-vous:', error);
+        toast({
+          title: "Erreur d'ajout",
+          description: "Impossible d'ajouter le rendez-vous à la base de données. Message: " + error.message,
+          variant: "destructive",
+        });
+      } else if (insertedData && insertedData.length > 0) {
+        // Add to local state after successful insertion
+        // Convert date back to Date object for local state consistency
+        const newRendezVousWithDateObject: RendezVous = {
+          ...insertedData[0],
+          date: new Date(insertedData[0].date),
+        };
+        setRendezVous(prevRendezVous => [...prevRendezVous, newRendezVousWithDateObject].sort((a, b) => a.date.getTime() - b.date.getTime()));
+
+        // Reset form fields
+        setDescription('');
+        setAdresse('');
+        setCodePostal('');
+        setVille('');
+        setLatitude(undefined);
+        setLongitude(undefined);
+        setNomContact('');
+        setTelephoneContact('');
+        setEmailContact('');
+        setHeure('');
+        setDuree('');
+        setNotePersonnelle('');
+        setTypeEtatDesLieux(undefined);
+        setTypeBien(undefined);
+        // setDate(new Date()); // Optionally reset date, or keep it for next entry
+
+        toast({
+          title: "Rendez-vous ajouté",
+          description: `Rendez-vous pour le ${date.toLocaleDateString()} à ${heure} avec ${nomContact} a été enregistré.`,
+        });
+      }
     } else {
       toast({
-        title: "Erreur",
+        title: "Erreur de formulaire",
         description: "Veuillez remplir tous les champs obligatoires.",
         variant: "destructive",
       });
     }
   };
+
+  // Original handleAddRendezVous for reference before Supabase integration
+  // const handleAddRendezVous_local = () => {
+  //   if (date && description && adresse && codePostal && ville && nomContact && telephoneContact && emailContact && heure && duree && typeEtatDesLieux && typeBien) {
+  //     const newRendezVous: RendezVous = {
+  // date,
+  // description,
+  // adresse,
+  // codePostal,
+  // ville,
+  // nomContact,
+  // telephoneContact,
+  // emailContact,
+  // heure,
+  // duree,
+  // latitude: latitude,
+  // longitude: longitude,
+  // notePersonnelle: notePersonnelle,
+  // typeEtatDesLieux: typeEtatDesLieux,
+  // typeBien: typeBien,
+  //     };
+  //     setRendezVous([...rendezVous, newRendezVous]);
+  //     setDescription('');
+  //     setAdresse('');
+  //     setCodePostal('');
+  //     setVille('');
+  //     setLatitude(undefined);
+  //     setLongitude(undefined);
+  //     setNomContact('');
+  //     setTelephoneContact('');
+  //     setEmailContact('');
+  //     setHeure('');
+  //     setDuree('');
+  //     setNotePersonnelle('');
+  //     setTypeEtatDesLieux(undefined);
+  //     setTypeBien(undefined);
+  //     toast({
+  //       title: "Rendez-vous ajouté",
+  //       description: `Rendez-vous pour le ${date.toLocaleDateString()} à ${heure} avec ${nomContact}.`,
+  //     });
+  //   } else {
+  //     toast({
+  //       title: "Erreur",
+  //       description: "Veuillez remplir tous les champs obligatoires.",
+  //       variant: "destructive",
+  //     });
+  //   }
+  // };
 
   return (
     <div className="container mx-auto p-4">
