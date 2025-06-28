@@ -120,3 +120,25 @@ CREATE TABLE pieces (
     plaque_cuisson_sortie TEXT, -- Condition of hob at exit.
     commentaires TEXT -- Additional comments for the room.
 );
+
+-- Table: rendez_vous
+-- Stores information about scheduled appointments for property inventories.
+CREATE TABLE rendez_vous (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each appointment.
+    date DATE NOT NULL, -- Date of the appointment.
+    heure TIME NOT NULL, -- Time of the appointment.
+    duree TEXT, -- Planned duration of the appointment (e.g., "1h30").
+    description TEXT, -- Description or purpose of the appointment.
+    adresse TEXT NOT NULL, -- Address where the appointment will take place.
+    code_postal TEXT NOT NULL, -- Postal code for the address.
+    ville TEXT NOT NULL, -- City for the address.
+    latitude FLOAT, -- Latitude for precise location (optional).
+    longitude FLOAT, -- Longitude for precise location (optional).
+    nom_contact TEXT NOT NULL, -- Name of the person to contact for the appointment.
+    telephone_contact TEXT NOT NULL, -- Phone number of the contact person.
+    email_contact TEXT NOT NULL, -- Email address of the contact person.
+    note_personnelle TEXT, -- Any personal notes regarding the appointment.
+    type_etat_des_lieux TEXT, -- Type of inventory (e.g., "entree", "sortie").
+    type_bien TEXT, -- Type of property (e.g., "studio", "t2-t3", "local").
+    created_at TIMESTAMPTZ DEFAULT now() -- Timestamp of when the appointment was created.
+);
