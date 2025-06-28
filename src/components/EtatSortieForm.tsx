@@ -126,9 +126,10 @@ const EtatSortieForm = () => {
   };
 
   const handleSaveEtat = async () => {
-    if (dateSortie && id) {
+    // La date de sortie est facultative, donc on sauvegarde même si elle est vide
+    if (id) {
       try {
-        await updateEtatSortie.mutateAsync({ id, date_sortie: dateSortie });
+        await updateEtatSortie.mutateAsync({ id, date_sortie: dateSortie || null });
         toast({
           title: "Date de sortie sauvegardée",
           description: "La date de sortie a été enregistrée avec succès.",
@@ -144,6 +145,7 @@ const EtatSortieForm = () => {
   };
 
   const handleSaveReleve = async () => {
+    // Les relevés de compteurs sont facultatifs
     if (id) {
       try {
         await updateReleveCompteurs.mutateAsync({
@@ -165,6 +167,7 @@ const EtatSortieForm = () => {
   };
 
   const handleFinalize = async () => {
+    // La validation de la checkbox reste obligatoire pour finaliser
     if (!isValidated) {
       toast({
         title: "Validation requise",
@@ -174,13 +177,29 @@ const EtatSortieForm = () => {
       return;
     }
 
+    // Les champs obligatoires identifiés sont :
+    // - Description du rendez-vous (implicitement l'existence de l'état des lieux)
+    // - Type d'état des lieux (implicitement 'sortie' car c'est EtatSortieForm)
+    // - Etat des lieux de sortie (la date de sortie, qui est facultative maintenant, mais la finalisation implique une sortie)
+    // - Type de bien (contenu dans etatDesLieux.adresse_bien)
+
+    if (!etatDesLieux?.adresse_bien) {
+       toast({
+        title: "Information manquante",
+        description: "L'adresse du bien (type de bien) est requise pour finaliser.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // La date de sortie n'est plus bloquante ici, elle peut être vide.
+    // Si elle est vide au moment de la finalisation, elle sera mise à la date du jour.
+
     if (id) {
       try {
-        // Marquer l'état des lieux comme finalisé en ajoutant une date de sortie si pas déjà fait
-        if (!dateSortie) {
-          const today = new Date().toISOString().split('T')[0];
-          await updateEtatSortie.mutateAsync({ id, date_sortie: today });
-        }
+        // Marquer l'état des lieux comme finalisé
+        // Si dateSortie est vide, on met la date du jour comme date de sortie effective
+        const finalDateSortie = dateSortie || new Date().toISOString().split('T')[0];
+        await updateEtatSortie.mutateAsync({ id, date_sortie: finalDateSortie, statut: 'Terminé' }); // Ajout du statut
         
         toast({
           title: "État des lieux finalisé",
@@ -236,8 +255,9 @@ const EtatSortieForm = () => {
                   />
                 </div>
               </div>
-              <Button onClick={handleSaveEtat} disabled={!dateSortie}>
-                Sauvegarder la date de sortie
+              {/* Le bouton de sauvegarde est toujours actif, car la date de sortie est facultative */}
+              <Button onClick={handleSaveEtat}>
+                Sauvegarder les informations générales
               </Button>
             </CardContent>
           </Card>
@@ -247,9 +267,9 @@ const EtatSortieForm = () => {
         return (
           <Card>
             <CardHeader>
-              <CardTitle>Relevé des compteurs</CardTitle>
+              <CardTitle>Relevé des compteurs (Facultatif)</CardTitle>
               <CardDescription>
-                Saisissez les index des compteurs au moment de la sortie
+                Saisissez les index des compteurs au moment de la sortie si nécessaire
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -263,6 +283,7 @@ const EtatSortieForm = () => {
                       ...prev,
                       electricite_h_pleines: e.target.value
                     }))}
+                    placeholder="Optionnel"
                   />
                 </div>
                 <div>
@@ -274,6 +295,7 @@ const EtatSortieForm = () => {
                       ...prev,
                       electricite_h_creuses: e.target.value
                     }))}
+                    placeholder="Optionnel"
                   />
                 </div>
                 <div>
@@ -285,6 +307,7 @@ const EtatSortieForm = () => {
                       ...prev,
                       gaz_naturel_releve: e.target.value
                     }))}
+                    placeholder="Optionnel"
                   />
                 </div>
                 <div>
@@ -296,6 +319,7 @@ const EtatSortieForm = () => {
                       ...prev,
                       eau_chaude_m3: e.target.value
                     }))}
+                    placeholder="Optionnel"
                   />
                 </div>
                 <div>
@@ -307,11 +331,13 @@ const EtatSortieForm = () => {
                       ...prev,
                       eau_froide_m3: e.target.value
                     }))}
+                    placeholder="Optionnel"
                   />
                 </div>
               </div>
+              {/* Le bouton de sauvegarde est toujours actif */}
               <Button onClick={handleSaveReleve}>
-                Sauvegarder le relevé
+                Sauvegarder le relevé (si renseigné)
               </Button>
             </CardContent>
           </Card>
@@ -320,13 +346,18 @@ const EtatSortieForm = () => {
       case 2: // État des pièces
         return (
           <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>État des pièces (Facultatif)</CardTitle>
+                <CardDescription>
+                  Comparez l'état d'entrée avec l'état de sortie si nécessaire. Ces champs sont facultatifs.
+                </CardDescription>
+              </CardHeader>
+            </Card>
             {pieces?.map((piece) => (
               <Card key={piece.id}>
                 <CardHeader>
                   <CardTitle>{piece.nom_piece}</CardTitle>
-                  <CardDescription>
-                    Comparez l'état d'entrée avec l'état de sortie
-                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -353,14 +384,17 @@ const EtatSortieForm = () => {
                     </div>
                     
                     <div className="space-y-4">
-                      <h4 className="font-medium text-slate-900">État de sortie</h4>
+                      <h4 className="font-medium text-slate-900">État de sortie (Facultatif)</h4>
                       <div>
                         <Label className="text-sm">Revêtements sols</Label>
-                        <Select defaultValue={piece.revetements_sols_sortie || ''}>
+                        <Select defaultValue={piece.revetements_sols_sortie || ''}
+                          // onChange pour sauvegarder si besoin, ou laisser pour un bouton global "Sauvegarder pièces"
+                        >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner l'état" />
+                            <SelectValue placeholder="Sélectionner l'état (Optionnel)" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="">Non renseigné</SelectItem>
                             <SelectItem value="excellent">Excellent état</SelectItem>
                             <SelectItem value="bon">Bon état</SelectItem>
                             <SelectItem value="moyen">État moyen</SelectItem>
@@ -372,9 +406,10 @@ const EtatSortieForm = () => {
                         <Label className="text-sm">Murs menuiseries</Label>
                         <Select defaultValue={piece.murs_menuiseries_sortie || ''}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner l'état" />
+                            <SelectValue placeholder="Sélectionner l'état (Optionnel)" />
                           </SelectTrigger>
                           <SelectContent>
+                           <SelectItem value="">Non renseigné</SelectItem>
                             <SelectItem value="excellent">Excellent état</SelectItem>
                             <SelectItem value="bon">Bon état</SelectItem>
                             <SelectItem value="moyen">État moyen</SelectItem>
@@ -386,9 +421,10 @@ const EtatSortieForm = () => {
                         <Label className="text-sm">Plafond</Label>
                         <Select defaultValue={piece.plafond_sortie || ''}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner l'état" />
+                            <SelectValue placeholder="Sélectionner l'état (Optionnel)" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="">Non renseigné</SelectItem>
                             <SelectItem value="excellent">Excellent état</SelectItem>
                             <SelectItem value="bon">Bon état</SelectItem>
                             <SelectItem value="moyen">État moyen</SelectItem>
@@ -399,17 +435,20 @@ const EtatSortieForm = () => {
                     </div>
 
                     <div className="space-y-4">
-                      <h4 className="font-medium text-slate-900">Commentaires</h4>
+                      <h4 className="font-medium text-slate-900">Commentaires (Facultatif)</h4>
                       <Textarea 
-                        placeholder="Observations particulières..."
+                        placeholder="Observations particulières (Optionnel)..."
                         className="min-h-[200px]"
                         defaultValue={piece.commentaires || ''}
+                         // onChange pour sauvegarder si besoin
                       />
                     </div>
                   </div>
+                  {/* Ajouter un bouton de sauvegarde par pièce si nécessaire ou un global */}
                 </CardContent>
               </Card>
             ))}
+             {/* <Button onClick={handleSavePieces}>Sauvegarder État des Pièces</Button> */}
           </div>
         );
 
@@ -417,9 +456,9 @@ const EtatSortieForm = () => {
         return (
           <Card>
             <CardHeader>
-              <CardTitle>Remise des clés</CardTitle>
+              <CardTitle>Remise des clés (Facultatif)</CardTitle>
               <CardDescription>
-                Vérifiez la restitution de toutes les clés et badges
+                Vérifiez la restitution de toutes les clés et badges si applicable.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -440,6 +479,7 @@ const EtatSortieForm = () => {
                         newClesData[index].nombre = parseInt(e.target.value) || 0;
                         setClesData(newClesData);
                       }}
+                      placeholder="Optionnel"
                     />
                   </div>
                   <div>
@@ -452,10 +492,12 @@ const EtatSortieForm = () => {
                         newClesData[index].commentaires = e.target.value;
                         setClesData(newClesData);
                       }}
+                      placeholder="Optionnel"
                     />
                   </div>
                 </div>
               ))}
+              {/* <Button onClick={handleSaveCles}>Sauvegarder Remise des Clés</Button> */}
             </CardContent>
           </Card>
         );

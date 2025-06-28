@@ -2,8 +2,9 @@
 export interface EtatDesLieux {
   id: string;
   date_entree: string | null;
-  date_sortie: string | null;
-  adresse_bien: string;
+  date_sortie: string | null; // Déjà nullable, OK
+  adresse_bien: string; // Champ obligatoire pour "Type de bien"
+  statut?: string | null; // Ajout du champ statut, utilisé lors de la finalisation
   bailleur_nom: string | null;
   bailleur_adresse: string | null;
   locataire_nom: string | null;
