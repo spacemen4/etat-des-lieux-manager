@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
 
 interface RendezVous {
@@ -33,6 +34,8 @@ interface RendezVous {
   latitude?: number;
   longitude?: number;
   notePersonnelle?: string;
+  typeEtatDesLieux?: string;
+  typeBien?: string;
 }
 
 export function RendezVousCalendar() {
@@ -50,9 +53,11 @@ export function RendezVousCalendar() {
   const [latitude, setLatitude] = useState<number | undefined>(undefined);
   const [longitude, setLongitude] = useState<number | undefined>(undefined);
   const [notePersonnelle, setNotePersonnelle] = useState('');
+  const [typeEtatDesLieux, setTypeEtatDesLieux] = useState<string | undefined>(undefined);
+  const [typeBien, setTypeBien] = useState<string | undefined>(undefined);
 
   const handleAddRendezVous = () => {
-    if (date && description && adresse && codePostal && ville && nomContact && telephoneContact && emailContact && heure && duree) {
+    if (date && description && adresse && codePostal && ville && nomContact && telephoneContact && emailContact && heure && duree && typeEtatDesLieux && typeBien) {
       const newRendezVous: RendezVous = {
         date,
         description,
@@ -67,6 +72,8 @@ export function RendezVousCalendar() {
         latitude: latitude,
         longitude: longitude,
         notePersonnelle: notePersonnelle,
+        typeEtatDesLieux: typeEtatDesLieux,
+        typeBien: typeBien,
       };
       setRendezVous([...rendezVous, newRendezVous]);
       setDescription('');
@@ -81,6 +88,8 @@ export function RendezVousCalendar() {
       setHeure('');
       setDuree('');
       setNotePersonnelle('');
+      setTypeEtatDesLieux(undefined);
+      setTypeBien(undefined);
       toast({
         title: "Rendez-vous ajouté",
         description: `Rendez-vous pour le ${date.toLocaleDateString()} à ${heure} avec ${nomContact}.`,
@@ -115,6 +124,36 @@ export function RendezVousCalendar() {
               placeholder="Ex: État des lieux d'entrée pour M. Dupont"
               className="mt-1"
             />
+          </div>
+          <div className="mt-4">
+            <Label htmlFor="typeEtatDesLieux">Type d'état des lieux</Label>
+            <Select value={typeEtatDesLieux} onValueChange={setTypeEtatDesLieux}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Sélectionner un type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="entree">Etat des lieux entrée</SelectItem>
+                <SelectItem value="sortie">Etat des lieux de sortie</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="mt-4">
+            <Label htmlFor="typeBien">Type de bien</Label>
+            <Select value={typeBien} onValueChange={setTypeBien}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Sélectionner un type de bien" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="studio">Etat des lieux Studio</SelectItem>
+                <SelectItem value="t2-t3">Etat des lieux T2 – T3</SelectItem>
+                <SelectItem value="t4-t5">Etat des lieux T4 – T5</SelectItem>
+                <SelectItem value="mobilier">Inventaire du mobilier</SelectItem>
+                <SelectItem value="bureau">Etat des lieux Bureau</SelectItem>
+                <SelectItem value="local">Etat des lieux Local commercial</SelectItem>
+                <SelectItem value="garage">Etat des lieux Garage / Box</SelectItem>
+                <SelectItem value="pieces-supplementaires">Pièces supplémentaires</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="mt-4">
             <Label htmlFor="heure">Heure du rendez-vous</Label>
@@ -248,6 +287,8 @@ export function RendezVousCalendar() {
                       {rv.date.toLocaleDateString()} à {rv.heure} (Durée: {rv.duree})
                     </p>
                     <p className="text-sm text-gray-600">{rv.description}</p>
+                    {rv.typeEtatDesLieux && <p className="text-sm text-gray-600">Type d'EDL: {rv.typeEtatDesLieux}</p>}
+                    {rv.typeBien && <p className="text-sm text-gray-600">Type de bien: {rv.typeBien}</p>}
                     <p className="text-sm text-gray-600">
                       Adresse: {rv.adresse}, {rv.codePostal} {rv.ville}
                     </p>
