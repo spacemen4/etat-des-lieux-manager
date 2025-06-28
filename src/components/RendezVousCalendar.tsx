@@ -34,7 +34,7 @@ interface RendezVous {
   duree: string;
   latitude?: number;
   longitude?: number;
-  notePersonnelle?: string;
+  note_personnelle?: string; // Changed from notePersonnelle
   typeEtatDesLieux?: string;
   typeBien?: string;
 }
@@ -53,7 +53,7 @@ export function RendezVousCalendar() {
   const [duree, setDuree] = useState('');
   const [latitude, setLatitude] = useState<number | undefined>(undefined);
   const [longitude, setLongitude] = useState<number | undefined>(undefined);
-  const [notePersonnelle, setNotePersonnelle] = useState('');
+  const [note_personnelle, setNote_personnelle] = useState(''); // Changed from notePersonnelle
   const [typeEtatDesLieux, setTypeEtatDesLieux] = useState<string | undefined>(undefined);
   const [typeBien, setTypeBien] = useState<string | undefined>(undefined);
 
@@ -102,7 +102,7 @@ export function RendezVousCalendar() {
         duree,
         latitude: latitude,
         longitude: longitude,
-        notePersonnelle: notePersonnelle,
+        note_personnelle: note_personnelle, // Changed from notePersonnelle
         typeEtatDesLieux: typeEtatDesLieux,
         typeBien: typeBien,
         // Supabase will generate id, created_at, updated_at
@@ -141,7 +141,7 @@ export function RendezVousCalendar() {
         setEmail_contact('');
         setHeure('');
         setDuree('');
-        setNotePersonnelle('');
+        setNote_personnelle(''); // Changed from setNotePersonnelle
         setTypeEtatDesLieux(undefined);
         setTypeBien(undefined);
         // setDate(new Date()); // Optionally reset date, or keep it for next entry
@@ -176,7 +176,7 @@ export function RendezVousCalendar() {
   // duree,
   // latitude: latitude,
   // longitude: longitude,
-  // notePersonnelle: notePersonnelle,
+  // note_personnelle: note_personnelle, // Changed from notePersonnelle
   // typeEtatDesLieux: typeEtatDesLieux,
   // typeBien: typeBien,
   //     };
@@ -365,11 +365,11 @@ export function RendezVousCalendar() {
             />
           </div>
           <div className="mt-4">
-            <Label htmlFor="notePersonnelle">Note personnelle</Label>
+            <Label htmlFor="note_personnelle">Note personnelle</Label>
             <Textarea
-              id="notePersonnelle"
-              value={notePersonnelle}
-              onChange={(e) => setNotePersonnelle(e.target.value)}
+              id="note_personnelle" // Matches htmlFor for label linking
+              value={note_personnelle} // Changed from notePersonnelle
+              onChange={(e) => setNote_personnelle(e.target.value)} // Changed from setNotePersonnelle
               placeholder="Ajouter une note personnelle ici..."
               className="mt-1"
             />
@@ -406,9 +406,9 @@ export function RendezVousCalendar() {
                         {rv.longitude}
                       </p>
                     )}
-                    {rv.notePersonnelle && (
+                    {rv.note_personnelle && ( // Changed from rv.notePersonnelle
                       <p className="text-sm text-gray-500 mt-1 italic">
-                        Note: {rv.notePersonnelle}
+                        Note: {rv.note_personnelle} {/* Changed from rv.notePersonnelle */}
                       </p>
                     )}
                   </li>
