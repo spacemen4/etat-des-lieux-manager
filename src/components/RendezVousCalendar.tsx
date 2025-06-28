@@ -17,6 +17,8 @@ interface RendezVous {
   emailContact: string;
   heure: string;
   duree: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export function RendezVousCalendar() {
@@ -31,6 +33,8 @@ export function RendezVousCalendar() {
   const [emailContact, setEmailContact] = useState('');
   const [heure, setHeure] = useState('');
   const [duree, setDuree] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
 
   const handleAddRendezVous = () => {
     if (date && description && adresse && codePostal && ville && nomContact && telephoneContact && emailContact && heure && duree) {
@@ -45,12 +49,16 @@ export function RendezVousCalendar() {
         emailContact,
         heure,
         duree,
+        latitude: latitude ? parseFloat(latitude) : undefined,
+        longitude: longitude ? parseFloat(longitude) : undefined,
       };
       setRendezVous([...rendezVous, newRendezVous]);
       setDescription('');
       setAdresse('');
       setCodePostal('');
       setVille('');
+      setLatitude('');
+      setLongitude('');
       setNomContact('');
       setTelephoneContact('');
       setEmailContact('');
@@ -146,6 +154,28 @@ export function RendezVousCalendar() {
             />
           </div>
           <div className="mt-4">
+            <Label htmlFor="latitude">Latitude</Label>
+            <Input
+              id="latitude"
+              type="number"
+              value={latitude}
+              onChange={(e) => setLatitude(e.target.value)}
+              placeholder="Ex: 48.8566"
+              className="mt-1"
+            />
+          </div>
+          <div className="mt-4">
+            <Label htmlFor="longitude">Longitude</Label>
+            <Input
+              id="longitude"
+              type="number"
+              value={longitude}
+              onChange={(e) => setLongitude(e.target.value)}
+              placeholder="Ex: 2.3522"
+              className="mt-1"
+            />
+          </div>
+          <div className="mt-4">
             <Label htmlFor="nomContact">Personne à contacter (Nom)</Label>
             <Input
               id="nomContact"
@@ -202,6 +232,12 @@ export function RendezVousCalendar() {
                     <p className="text-sm text-gray-600">
                       Contact: {rv.nomContact} - {rv.telephoneContact} - {rv.emailContact}
                     </p>
+                    {(rv.latitude || rv.longitude) && (
+                      <p className="text-sm text-gray-600">
+                        Coordonnées: {rv.latitude}{rv.latitude && rv.longitude && ', '}
+                        {rv.longitude}
+                      </p>
+                    )}
                   </li>
                 ))}
             </ul>
