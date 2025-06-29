@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
 import FormProgress from './FormProgress';
 import { toast } from '@/hooks/use-toast';
@@ -15,16 +16,27 @@ import {
   usePiecesByEtatId, 
   useReleveCompteursByEtatId,
   useClesByEtatId,
+  usePartiesPrivativesByEtatId,
+  useAutresEquipementsByEtatId,
+  useEquipementsEnergetiquesByEtatId,
+  useEquipementsChauffageByEtatId,
   useUpdateEtatSortie,
   useUpdateReleveCompteurs,
   useUpdatePiece,
-  useUpdateCles
+  useUpdateCles,
+  useUpdatePartiePrivative,
+  useUpdateAutreEquipement,
+  useUpdateEquipementsEnergetiques,
+  useUpdateEquipementsChauffage
 } from '@/hooks/useEtatDesLieux';
 
 const STEPS = [
   { id: 'info', title: 'Informations générales', completed: false, current: true },
   { id: 'compteurs', title: 'Relevé compteurs', completed: false, current: false },
+  { id: 'equipements', title: 'Équipements énergétiques', completed: false, current: false },
   { id: 'pieces', title: 'État des pièces', completed: false, current: false },
+  { id: 'parties_privatives', title: 'Parties privatives', completed: false, current: false },
+  { id: 'autres_equipements', title: 'Autres équipements', completed: false, current: false },
   { id: 'cles', title: 'Remise des clés', completed: false, current: false },
   { id: 'validation', title: 'Validation', completed: false, current: false },
 ];
@@ -42,27 +54,68 @@ const EtatSortieForm = () => {
   const { data: pieces, isLoading: loadingPieces } = usePiecesByEtatId(id || '');
   const { data: releveCompteurs } = useReleveCompteursByEtatId(id || '');
   const { data: cles } = useClesByEtatId(id || '');
+  const { data: partiesPrivatives } = usePartiesPrivativesByEtatId(id || '');
+  const { data: autresEquipements } = useAutresEquipementsByEtatId(id || '');
+  const { data: equipementsEnergetiques } = useEquipementsEnergetiquesByEtatId(id || '');
+  const { data: equipementsChauffage } = useEquipementsChauffageByEtatId(id || '');
 
   // Mutations
   const updateEtatSortie = useUpdateEtatSortie();
   const updateReleveCompteurs = useUpdateReleveCompteurs();
   const updatePiece = useUpdatePiece();
   const updateCles = useUpdateCles();
+  const updatePartiePrivative = useUpdatePartiePrivative();
+  const updateAutreEquipement = useUpdateAutreEquipement();
+  const updateEquipementsEnergetiques = useUpdateEquipementsEnergetiques();
+  const updateEquipementsChauffage = useUpdateEquipementsChauffage();
 
   // État local pour les formulaires
   const [releveData, setReleveData] = useState({
+    nom_ancien_occupant: '',
+    electricite_n_compteur: '',
     electricite_h_pleines: '',
     electricite_h_creuses: '',
+    gaz_naturel_n_compteur: '',
     gaz_naturel_releve: '',
     eau_chaude_m3: '',
     eau_froide_m3: '',
+  });
+
+  const [equipementsEnergetiquesData, setEquipementsEnergetiquesData] = useState({
+    chauffage_type: '',
+    eau_chaude_type: '',
+  });
+
+  const [equipementsChauffageData, setEquipementsChauffageData] = useState({
+    chaudiere_etat: '',
+    chaudiere_date_dernier_entretien: '',
+    ballon_eau_chaude_etat: '',
   });
 
   const [clesData, setClesData] = useState([
     { type_cle_badge: 'Appartement', nombre: 0, commentaires: '' },
     { type_cle_badge: 'Boîte aux lettres', nombre: 0, commentaires: '' },
     { type_cle_badge: 'Badge accès', nombre: 0, commentaires: '' },
+    { type_cle_badge: 'Cave', nombre: 0, commentaires: '' },
+    { type_cle_badge: 'Parking', nombre: 0, commentaires: '' },
   ]);
+
+  const [partiesPrivativesData, setPartiesPrivativesData] = useState([
+    { type_partie: 'Cave', etat_sortie: '', numero: '', commentaires: '' },
+    { type_partie: 'Parking / Box / Garage', etat_sortie: '', numero: '', commentaires: '' },
+    { type_partie: 'Jardin', etat_sortie: '', numero: '', commentaires: '' },
+    { type_partie: 'Balcon / Terrasse', etat_sortie: '', numero: '', commentaires: '' },
+  ]);
+
+  const [autresEquipementsData, setAutresEquipementsData] = useState([
+    { equipement: 'Sonnette / Interphone', etat_sortie: '', commentaires: '' },
+    { equipement: 'Boîte aux lettres', etat_sortie: '', commentaires: '' },
+    { equipement: 'Internet', etat_sortie: '', commentaires: '' },
+    { equipement: 'Antenne TV', etat_sortie: '', commentaires: '' },
+    { equipement: 'Digicode', etat_sortie: '', commentaires: '' },
+  ]);
+
+  const [piecesData, setPiecesData] = useState<{ [key: string]: any }>({});
 
   useEffect(() => {
     if (etatDesLieux?.date_sortie) {
@@ -73,14 +126,105 @@ const EtatSortieForm = () => {
   useEffect(() => {
     if (releveCompteurs) {
       setReleveData({
+        nom_ancien_occupant: releveCompteurs.nom_ancien_occupant || '',
+        electricite_n_compteur: releveCompteurs.electricite_n_compteur || '',
         electricite_h_pleines: releveCompteurs.electricite_h_pleines || '',
         electricite_h_creuses: releveCompteurs.electricite_h_creuses || '',
+        gaz_naturel_n_compteur: releveCompteurs.gaz_naturel_n_compteur || '',
         gaz_naturel_releve: releveCompteurs.gaz_naturel_releve || '',
         eau_chaude_m3: releveCompteurs.eau_chaude_m3 || '',
         eau_froide_m3: releveCompteurs.eau_froide_m3 || '',
       });
     }
   }, [releveCompteurs]);
+
+  useEffect(() => {
+    if (equipementsEnergetiques) {
+      setEquipementsEnergetiquesData({
+        chauffage_type: equipementsEnergetiques.chauffage_type || '',
+        eau_chaude_type: equipementsEnergetiques.eau_chaude_type || '',
+      });
+    }
+  }, [equipementsEnergetiques]);
+
+  useEffect(() => {
+    if (equipementsChauffage) {
+      setEquipementsChauffageData({
+        chaudiere_etat: equipementsChauffage.chaudiere_etat || '',
+        chaudiere_date_dernier_entretien: equipementsChauffage.chaudiere_date_dernier_entretien || '',
+        ballon_eau_chaude_etat: equipementsChauffage.ballon_eau_chaude_etat || '',
+      });
+    }
+  }, [equipementsChauffage]);
+
+  useEffect(() => {
+    if (cles) {
+      const updatedClesData = clesData.map(defaultCle => {
+        const savedCle = cles.find(c => c.type_cle_badge === defaultCle.type_cle_badge);
+        return savedCle ? {
+          type_cle_badge: savedCle.type_cle_badge,
+          nombre: savedCle.nombre || 0,
+          commentaires: savedCle.commentaires || ''
+        } : defaultCle;
+      });
+      setClesData(updatedClesData);
+    }
+  }, [cles]);
+
+  useEffect(() => {
+    if (partiesPrivatives) {
+      const updatedPartiesData = partiesPrivativesData.map(defaultPartie => {
+        const savedPartie = partiesPrivatives.find(p => p.type_partie === defaultPartie.type_partie);
+        return savedPartie ? {
+          type_partie: savedPartie.type_partie,
+          etat_sortie: savedPartie.etat_sortie || '',
+          numero: savedPartie.numero || '',
+          commentaires: savedPartie.commentaires || ''
+        } : defaultPartie;
+      });
+      setPartiesPrivativesData(updatedPartiesData);
+    }
+  }, [partiesPrivatives]);
+
+  useEffect(() => {
+    if (autresEquipements) {
+      const updatedEquipementsData = autresEquipementsData.map(defaultEquip => {
+        const savedEquip = autresEquipements.find(e => e.equipement === defaultEquip.equipement);
+        return savedEquip ? {
+          equipement: savedEquip.equipement,
+          etat_sortie: savedEquip.etat_sortie || '',
+          commentaires: savedEquip.commentaires || ''
+        } : defaultEquip;
+      });
+      setAutresEquipementsData(updatedEquipementsData);
+    }
+  }, [autresEquipements]);
+
+  useEffect(() => {
+    if (pieces) {
+      const initialPiecesData: { [key: string]: any } = {};
+      pieces.forEach(piece => {
+        initialPiecesData[piece.id] = {
+          revetements_sols_sortie: piece.revetements_sols_sortie || '',
+          murs_menuiseries_sortie: piece.murs_menuiseries_sortie || '',
+          plafond_sortie: piece.plafond_sortie || '',
+          electricite_plomberie_sortie: piece.electricite_plomberie_sortie || '',
+          placards_sortie: piece.placards_sortie || '',
+          sanitaires_sortie: piece.sanitaires_sortie || '',
+          menuiseries_sortie: piece.menuiseries_sortie || '',
+          rangements_sortie: piece.rangements_sortie || '',
+          baignoire_douche_sortie: piece.baignoire_douche_sortie || '',
+          eviers_robinetterie_sortie: piece.eviers_robinetterie_sortie || '',
+          chauffage_tuyauterie_sortie: piece.chauffage_tuyauterie_sortie || '',
+          meubles_cuisine_sortie: piece.meubles_cuisine_sortie || '',
+          hotte_sortie: piece.hotte_sortie || '',
+          plaque_cuisson_sortie: piece.plaque_cuisson_sortie || '',
+          commentaires: piece.commentaires || '',
+        };
+      });
+      setPiecesData(initialPiecesData);
+    }
+  }, [pieces]);
 
   if (loadingEtat || loadingPieces) {
     return (
@@ -112,8 +256,8 @@ const EtatSortieForm = () => {
       setCurrentStep(newStep);
       updateSteps(newStep);
       toast({
-        title: "Étape sauvegardée",
-        description: "Vos données ont été enregistrées avec succès.",
+        title: "Étape suivante",
+        description: `Vous êtes maintenant à l'étape: ${steps[newStep].title}`,
       });
     }
   };
@@ -127,7 +271,6 @@ const EtatSortieForm = () => {
   };
 
   const handleSaveEtat = async () => {
-    // La date de sortie est facultative, donc on sauvegarde même si elle est vide
     if (id) {
       try {
         await updateEtatSortie.mutateAsync({ id, date_sortie: dateSortie || null });
@@ -146,7 +289,6 @@ const EtatSortieForm = () => {
   };
 
   const handleSaveReleve = async () => {
-    // Les relevés de compteurs sont facultatifs
     if (id) {
       try {
         await updateReleveCompteurs.mutateAsync({
@@ -167,40 +309,143 @@ const EtatSortieForm = () => {
     }
   };
 
+  const handleSaveEquipementsEnergetiques = async () => {
+    if (id) {
+      try {
+        await updateEquipementsEnergetiques.mutateAsync({
+          etat_des_lieux_id: id,
+          ...equipementsEnergetiquesData,
+        });
+        await updateEquipementsChauffage.mutateAsync({
+          etat_des_lieux_id: id,
+          ...equipementsChauffageData,
+        });
+        toast({
+          title: "Équipements sauvegardés",
+          description: "Les informations sur les équipements ont été enregistrées.",
+        });
+      } catch (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de sauvegarder les équipements.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleSavePiece = async (pieceId: string) => {
+    try {
+      await updatePiece.mutateAsync({
+        id: pieceId,
+        ...piecesData[pieceId],
+      });
+      toast({
+        title: "Pièce sauvegardée",
+        description: "L'état de la pièce a été enregistré avec succès.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder l'état de la pièce.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveCles = async () => {
+    if (id) {
+      try {
+        await Promise.all(clesData.map(cle => 
+          updateCles.mutateAsync({
+            etat_des_lieux_id: id,
+            ...cle
+          })
+        );
+        toast({
+          title: "Clés sauvegardées",
+          description: "Les informations sur les clés ont été enregistrées.",
+        });
+      } catch (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de sauvegarder les informations sur les clés.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleSavePartiesPrivatives = async () => {
+    if (id) {
+      try {
+        await Promise.all(partiesPrivativesData.map(partie => 
+          updatePartiePrivative.mutateAsync({
+            etat_des_lieux_id: id,
+            ...partie
+          })
+        );
+        toast({
+          title: "Parties privatives sauvegardées",
+          description: "Les informations sur les parties privatives ont été enregistrées.",
+        });
+      } catch (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de sauvegarder les parties privatives.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleSaveAutresEquipements = async () => {
+    if (id) {
+      try {
+        await Promise.all(autresEquipementsData.map(equipement => 
+          updateAutreEquipement.mutateAsync({
+            etat_des_lieux_id: id,
+            ...equipement
+          })
+        );
+        toast({
+          title: "Équipements sauvegardés",
+          description: "Les informations sur les autres équipements ont été enregistrées.",
+        });
+      } catch (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de sauvegarder les autres équipements.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   const handleFinalize = async () => {
-    setFormErrors({}); // Clear previous errors
+    setFormErrors({});
     let errors: { [key: string]: string } = {};
 
-    // La validation de la checkbox reste obligatoire pour finaliser
     if (!isValidated) {
       errors.validation = "La case de validation doit être cochée pour finaliser.";
     }
 
-    // Le type de bien (via adresse_bien) est obligatoire
     if (!etatDesLieux?.adresse_bien) {
-      errors.adresse_bien = "L'adresse du bien (et donc le type de bien) est requise pour finaliser.";
+      errors.adresse_bien = "L'adresse du bien est requise pour finaliser.";
     }
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      if (errors.validation) {
+      Object.values(errors).forEach(error => {
         toast({
           title: "Validation requise",
-          description: errors.validation,
+          description: error,
           variant: "destructive",
         });
-      }
-      if (errors.adresse_bien) {
-        toast({
-          title: "Information manquante",
-          description: errors.adresse_bien,
-          variant: "destructive",
-        });
-      }
+      });
       return;
     }
 
-    // Si la date de sortie n'est pas renseignée, utiliser la date du jour.
     const finalDateSortie = dateSortie || new Date().toISOString().split('T')[0];
 
     if (id) {
@@ -216,14 +461,13 @@ const EtatSortieForm = () => {
           description: "L'état des lieux de sortie a été finalisé avec succès.",
         });
         
-        // Rediriger vers le dashboard après finalisation
         setTimeout(() => {
           window.location.href = '/';
         }, 2000);
       } catch (error) {
         toast({
           title: "Erreur lors de la finalisation",
-          description: "Impossible de finaliser l'état des lieux. Veuillez vérifier les informations ou contacter le support.",
+          description: "Impossible de finaliser l'état des lieux.",
           variant: "destructive",
         });
       }
@@ -238,19 +482,23 @@ const EtatSortieForm = () => {
             <CardHeader>
               <CardTitle>Informations générales</CardTitle>
               <CardDescription>
-                Vérifiez les informations du bien. La date de sortie est facultative ici ; si non renseignée, elle sera automatiquement mise à la date du jour lors de la finalisation.
+                Vérifiez les informations du bien. La date de sortie est facultative.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label>Adresse du bien (Requis pour finalisation)</Label>
+                  <Label>Adresse du bien (Requis)</Label>
                   <Input value={etatDesLieux.adresse_bien} disabled className={formErrors.adresse_bien ? 'border-red-500' : ''} />
                   {formErrors.adresse_bien && <p className="text-sm text-red-600 mt-1">{formErrors.adresse_bien}</p>}
                 </div>
                 <div>
                   <Label>Locataire</Label>
                   <Input value={etatDesLieux.locataire_nom || ''} disabled />
+                </div>
+                <div>
+                  <Label>Bailleur</Label>
+                  <Input value={etatDesLieux.bailleur_nom || ''} disabled />
                 </div>
                 <div>
                   <Label>Date d'entrée</Label>
@@ -263,7 +511,7 @@ const EtatSortieForm = () => {
                     type="date" 
                     value={dateSortie}
                     onChange={(e) => setDateSortie(e.target.value)}
-                    placeholder="Optionnel - Date du jour si non remplie à la finalisation"
+                    placeholder="Date du jour si non remplie à la finalisation"
                   />
                 </div>
               </div>
@@ -280,11 +528,35 @@ const EtatSortieForm = () => {
             <CardHeader>
               <CardTitle>Relevé des compteurs (Facultatif)</CardTitle>
               <CardDescription>
-                Saisissez les index des compteurs au moment de la sortie. Cette étape est entièrement facultative.
+                Saisissez les index des compteurs au moment de la sortie.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="ancien_occupant">Nom ancien occupant</Label>
+                  <Input 
+                    id="ancien_occupant"
+                    value={releveData.nom_ancien_occupant}
+                    onChange={(e) => setReleveData(prev => ({
+                      ...prev,
+                      nom_ancien_occupant: e.target.value
+                    }))}
+                    placeholder="Optionnel"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="elec_compteur">N° compteur électricité</Label>
+                  <Input 
+                    id="elec_compteur"
+                    value={releveData.electricite_n_compteur}
+                    onChange={(e) => setReleveData(prev => ({
+                      ...prev,
+                      electricite_n_compteur: e.target.value
+                    }))}
+                    placeholder="Optionnel"
+                  />
+                </div>
                 <div>
                   <Label htmlFor="elec_pleines">Électricité - Heures pleines</Label>
                   <Input 
@@ -305,6 +577,18 @@ const EtatSortieForm = () => {
                     onChange={(e) => setReleveData(prev => ({
                       ...prev,
                       electricite_h_creuses: e.target.value
+                    }))}
+                    placeholder="Optionnel"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="gaz_compteur">N° compteur gaz</Label>
+                  <Input 
+                    id="gaz_compteur"
+                    value={releveData.gaz_naturel_n_compteur}
+                    onChange={(e) => setReleveData(prev => ({
+                      ...prev,
+                      gaz_naturel_n_compteur: e.target.value
                     }))}
                     placeholder="Optionnel"
                   />
@@ -347,20 +631,119 @@ const EtatSortieForm = () => {
                 </div>
               </div>
               <Button onClick={handleSaveReleve}>
-                Sauvegarder le relevé (si renseigné)
+                Sauvegarder le relevé
               </Button>
             </CardContent>
           </Card>
         );
 
-      case 2: // État des pièces
+      case 2: // Équipements énergétiques
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Équipements énergétiques (Facultatif)</CardTitle>
+              <CardDescription>
+                Informations sur le chauffage et les équipements énergétiques.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="chauffage_type">Type de chauffage</Label>
+                  <Select value={equipementsEnergetiquesData.chauffage_type} onValueChange={(value) => 
+                    setEquipementsEnergetiquesData(prev => ({ ...prev, chauffage_type: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner le type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Non renseigné</SelectItem>
+                      <SelectItem value="electrique">Électrique</SelectItem>
+                      <SelectItem value="gaz">Gaz</SelectItem>
+                      <SelectItem value="collectif">Collectif</SelectItem>
+                      <SelectItem value="autre">Autre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="eau_chaude_type">Type eau chaude</Label>
+                  <Select value={equipementsEnergetiquesData.eau_chaude_type} onValueChange={(value) => 
+                    setEquipementsEnergetiquesData(prev => ({ ...prev, eau_chaude_type: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner le type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Non renseigné</SelectItem>
+                      <SelectItem value="electrique">Électrique</SelectItem>
+                      <SelectItem value="gaz">Gaz</SelectItem>
+                      <SelectItem value="collectif">Collectif</SelectItem>
+                      <SelectItem value="autre">Autre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="chaudiere_etat">État de la chaudière</Label>
+                  <Select value={equipementsChauffageData.chaudiere_etat} onValueChange={(value) => 
+                    setEquipementsChauffageData(prev => ({ ...prev, chaudiere_etat: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner l'état" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Non renseigné</SelectItem>
+                      <SelectItem value="excellent">Excellent état</SelectItem>
+                      <SelectItem value="bon">Bon état</SelectItem>
+                      <SelectItem value="moyen">État moyen</SelectItem>
+                      <SelectItem value="mauvais">Mauvais état</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="chaudiere_entretien">Dernier entretien chaudière</Label>
+                  <Input 
+                    id="chaudiere_entretien"
+                    type="date"
+                    value={equipementsChauffageData.chaudiere_date_dernier_entretien}
+                    onChange={(e) => setEquipementsChauffageData(prev => ({
+                      ...prev,
+                      chaudiere_date_dernier_entretien: e.target.value
+                    }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="ballon_etat">État du ballon eau chaude</Label>
+                  <Select value={equipementsChauffageData.ballon_eau_chaude_etat} onValueChange={(value) => 
+                    setEquipementsChauffageData(prev => ({ ...prev, ballon_eau_chaude_etat: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner l'état" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Non renseigné</SelectItem>
+                      <SelectItem value="excellent">Excellent état</SelectItem>
+                      <SelectItem value="bon">Bon état</SelectItem>
+                      <SelectItem value="moyen">État moyen</SelectItem>
+                      <SelectItem value="mauvais">Mauvais état</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button onClick={handleSaveEquipementsEnergetiques}>
+                Sauvegarder les équipements
+              </Button>
+            </CardContent>
+          </Card>
+        );
+
+      case 3: // État des pièces
         return (
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>État des pièces (Facultatif)</CardTitle>
                 <CardDescription>
-                  Comparez l'état d'entrée avec l'état de sortie. Cette étape est entièrement facultative.
+                  Comparez l'état d'entrée avec l'état de sortie pour chaque pièce.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -391,17 +774,31 @@ const EtatSortieForm = () => {
                           <Input value={piece.plafond_entree} disabled className="bg-slate-50" />
                         </div>
                       )}
+                      {piece.electricite_plomberie_entree && (
+                        <div>
+                          <Label className="text-sm text-slate-600">Électricité/Plomberie</Label>
+                          <Input value={piece.electricite_plomberie_entree} disabled className="bg-slate-50" />
+                        </div>
+                      )}
+                      {/* Afficher les autres champs d'entrée selon le type de pièce */}
                     </div>
                     
                     <div className="space-y-4">
                       <h4 className="font-medium text-slate-900">État de sortie (Facultatif)</h4>
                       <div>
                         <Label className="text-sm">Revêtements sols</Label>
-                        <Select defaultValue={piece.revetements_sols_sortie || ''}
-                          // onChange pour sauvegarder si besoin, ou laisser pour un bouton global "Sauvegarder pièces"
+                        <Select
+                          value={piecesData[piece.id]?.revetements_sols_sortie || ''}
+                          onValueChange={(value) => setPiecesData(prev => ({
+                            ...prev,
+                            [piece.id]: {
+                              ...prev[piece.id],
+                              revetements_sols_sortie: value
+                            }
+                          }))}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner l'état (Optionnel)" />
+                            <SelectValue placeholder="Sélectionner l'état" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="">Non renseigné</SelectItem>
@@ -413,13 +810,22 @@ const EtatSortieForm = () => {
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-sm">Murs menuiseries</Label>
-                        <Select defaultValue={piece.murs_menuiseries_sortie || ''}>
+                        <Label className="text-sm">Murs et menuiseries</Label>
+                        <Select
+                          value={piecesData[piece.id]?.murs_menuiseries_sortie || ''}
+                          onValueChange={(value) => setPiecesData(prev => ({
+                            ...prev,
+                            [piece.id]: {
+                              ...prev[piece.id],
+                              murs_menuiseries_sortie: value
+                            }
+                          }))}
+                        >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner l'état (Optionnel)" />
+                            <SelectValue placeholder="Sélectionner l'état" />
                           </SelectTrigger>
                           <SelectContent>
-                           <SelectItem value="">Non renseigné</SelectItem>
+                            <SelectItem value="">Non renseigné</SelectItem>
                             <SelectItem value="excellent">Excellent état</SelectItem>
                             <SelectItem value="bon">Bon état</SelectItem>
                             <SelectItem value="moyen">État moyen</SelectItem>
@@ -429,9 +835,18 @@ const EtatSortieForm = () => {
                       </div>
                       <div>
                         <Label className="text-sm">Plafond</Label>
-                        <Select defaultValue={piece.plafond_sortie || ''}>
+                        <Select
+                          value={piecesData[piece.id]?.plafond_sortie || ''}
+                          onValueChange={(value) => setPiecesData(prev => ({
+                            ...prev,
+                            [piece.id]: {
+                              ...prev[piece.id],
+                              plafond_sortie: value
+                            }
+                          }))}
+                        >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner l'état (Optionnel)" />
+                            <SelectValue placeholder="Sélectionner l'état" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="">Non renseigné</SelectItem>
@@ -441,168 +856,4 @@ const EtatSortieForm = () => {
                             <SelectItem value="mauvais">Mauvais état</SelectItem>
                           </SelectContent>
                         </Select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-slate-900">Commentaires (Facultatif)</h4>
-                      <Textarea 
-                        placeholder="Observations particulières (Optionnel)..."
-                        className="min-h-[200px]"
-                        defaultValue={piece.commentaires || ''}
-                         // onChange pour sauvegarder si besoin
-                      />
-                    </div>
-                  </div>
-                  {/* Ajouter un bouton de sauvegarde par pièce si nécessaire ou un global */}
-                </CardContent>
-              </Card>
-            ))}
-             {/* <Button onClick={handleSavePieces}>Sauvegarder État des Pièces</Button> */}
-          </div>
-        );
-
-      case 3: // Remise des clés
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Remise des clés (Facultatif)</CardTitle>
-              <CardDescription>
-                Vérifiez la restitution de toutes les clés et badges. Cette étape est entièrement facultative.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {clesData.map((cle, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg">
-                  <div>
-                    <Label>{cle.type_cle_badge}</Label>
-                  </div>
-                  <div>
-                    <Label htmlFor={`cle_${index}_nombre`}>Nombre (Optionnel)</Label>
-                    <Input 
-                      id={`cle_${index}_nombre`}
-                      type="number" 
-                      min="0"
-                      value={cle.nombre}
-                      onChange={(e) => {
-                        const newClesData = [...clesData];
-                        newClesData[index].nombre = parseInt(e.target.value) || 0;
-                        setClesData(newClesData);
-                      }}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor={`cle_${index}_commentaires`}>Commentaires (Optionnel)</Label>
-                    <Input 
-                      id={`cle_${index}_commentaires`}
-                      value={cle.commentaires}
-                      onChange={(e) => {
-                        const newClesData = [...clesData];
-                        newClesData[index].commentaires = e.target.value;
-                        setClesData(newClesData);
-                      }}
-                      placeholder="Ex: Clé de la cave"
-                    />
-                  </div>
-                </div>
-              ))}
-              {/* <Button onClick={handleSaveCles}>Sauvegarder Remise des Clés</Button> */}
-            </CardContent>
-          </Card>
-        );
-
-      case 4: // Validation
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Validation de l'état des lieux</CardTitle>
-              <CardDescription>
-                Vérifiez toutes les informations avant la validation finale
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-slate-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Résumé</h4>
-                <div className="space-y-2 text-sm">
-                  <p><strong>Bien :</strong> {etatDesLieux.adresse_bien}</p>
-                  <p><strong>Locataire :</strong> {etatDesLieux.locataire_nom}</p>
-                  <p><strong>Date de sortie :</strong> {dateSortie || 'Non renseignée'}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="validation"
-                    className={`rounded ${formErrors.validation ? 'border-red-500' : ''}`}
-                  checked={isValidated}
-                    onChange={(e) => {
-                      setIsValidated(e.target.checked);
-                      if (e.target.checked && formErrors.validation) {
-                        // Clear validation error if checkbox is checked
-                        setFormErrors(prev => ({ ...prev, validation: '' }));
-                      }
-                    }}
-                />
-                  <Label htmlFor="validation" className={formErrors.validation ? 'text-red-600' : ''}>
-                  Je certifie que toutes les informations renseignées sont exactes et que l'état des lieux a été réalisé en présence du locataire.
-                </Label>
-              </div>
-                {formErrors.validation && <p className="text-sm text-red-600 mt-1">{formErrors.validation}</p>}
-            </CardContent>
-          </Card>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold text-slate-900 mb-2">
-          État des lieux de sortie
-        </h2>
-        <p className="text-slate-600">
-          {etatDesLieux.adresse_bien} - {etatDesLieux.locataire_nom}
-        </p>
-      </div>
-
-      <FormProgress steps={steps} />
-
-      <div className="min-h-[400px]">
-        {renderStepContent()}
-      </div>
-
-      <div className="flex justify-between">
-        <Button 
-          variant="outline" 
-          onClick={prevStep}
-          disabled={currentStep === 0}
-        >
-          Précédent
-        </Button>
-        
-        <div className="space-x-2">
-          {currentStep === steps.length - 1 ? (
-            <Button 
-              className="bg-green-600 hover:bg-green-700"
-              onClick={handleFinalize}
-              disabled={!isValidated || updateEtatSortie.isPending}
-            >
-              {updateEtatSortie.isPending ? 'Finalisation...' : 'Finaliser l\'état des lieux'}
-            </Button>
-          ) : (
-            <Button onClick={nextStep}>
-              Suivant
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default EtatSortieForm;
+                      </
