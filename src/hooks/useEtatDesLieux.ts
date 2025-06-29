@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
@@ -9,6 +8,8 @@ export interface EtatDesLieux {
   date_sortie?: string | null;
   adresse_bien: string; // Required
   statut?: string | null;
+  type_etat_des_lieux: 'entree' | 'sortie'; // Required - Type of inventory
+  type_bien: 'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires'; // Required - Type of property
   bailleur_nom?: string | null;
   bailleur_adresse?: string | null;
   locataire_nom?: string | null;

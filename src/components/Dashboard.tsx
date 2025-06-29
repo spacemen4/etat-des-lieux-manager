@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, User, FileText, Loader2 } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, Loader2, Building2 } from 'lucide-react';
 import { useEtatDesLieux } from '@/hooks/useEtatDesLieux';
 
 const Dashboard = () => {
@@ -27,6 +28,20 @@ const Dashboard = () => {
 
   const etatsEnCours = etatsDesLieux?.filter(e => !e.date_sortie) || [];
   const etatsTermines = etatsDesLieux?.filter(e => e.date_sortie) || [];
+
+  const getTypeBienLabel = (typeBien: string) => {
+    const labels: Record<string, string> = {
+      'studio': 'Studio',
+      't2_t3': 'T2 - T3',
+      't4_t5': 'T4 - T5',
+      'inventaire_mobilier': 'Inventaire mobilier',
+      'bureau': 'Bureau',
+      'local_commercial': 'Local commercial',
+      'garage_box': 'Garage / Box',
+      'pieces_supplementaires': 'Pièces supplémentaires'
+    };
+    return labels[typeBien] || typeBien;
+  };
 
   return (
     <div className="space-y-8">
@@ -126,6 +141,10 @@ const Dashboard = () => {
                         <User className="h-4 w-4 text-slate-500" />
                         <span className="text-slate-600">{etat.locataire_nom || 'Non renseigné'}</span>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-slate-500" />
+                        <span className="text-slate-600">{getTypeBienLabel(etat.type_bien)}</span>
+                      </div>
                       <div className="flex items-center gap-4 text-sm text-slate-500">
                         {etat.date_entree && (
                           <span>Entrée: {new Date(etat.date_entree).toLocaleDateString()}</span>
@@ -135,11 +154,16 @@ const Dashboard = () => {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={!etat.date_sortie ? "default" : "secondary"}>
-                        {!etat.date_sortie ? "En cours" : "Terminé"}
-                      </Badge>
-                      {!etat.date_sortie && (
+                    <div className="flex items-center gap-2 flex-col">
+                      <div className="flex gap-2">
+                        <Badge variant={etat.type_etat_des_lieux === 'entree' ? "default" : "secondary"}>
+                          {etat.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}
+                        </Badge>
+                        <Badge variant={!etat.date_sortie ? "default" : "secondary"}>
+                          {!etat.date_sortie ? "En cours" : "Terminé"}
+                        </Badge>
+                      </div>
+                      {!etat.date_sortie && etat.type_etat_des_lieux === 'entree' && (
                         <Button size="sm" asChild>
                           <a href={`/sortie/${etat.id}`}>Faire l'état de sortie</a>
                         </Button>

@@ -1,3 +1,4 @@
+
 -- This SQL DDL script defines the schema for a PostgreSQL database to manage 'état des lieux' (property inventory) forms.
 -- It is designed to be compatible with Supabase.
 
@@ -11,11 +12,16 @@ CREATE TABLE etat_des_lieux (
     date_entree DATE, -- Date of entry inventory.
     date_sortie DATE, -- Date of exit inventory.
     adresse_bien TEXT NOT NULL, -- Address of the property.
+    statut TEXT, -- Status of the inventory (e.g., 'en_cours', 'termine')
+    type_etat_des_lieux TEXT NOT NULL CHECK (type_etat_des_lieux IN ('entree', 'sortie')), -- Type of inventory: entry or exit
+    type_bien TEXT NOT NULL CHECK (type_bien IN ('studio', 't2_t3', 't4_t5', 'inventaire_mobilier', 'bureau', 'local_commercial', 'garage_box', 'pieces_supplementaires')), -- Type of property
     bailleur_nom TEXT, -- Name of the landlord or their representative.
     bailleur_adresse TEXT, -- Address of the landlord or their representative.
     locataire_nom TEXT, -- Name of the tenant(s).
     locataire_adresse TEXT -- Address of the tenant(s).
 );
+
+-- ... keep existing code (all other tables remain unchanged)
 
 -- Table: releve_compteurs
 -- Stores meter readings for electricity, gas, and water.

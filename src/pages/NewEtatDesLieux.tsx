@@ -9,10 +9,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import EtatDesLieuxTypeSelector from '@/components/EtatDesLieuxTypeSelector';
 
 const NewEtatDesLieux = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [typeEtatDesLieux, setTypeEtatDesLieux] = useState<'entree' | 'sortie'>('entree');
+  const [typeBien, setTypeBien] = useState<'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires'>('studio');
   const [formData, setFormData] = useState({
     date_entree: '',
     adresse_bien: '',
@@ -44,12 +47,15 @@ const NewEtatDesLieux = () => {
       const { data, error } = await supabase
         .from('etat_des_lieux')
         .insert([{
+          type_etat_des_lieux: typeEtatDesLieux,
+          type_bien: typeBien,
           date_entree: formData.date_entree || null,
           adresse_bien: formData.adresse_bien,
           bailleur_nom: formData.bailleur_nom || null,
           bailleur_adresse: formData.bailleur_adresse || null,
           locataire_nom: formData.locataire_nom || null,
-          locataire_adresse: formData.locataire_adresse || null
+          locataire_adresse: formData.locataire_adresse || null,
+          statut: 'en_cours'
         }])
         .select()
         .single();
@@ -57,7 +63,13 @@ const NewEtatDesLieux = () => {
       if (error) throw error;
 
       toast.success('État des lieux créé avec succès');
-      navigate('/');
+      
+      // Redirect based on the type of inventory
+      if (typeEtatDesLieux === 'sortie') {
+        navigate(`/sortie/${data.id}`);
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       console.error('Erreur lors de la création:', error);
       toast.error('Erreur lors de la création de l\'état des lieux');
@@ -82,10 +94,17 @@ const NewEtatDesLieux = () => {
             Nouvel état des lieux
           </h2>
           <p className="text-slate-600">
-            Créer un nouvel état des lieux d'entrée
+            Sélectionnez le type d'état des lieux et de bien
           </p>
         </div>
       </div>
+
+      <EtatDesLieuxTypeSelector
+        typeEtatDesLieux={typeEtatDesLieux}
+        typeBien={typeBien}
+        onTypeEtatDesLieuxChange={setTypeEtatDesLieux}
+        onTypeBienChange={setTypeBien}
+      />
 
       <Card>
         <CardHeader>
@@ -95,7 +114,9 @@ const NewEtatDesLieux = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="date_entree">Date d'entrée</Label>
+                <Label htmlFor="date_entree">
+                  {typeEtatDesLieux === 'entree' ? 'Date d\'entrée' : 'Date de sortie'}
+                </Label>
                 <Input
                   id="date_entree"
                   name="date_entree"
