@@ -24,6 +24,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
   });
 
   useEffect(() => {
+    console.log('ReleveCompteursStep - useEffect triggered. releveCompteurs:', releveCompteurs);
     if (releveCompteurs) {
       const newFormData = {
         electricite_h_pleines: releveCompteurs.electricite_h_pleines || '',
