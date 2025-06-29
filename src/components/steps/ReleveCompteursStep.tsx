@@ -82,18 +82,21 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     try {
       // Conversion des valeurs en nombres ou null si vide
       const payload = {
+        // Include the id if updating existing record
+        ...(releveCompteurs?.id && { id: releveCompteurs.id }),
         etat_des_lieux_id: etatId,
-        electricite_h_pleines: formData.electricite_h_pleines ? Number(formData.electricite_h_pleines) : null,
-        electricite_h_creuses: formData.electricite_h_creuses ? Number(formData.electricite_h_creuses) : null,
-        gaz_naturel_releve: formData.gaz_naturel_releve ? Number(formData.gaz_naturel_releve) : null,
-        eau_chaude_m3: formData.eau_chaude_m3 ? Number(formData.eau_chaude_m3) : null,
-        eau_froide_m3: formData.eau_froide_m3 ? Number(formData.eau_froide_m3) : null,
+        electricite_h_pleines: formData.electricite_h_pleines ? formData.electricite_h_pleines : null,
+        electricite_h_creuses: formData.electricite_h_creuses ? formData.electricite_h_creuses : null,
+        gaz_naturel_releve: formData.gaz_naturel_releve ? formData.gaz_naturel_releve : null,
+        eau_chaude_m3: formData.eau_chaude_m3 ? formData.eau_chaude_m3 : null,
+        eau_froide_m3: formData.eau_froide_m3 ? formData.eau_froide_m3 : null,
       };
 
       await updateReleveCompteursMutation.mutateAsync(payload);
       toast.success('Relevé des compteurs sauvegardé');
       refetch();
     } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
       toast.error('Erreur lors de la sauvegarde');
     }
   };
@@ -141,9 +144,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
               </Label>
               <Input
                 id="electricite_h_pleines"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
                 value={formData.electricite_h_pleines}
                 onChange={(e) => handleInputChange('electricite_h_pleines', e.target.value)}
                 placeholder="Ex: 12345.67"
@@ -160,9 +161,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
               </Label>
               <Input
                 id="electricite_h_creuses"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
                 value={formData.electricite_h_creuses}
                 onChange={(e) => handleInputChange('electricite_h_creuses', e.target.value)}
                 placeholder="Ex: 8765.43"
@@ -188,9 +187,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
             </Label>
             <Input
               id="gaz_naturel_releve"
-              type="number"
-              step="0.01"
-              min="0"
+              type="text"
               value={formData.gaz_naturel_releve}
               onChange={(e) => handleInputChange('gaz_naturel_releve', e.target.value)}
               placeholder="Ex: 2345.12"
@@ -216,9 +213,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
               </Label>
               <Input
                 id="eau_chaude_m3"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
                 value={formData.eau_chaude_m3}
                 onChange={(e) => handleInputChange('eau_chaude_m3', e.target.value)}
                 placeholder="Ex: 123.45"
@@ -235,9 +230,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
               </Label>
               <Input
                 id="eau_froide_m3"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
                 value={formData.eau_froide_m3}
                 onChange={(e) => handleInputChange('eau_froide_m3', e.target.value)}
                 placeholder="Ex: 456.78"
@@ -264,7 +257,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
             <p className="text-sm text-red-500 mt-2 text-center">
               Veuillez corriger les erreurs avant de sauvegarder
             </p>
-          )}
+            )}
         </div>
 
         {/* Note informative */}
