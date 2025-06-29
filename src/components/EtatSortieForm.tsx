@@ -856,4 +856,592 @@ const EtatSortieForm = () => {
                             <SelectItem value="mauvais">Mauvais état</SelectItem>
                           </SelectContent>
                         </Select>
-                      </
+                      </div>
+                      <div>
+                        <Label className="text-sm">Électricité/Plomberie</Label>
+                        <Select
+                          value={piecesData[piece.id]?.electricite_plomberie_sortie || ''}
+                          onValueChange={(value) => setPiecesData(prev => ({
+                            ...prev,
+                            [piece.id]: {
+                              ...prev[piece.id],
+                              electricite_plomberie_sortie: value
+                            }
+                          }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner l'état" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Non renseigné</SelectItem>
+                            <SelectItem value="excellent">Excellent état</SelectItem>
+                            <SelectItem value="bon">Bon état</SelectItem>
+                            <SelectItem value="moyen">État moyen</SelectItem>
+                            <SelectItem value="mauvais">Mauvais état</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Champs spécifiques au type de pièce */}
+                      {(piece.nom_piece === 'Salon / Pièce à vivre' || piece.nom_piece === 'WC') && (
+                        <div>
+                          <Label className="text-sm">Placards</Label>
+                          <Select
+                            value={piecesData[piece.id]?.placards_sortie || ''}
+                            onValueChange={(value) => setPiecesData(prev => ({
+                              ...prev,
+                              [piece.id]: {
+                                ...prev[piece.id],
+                                placards_sortie: value
+                              }
+                            }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner l'état" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">Non renseigné</SelectItem>
+                              <SelectItem value="excellent">Excellent état</SelectItem>
+                              <SelectItem value="bon">Bon état</SelectItem>
+                              <SelectItem value="moyen">État moyen</SelectItem>
+                              <SelectItem value="mauvais">Mauvais état</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {piece.nom_piece === 'WC' && (
+                        <div>
+                          <Label className="text-sm">Sanitaires</Label>
+                          <Select
+                            value={piecesData[piece.id]?.sanitaires_sortie || ''}
+                            onValueChange={(value) => setPiecesData(prev => ({
+                              ...prev,
+                              [piece.id]: {
+                                ...prev[piece.id],
+                                sanitaires_sortie: value
+                              }
+                            }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner l'état" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">Non renseigné</SelectItem>
+                              <SelectItem value="excellent">Excellent état</SelectItem>
+                              <SelectItem value="bon">Bon état</SelectItem>
+                              <SelectItem value="moyen">État moyen</SelectItem>
+                              <SelectItem value="mauvais">Mauvais état</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {(piece.nom_piece === 'Salle de bain' || piece.nom_piece === 'Coin cuisine') && (
+                        <div>
+                          <Label className="text-sm">Menuiseries</Label>
+                          <Select
+                            value={piecesData[piece.id]?.menuiseries_sortie || ''}
+                            onValueChange={(value) => setPiecesData(prev => ({
+                              ...prev,
+                              [piece.id]: {
+                                ...prev[piece.id],
+                                menuiseries_sortie: value
+                              }
+                            }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner l'état" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">Non renseigné</SelectItem>
+                              <SelectItem value="excellent">Excellent état</SelectItem>
+                              <SelectItem value="bon">Bon état</SelectItem>
+                              <SelectItem value="moyen">État moyen</SelectItem>
+                              <SelectItem value="mauvais">Mauvais état</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {piece.nom_piece === 'Salle de bain' && (
+                        <>
+                          <div>
+                            <Label className="text-sm">Rangements</Label>
+                            <Select
+                              value={piecesData[piece.id]?.rangements_sortie || ''}
+                              onValueChange={(value) => setPiecesData(prev => ({
+                                ...prev,
+                                [piece.id]: {
+                                  ...prev[piece.id],
+                                  rangements_sortie: value
+                                }
+                              }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner l'état" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Non renseigné</SelectItem>
+                                <SelectItem value="excellent">Excellent état</SelectItem>
+                                <SelectItem value="bon">Bon état</SelectItem>
+                                <SelectItem value="moyen">État moyen</SelectItem>
+                                <SelectItem value="mauvais">Mauvais état</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-sm">Baignoire/Douche</Label>
+                            <Select
+                              value={piecesData[piece.id]?.baignoire_douche_sortie || ''}
+                              onValueChange={(value) => setPiecesData(prev => ({
+                                ...prev,
+                                [piece.id]: {
+                                  ...prev[piece.id],
+                                  baignoire_douche_sortie: value
+                                }
+                              }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner l'état" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Non renseigné</SelectItem>
+                                <SelectItem value="excellent">Excellent état</SelectItem>
+                                <SelectItem value="bon">Bon état</SelectItem>
+                                <SelectItem value="moyen">État moyen</SelectItem>
+                                <SelectItem value="mauvais">Mauvais état</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                           <div>
+                            <Label className="text-sm">Éviers/Robinetterie</Label>
+                            <Select
+                              value={piecesData[piece.id]?.eviers_robinetterie_sortie || ''}
+                              onValueChange={(value) => setPiecesData(prev => ({
+                                ...prev,
+                                [piece.id]: {
+                                  ...prev[piece.id],
+                                  eviers_robinetterie_sortie: value
+                                }
+                              }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner l'état" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Non renseigné</SelectItem>
+                                <SelectItem value="excellent">Excellent état</SelectItem>
+                                <SelectItem value="bon">Bon état</SelectItem>
+                                <SelectItem value="moyen">État moyen</SelectItem>
+                                <SelectItem value="mauvais">Mauvais état</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </>
+                      )}
+
+                      {piece.nom_piece === 'Coin cuisine' && (
+                        <>
+                          <div>
+                            <Label className="text-sm">Éviers/Robinetterie</Label>
+                            <Select
+                              value={piecesData[piece.id]?.eviers_robinetterie_sortie || ''}
+                              onValueChange={(value) => setPiecesData(prev => ({
+                                ...prev,
+                                [piece.id]: {
+                                  ...prev[piece.id],
+                                  eviers_robinetterie_sortie: value
+                                }
+                              }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner l'état" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Non renseigné</SelectItem>
+                                <SelectItem value="excellent">Excellent état</SelectItem>
+                                <SelectItem value="bon">Bon état</SelectItem>
+                                <SelectItem value="moyen">État moyen</SelectItem>
+                                <SelectItem value="mauvais">Mauvais état</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-sm">Chauffage/Tuyauterie</Label>
+                            <Select
+                              value={piecesData[piece.id]?.chauffage_tuyauterie_sortie || ''}
+                              onValueChange={(value) => setPiecesData(prev => ({
+                                ...prev,
+                                [piece.id]: {
+                                  ...prev[piece.id],
+                                  chauffage_tuyauterie_sortie: value
+                                }
+                              }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner l'état" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Non renseigné</SelectItem>
+                                <SelectItem value="excellent">Excellent état</SelectItem>
+                                <SelectItem value="bon">Bon état</SelectItem>
+                                <SelectItem value="moyen">État moyen</SelectItem>
+                                <SelectItem value="mauvais">Mauvais état</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-sm">Meubles de cuisine</Label>
+                            <Select
+                              value={piecesData[piece.id]?.meubles_cuisine_sortie || ''}
+                              onValueChange={(value) => setPiecesData(prev => ({
+                                ...prev,
+                                [piece.id]: {
+                                  ...prev[piece.id],
+                                  meubles_cuisine_sortie: value
+                                }
+                              }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner l'état" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Non renseigné</SelectItem>
+                                <SelectItem value="excellent">Excellent état</SelectItem>
+                                <SelectItem value="bon">Bon état</SelectItem>
+                                <SelectItem value="moyen">État moyen</SelectItem>
+                                <SelectItem value="mauvais">Mauvais état</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-sm">Hotte</Label>
+                            <Select
+                              value={piecesData[piece.id]?.hotte_sortie || ''}
+                              onValueChange={(value) => setPiecesData(prev => ({
+                                ...prev,
+                                [piece.id]: {
+                                  ...prev[piece.id],
+                                  hotte_sortie: value
+                                }
+                              }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner l'état" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Non renseigné</SelectItem>
+                                <SelectItem value="excellent">Excellent état</SelectItem>
+                                <SelectItem value="bon">Bon état</SelectItem>
+                                <SelectItem value="moyen">État moyen</SelectItem>
+                                <SelectItem value="mauvais">Mauvais état</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-sm">Plaque de cuisson</Label>
+                            <Select
+                              value={piecesData[piece.id]?.plaque_cuisson_sortie || ''}
+                              onValueChange={(value) => setPiecesData(prev => ({
+                                ...prev,
+                                [piece.id]: {
+                                  ...prev[piece.id],
+                                  plaque_cuisson_sortie: value
+                                }
+                              }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner l'état" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Non renseigné</SelectItem>
+                                <SelectItem value="excellent">Excellent état</SelectItem>
+                                <SelectItem value="bon">Bon état</SelectItem>
+                                <SelectItem value="moyen">État moyen</SelectItem>
+                                <SelectItem value="mauvais">Mauvais état</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="space-y-4 lg:col-span-1"> {/* Commentaires sur une colonne */}
+                       <h4 className="font-medium text-slate-900">Commentaires (Sortie)</h4>
+                      <div>
+                        <Label htmlFor={`commentaires_sortie_${piece.id}`} className="text-sm">
+                          Commentaires généraux sur la pièce
+                        </Label>
+                        <Textarea
+                          id={`commentaires_sortie_${piece.id}`}
+                          value={piecesData[piece.id]?.commentaires || ''}
+                          onChange={(e) => setPiecesData(prev => ({
+                            ...prev,
+                            [piece.id]: {
+                              ...prev[piece.id],
+                              commentaires: e.target.value
+                            }
+                          }))}
+                          placeholder="Ajouter des commentaires sur l'état de sortie de la pièce"
+                          className="min-h-[100px]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <Button onClick={() => handleSavePiece(piece.id)} className="mt-4">
+                    Sauvegarder cette pièce
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        );
+
+      case 4: // Parties privatives
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Parties privatives (Facultatif)</CardTitle>
+              <CardDescription>
+                Indiquez l'état des parties privatives à la sortie.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {partiesPrivativesData.map((partie, index) => (
+                <div key={index} className="p-4 border rounded-md space-y-3">
+                  <h4 className="font-medium">{partie.type_partie}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>État à la sortie</Label>
+                      <Select
+                        value={partie.etat_sortie}
+                        onValueChange={(value) => {
+                          const updated = [...partiesPrivativesData];
+                          updated[index].etat_sortie = value;
+                          setPartiesPrivativesData(updated);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner l'état" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Non renseigné</SelectItem>
+                          <SelectItem value="excellent">Excellent état</SelectItem>
+                          <SelectItem value="bon">Bon état</SelectItem>
+                          <SelectItem value="moyen">État moyen</SelectItem>
+                          <SelectItem value="mauvais">Mauvais état</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Numéro / Identification</Label>
+                      <Input
+                        value={partie.numero}
+                        onChange={(e) => {
+                          const updated = [...partiesPrivativesData];
+                          updated[index].numero = e.target.value;
+                          setPartiesPrivativesData(updated);
+                        }}
+                        placeholder="Optionnel"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Commentaires</Label>
+                    <Textarea
+                      value={partie.commentaires}
+                      onChange={(e) => {
+                        const updated = [...partiesPrivativesData];
+                        updated[index].commentaires = e.target.value;
+                        setPartiesPrivativesData(updated);
+                      }}
+                      placeholder="Optionnel"
+                    />
+                  </div>
+                </div>
+              ))}
+              <Button onClick={handleSavePartiesPrivatives}>
+                Sauvegarder les parties privatives
+              </Button>
+            </CardContent>
+          </Card>
+        );
+
+      case 5: // Autres équipements
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Autres équipements (Facultatif)</CardTitle>
+              <CardDescription>
+                Indiquez l'état des autres équipements à la sortie.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {autresEquipementsData.map((equipement, index) => (
+                <div key={index} className="p-4 border rounded-md space-y-3">
+                  <h4 className="font-medium">{equipement.equipement}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>État à la sortie</Label>
+                      <Select
+                        value={equipement.etat_sortie}
+                        onValueChange={(value) => {
+                          const updated = [...autresEquipementsData];
+                          updated[index].etat_sortie = value;
+                          setAutresEquipementsData(updated);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner l'état" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Non renseigné</SelectItem>
+                          <SelectItem value="excellent">Excellent état</SelectItem>
+                          <SelectItem value="bon">Bon état</SelectItem>
+                          <SelectItem value="moyen">État moyen</SelectItem>
+                          <SelectItem value="mauvais">Mauvais état</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Commentaires</Label>
+                      <Textarea
+                        value={equipement.commentaires}
+                        onChange={(e) => {
+                          const updated = [...autresEquipementsData];
+                          updated[index].commentaires = e.target.value;
+                          setAutresEquipementsData(updated);
+                        }}
+                        placeholder="Optionnel"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <Button onClick={handleSaveAutresEquipements}>
+                Sauvegarder les autres équipements
+              </Button>
+            </CardContent>
+          </Card>
+        );
+
+      case 6: // Remise des clés
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Remise des clés (Facultatif)</CardTitle>
+              <CardDescription>
+                Indiquez le nombre de clés et badges restitués.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {clesData.map((cle, index) => (
+                <div key={index} className="p-4 border rounded-md space-y-3">
+                  <h4 className="font-medium">{cle.type_cle_badge}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Nombre restitué</Label>
+                      <Input
+                        type="number"
+                        value={cle.nombre}
+                        onChange={(e) => {
+                          const updated = [...clesData];
+                          updated[index].nombre = parseInt(e.target.value, 10) || 0;
+                          setClesData(updated);
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Label>Commentaires</Label>
+                      <Textarea
+                        value={cle.commentaires}
+                        onChange={(e) => {
+                          const updated = [...clesData];
+                          updated[index].commentaires = e.target.value;
+                          setClesData(updated);
+                        }}
+                        placeholder="Optionnel"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <Button onClick={handleSaveCles}>Sauvegarder les clés</Button>
+            </CardContent>
+          </Card>
+        );
+
+      case 7: // Validation
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Validation et Finalisation</CardTitle>
+              <CardDescription>
+                Vérifiez toutes les informations avant de finaliser l'état des lieux de sortie.
+                Assurez-vous que l'adresse du bien est renseignée à l'étape 1.
+                La date de sortie sera celle du jour si non renseignée.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {formErrors.validation && <p className="text-sm text-red-600">{formErrors.validation}</p>}
+              {formErrors.adresse_bien && <p className="text-sm text-red-600">{formErrors.adresse_bien}</p>}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="validation"
+                  checked={isValidated}
+                  onCheckedChange={(checked) => setIsValidated(Boolean(checked))}
+                  className={formErrors.validation ? 'border-red-500' : ''}
+                />
+                <Label htmlFor="validation" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Je confirme avoir vérifié toutes les informations et souhaite finaliser cet état des lieux de sortie.
+                </Label>
+              </div>
+              <Button onClick={handleFinalize} disabled={updateEtatSortie.isLoading}>
+                {updateEtatSortie.isLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Finaliser l'état des lieux de sortie
+              </Button>
+            </CardContent>
+          </Card>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="container mx-auto p-4 md:p-8 max-w-5xl">
+      <h1 className="text-3xl font-bold mb-2 text-slate-800">État des Lieux de Sortie</h1>
+      <p className="text-slate-600 mb-8">
+        Propriété: {etatDesLieux.adresse_bien}
+      </p>
+
+      <FormProgress steps={steps} currentStep={currentStep} />
+
+      <div className="mt-8">
+        {renderStepContent()}
+      </div>
+
+      <div className="mt-8 flex justify-between">
+        <Button onClick={prevStep} disabled={currentStep === 0} variant="outline">
+          Précédent
+        </Button>
+        {currentStep < steps.length - 1 ? (
+          <Button onClick={nextStep}>Suivant</Button>
+        ) : (
+          <Button onClick={handleFinalize} disabled={!isValidated || updateEtatSortie.isLoading}>
+            {updateEtatSortie.isLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            Finaliser et Soumettre
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default EtatSortieForm;
