@@ -10,6 +10,12 @@ import { toast } from 'sonner';
 import FormProgress from '@/components/FormProgress';
 import { useUpdateEtatSortie } from '@/hooks/useEtatDesLieux';
 
+// Import des composants d'étapes
+import GeneralStep from '@/components/steps/GeneralStep';
+import ReleveCompteursStep from '@/components/steps/ReleveCompteursStep';
+import PiecesStep from '@/components/steps/PiecesStep';
+import ClesStep from '@/components/steps/ClesStep';
+
 interface EtatSortieFormProps {
   etatId: string;
 }
@@ -86,64 +92,16 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
   const renderStepContent = () => {
     switch (currentStep) {
       case 0: // Général
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Informations générales</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Vérification des informations générales de l'état des lieux de sortie.</p>
-              <p className="text-sm text-gray-600 mt-2">
-                Cette étape permet de confirmer les informations de base du logement.
-              </p>
-            </CardContent>
-          </Card>
-        );
+        return <GeneralStep etatId={etatId} />;
       
       case 1: // Relevé des compteurs
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Relevé des compteurs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Saisie des relevés de compteurs à la sortie.</p>
-              <p className="text-sm text-gray-600 mt-2">
-                Enregistrez les index des compteurs d'électricité, gaz et eau.
-              </p>
-            </CardContent>
-          </Card>
-        );
+        return <ReleveCompteursStep etatId={etatId} />;
       
       case 2: // Pièces
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>État des pièces</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Vérification de l'état de chaque pièce du logement.</p>
-              <p className="text-sm text-gray-600 mt-2">
-                Documentez l'état des sols, murs, plafonds et équipements de chaque pièce.
-              </p>
-            </CardContent>
-          </Card>
-        );
+        return <PiecesStep etatId={etatId} />;
       
       case 3: // Clés
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Remise des clés</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Inventaire et remise des clés du logement.</p>
-              <p className="text-sm text-gray-600 mt-2">
-                Vérifiez que toutes les clés sont bien restituées.
-              </p>
-            </CardContent>
-          </Card>
-        );
+        return <ClesStep etatId={etatId} />;
       
       case 4: // Parties privatives
         return (
