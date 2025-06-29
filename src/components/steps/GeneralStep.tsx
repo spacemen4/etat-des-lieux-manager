@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,7 +49,10 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
     // This is a placeholder save function. The actual update logic might differ.
     updateEtatDesLieux({ id: etatId, ...formData }, {
       onSuccess: () => {
-        alert('Sauvegardé');
+        toast.success('Informations générales sauvegardées');
+      },
+      onError: () => {
+        toast.error('Erreur lors de la sauvegarde');
       }
     });
   };
