@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,6 +59,10 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
     );
   };
 
+  const handleCheckboxChange = (checked: boolean | "indeterminate") => {
+    setIsValidationChecked(checked === true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -98,7 +103,7 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
             <Checkbox 
               id="validation"
               checked={isValidationChecked}
-              onCheckedChange={setIsValidationChecked}
+              onCheckedChange={handleCheckboxChange}
             />
             <Label htmlFor="validation">
               Je confirme que toutes les informations sont correctes et que l'état des lieux peut être finalisé
