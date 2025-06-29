@@ -28,8 +28,6 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
             <Input 
               id="adresse" 
               value={etatDesLieux?.adresse_bien || ''} 
-              readOnly 
-              className="bg-gray-50"
             />
           </div>
           <div>
@@ -37,8 +35,6 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
             <Input 
               id="type_bien" 
               value={etatDesLieux?.type_bien || ''} 
-              readOnly 
-              className="bg-gray-50"
             />
           </div>
         </div>
@@ -49,8 +45,6 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
             <Input 
               id="bailleur" 
               value={etatDesLieux?.bailleur_nom || ''} 
-              readOnly 
-              className="bg-gray-50"
             />
           </div>
           <div>
@@ -58,8 +52,6 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
             <Input 
               id="locataire" 
               value={etatDesLieux?.locataire_nom || ''} 
-              readOnly 
-              className="bg-gray-50"
             />
           </div>
         </div>
@@ -70,8 +62,6 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
             id="date_entree" 
             type="date"
             value={etatDesLieux?.date_entree || ''} 
-            readOnly 
-            className="bg-gray-50"
           />
         </div>
       </CardContent>
