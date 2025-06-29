@@ -1,14 +1,16 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, MapPin, User, FileText, Loader2, Building2 } from 'lucide-react';
 import { useEtatDesLieux } from '@/hooks/useEtatDesLieux';
+import EtatDesLieuxViewer from './EtatDesLieuxViewer';
 
 const Dashboard = () => {
   const { data: etatsDesLieux, isLoading, error } = useEtatDesLieux();
+  const [selectedEtatId, setSelectedEtatId] = useState<string | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -41,6 +43,11 @@ const Dashboard = () => {
       'pieces_supplementaires': 'Pièces supplémentaires'
     };
     return labels[typeBien] || typeBien;
+  };
+
+  const handleViewEtat = (etatId: string) => {
+    setSelectedEtatId(etatId);
+    setIsViewerOpen(true);
   };
 
   return (
@@ -127,7 +134,7 @@ const Dashboard = () => {
         ) : (
           <div className="grid gap-4">
             {etatsDesLieux?.map((etat) => (
-              <Card key={etat.id} className="hover:shadow-md transition-shadow">
+              <Card key={etat.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleViewEtat(etat.id)}>
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start">
                     <div className="space-y-2">
@@ -164,7 +171,11 @@ const Dashboard = () => {
                         </Badge>
                       </div>
                       {!etat.date_sortie && etat.type_etat_des_lieux === 'entree' && (
-                        <Button size="sm" asChild>
+                        <Button 
+                          size="sm" 
+                          asChild
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <a href={`/sortie/${etat.id}`}>Faire l'état de sortie</a>
                         </Button>
                       )}
@@ -176,6 +187,15 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      <EtatDesLieuxViewer 
+        etatId={selectedEtatId}
+        isOpen={isViewerOpen}
+        onClose={() => {
+          setIsViewerOpen(false);
+          setSelectedEtatId(null);
+        }}
+      />
     </div>
   );
 };
