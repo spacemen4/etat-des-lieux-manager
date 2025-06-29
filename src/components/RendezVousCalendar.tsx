@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { toast } from '@/components/ui/use-toast';
 
 interface RendezVous {
   id?: number;
@@ -101,7 +102,11 @@ export function RendezVousCalendar() {
   const handleAddRendezVous = () => {
     // Validation des champs obligatoires
     if (!validateForm()) {
-      alert("Veuillez remplir tous les champs obligatoires : Type d'état des lieux, Type de bien et Heure du rendez-vous.");
+      toast({
+        title: "Champs obligatoires manquants",
+        description: "Veuillez remplir tous les champs obligatoires : Type d'état des lieux, Type de bien et Heure du rendez-vous.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -158,7 +163,10 @@ export function RendezVousCalendar() {
     setRemiseCles(false);
     setValidationErrors({ type_etat_des_lieux: false, type_bien: false, heure: false });
 
-    alert(`Rendez-vous ${finalDate.toLocaleDateString()} à ${heure} enregistré avec succès.`);
+    toast({
+      title: "Rendez-vous ajouté",
+      description: `Rendez-vous ${finalDate.toLocaleDateString()} à ${heure} enregistré avec succès.`,
+    });
   };
 
   const RequiredLabel = ({ htmlFor, children, isRequired = false, hasError = false }: {
