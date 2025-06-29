@@ -160,6 +160,23 @@ export const useEtatDesLieux = (
   });
 };
 
+export const useCreatePiece = () => {
+  return useMutation({
+    mutationFn: async (pieceData: {
+      etat_des_lieux_id: string;
+      nom_piece: string;
+    }) => {
+      // Votre logique d'appel API ici
+      const response = await fetch('/api/pieces', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pieceData),
+      });
+      return response.json();
+    },
+  });
+};
+
 export const useEtatDesLieuxById = (
   id: string,
   options?: QueryOptions<EtatDesLieux, PostgrestError>
