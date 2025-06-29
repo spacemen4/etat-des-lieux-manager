@@ -134,7 +134,7 @@ export function RendezVousCalendar() {
     const finalDate = date || new Date();
 
     const newRendezVousData = {
-      date: finalDate.toISOString().split('T')[0],
+      date: date ? finalDate.toISOString().split('T')[0] : null,
       description: description.trim() || null,
       adresse: adresse.trim(),
       code_postal: code_postal.trim() || null,
@@ -204,7 +204,7 @@ export function RendezVousCalendar() {
 
       toast({
         title: "Rendez-vous ajouté",
-        description: `Rendez-vous pour le ${finalDate.toLocaleDateString()} ${heure ? `à ${heure}` : ''} enregistré avec succès.`,
+        description: `Rendez-vous ${date ? `pour le ${finalDate.toLocaleDateString()}` : 'sans date spécifique'} ${heure ? `à ${heure}` : ''} enregistré avec succès.`,
       });
     }
   };
