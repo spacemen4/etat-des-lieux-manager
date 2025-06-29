@@ -553,6 +553,36 @@ export const useUpdateAutreEquipement = (
   });
 };
 
+export const useUpdateEtatSortie = (
+  options?: MutationOptions<EtatDesLieux, PostgrestError, { id: string; date_sortie: string; statut?: string }>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (sortieData: { id: string; date_sortie: string; statut?: string }) => {
+      const { id, ...updateFields } = sortieData;
+      const { data, error } = await supabase
+        .from('etat_des_lieux')
+        .update(updateFields)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as EtatDesLieux;
+    },
+    onSuccess: (data, variables) => {
+      // Invalidation optimisée
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.etatDesLieux });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.etatDesLieuxById(variables.id) });
+      
+      // Mise à jour optimiste du cache
+      queryClient.setQueryData(QUERY_KEYS.etatDesLieuxById(variables.id), data);
+    },
+    ...options,
+  });
+};
+
 export const useUpdateEquipementsEnergetiques = (
   options?: MutationOptions<EquipementEnergetique, PostgrestError, Partial<EquipementEnergetique>>
 ) => {
