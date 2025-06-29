@@ -19,24 +19,35 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/components/ui/use-toast';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface RendezVous {
-  date: Date;
-  description: string;
-  adresse: string;
-  code_postal: string; // Changed from codePostal
-  ville: string;
-  nom_contact: string;
-  telephone_contact: string;
-  email_contact: string;
-  heure: string;
-  duree: string;
+  date?: Date; // Optionnel - utilise la date du jour si non renseigné
+  description?: string; // Optionnel
+  adresse: string; // Obligatoire - pour identifier le type de bien
+  code_postal?: string; // Optionnel
+  ville?: string; // Optionnel
+  nom_contact?: string; // Optionnel
+  telephone_contact?: string; // Optionnel
+  email_contact?: string; // Optionnel
+  heure?: string; // Optionnel
+  duree?: string; // Optionnel
   latitude?: number;
   longitude?: number;
-  note_personnelle?: string; // Changed from notePersonnelle
-  type_etat_des_lieux?: string; // Schema alignment
-  type_bien?: string;         // Schema alignment
+  note_personnelle?: string;
+  type_etat_des_lieux?: string; // Optionnel
+  type_bien?: string; // Optionnel
+  validation_finale: boolean; // Obligatoire - case à cocher
+  releves_compteurs?: string; // Optionnel
+  etat_pieces?: string; // Optionnel
+  remise_cles?: boolean; // Optionnel
+}
+
+interface ValidationErrors {
+  adresse: boolean;
+  validation_finale: boolean;
 }
 
 export function RendezVousCalendar() {
@@ -44,7 +55,7 @@ export function RendezVousCalendar() {
   const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
   const [description, setDescription] = useState('');
   const [adresse, setAdresse] = useState('');
-  const [code_postal, setCode_postal] = useState(''); // Changed from codePostal
+  const [code_postal, setCode_postal] = useState('');
   const [ville, setVille] = useState('');
   const [nom_contact, setNom_contact] = useState('');
   const [telephone_contact, setTelephone_contact] = useState('');
@@ -53,9 +64,19 @@ export function RendezVousCalendar() {
   const [duree, setDuree] = useState('');
   const [latitude, setLatitude] = useState<number | undefined>(undefined);
   const [longitude, setLongitude] = useState<number | undefined>(undefined);
-  const [note_personnelle, setNote_personnelle] = useState(''); // Changed from notePersonnelle
+  const [note_personnelle, setNote_personnelle] = useState('');
   const [typeEtatDesLieux, setTypeEtatDesLieux] = useState<string | undefined>(undefined);
   const [typeBien, setTypeBien] = useState<string | undefined>(undefined);
+  const [validationFinale, setValidationFinale] = useState(false);
+  const [relevesCompteurs, setRelevesCompteurs] = useState('');
+  const [etatPieces, setEtatPieces] = useState('');
+  const [remiseCles, setRemiseCles] = useState(false);
+  
+  // État pour les erreurs de validation
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({
+    adresse: false,
+    validation_finale: false
+  });
 
   // Fetch existing rendez-vous from Supabase
   useEffect(() => {
@@ -63,7 +84,7 @@ export function RendezVousCalendar() {
       const { data, error } = await supabase
         .from('rendez_vous')
         .select('*')
-        .order('date', { ascending: true }); // Assuming you want them ordered by date
+        .order('date', { ascending: true });
 
       if (error) {
         console.error('Error fetching rendez-vous:', error);
@@ -73,154 +94,174 @@ export function RendezVousCalendar() {
           variant: "destructive",
         });
       } else if (data) {
-        // Ensure date strings are converted to Date objects
-        // And ensure all fields match the RendezVous interface, including code_postal
         const formattedData: RendezVous[] = data.map(item => ({
           ...item,
-          date: new Date(item.date),
-          code_postal: item.code_postal, // Ensure this mapping if it's not automatic
+          date: item.date ? new Date(item.date) : undefined,
+          validation_finale: Boolean(item.validation_finale),
+          remise_cles: Boolean(item.remise_cles),
         }));
         setRendezVous(formattedData);
       }
     };
 
     fetchRendezVous();
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
-  const handleAddRendezVous = async () => { // Made async to handle Supabase call
-    if (date && description && adresse && code_postal && ville && nom_contact && telephone_contact && email_contact && heure && duree && typeEtatDesLieux && typeBien) { // Changed codePostal to code_postal
-      const newRendezVousData = {
-        date: date.toISOString().split('T')[0], // Format date as YYYY-MM-DD for Supabase
-        description,
-        adresse,
-        code_postal: code_postal, // Changed codePostal to code_postal
-        ville,
-        nom_contact: nom_contact,
-        telephone_contact: telephone_contact,
-        email_contact: email_contact,
-        heure,
-        duree,
-        latitude: latitude,
-        longitude: longitude,
-        note_personnelle: note_personnelle, // Changed from notePersonnelle
-        type_etat_des_lieux: typeEtatDesLieux, // Schema alignment
-        type_bien: typeBien,                 // Schema alignment
-        // Supabase will generate id, created_at, updated_at
-      };
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {
+      adresse: !adresse.trim(),
+      validation_finale: !validationFinale
+    };
 
-      const { data: insertedData, error } = await supabase
-        .from('rendez_vous')
-        .insert([newRendezVousData])
-        .select(); // .select() returns the inserted row(s)
+    setValidationErrors(errors);
 
-      if (error) {
-        console.error('Error adding rendez-vous:', error);
-        toast({
-          title: "Erreur d'ajout",
-          description: "Impossible d'ajouter le rendez-vous à la base de données. Message: " + error.message,
-          variant: "destructive",
-        });
-      } else if (insertedData && insertedData.length > 0) {
-        // Add to local state after successful insertion
-        // Convert date back to Date object for local state consistency
-        const newRendezVousWithDateObject: RendezVous = {
-          ...insertedData[0],
-          date: new Date(insertedData[0].date),
-        };
-        setRendezVous(prevRendezVous => [...prevRendezVous, newRendezVousWithDateObject].sort((a, b) => a.date.getTime() - b.date.getTime()));
+    // Retourne true si aucune erreur
+    return !Object.values(errors).some(error => error);
+  };
 
-        // Reset form fields
-        setDescription('');
-        setAdresse('');
-        setCode_postal(''); // Changed from setCodePostal
-        setVille('');
-        setLatitude(undefined);
-        setLongitude(undefined);
-        setNom_contact('');
-        setTelephone_contact('');
-        setEmail_contact('');
-        setHeure('');
-        setDuree('');
-        setNote_personnelle(''); // Changed from setNotePersonnelle
-        setTypeEtatDesLieux(undefined);
-        setTypeBien(undefined);
-        // setDate(new Date()); // Optionally reset date, or keep it for next entry
-
-        toast({
-          title: "Rendez-vous ajouté",
-          description: `Rendez-vous pour le ${date.toLocaleDateString()} à ${heure} avec ${nom_contact} a été enregistré.`,
-        });
-      }
-    } else {
+  const handleAddRendezVous = async () => {
+    // Validation des champs obligatoires
+    if (!validateForm()) {
       toast({
-        title: "Erreur de formulaire",
-        description: "Veuillez remplir tous les champs obligatoires.",
+        title: "Champs obligatoires manquants",
+        description: "Veuillez remplir l'adresse du bien et cocher la validation finale.",
         variant: "destructive",
+      });
+      return;
+    }
+
+    // Utilise la date du jour si aucune date n'est sélectionnée
+    const finalDate = date || new Date();
+
+    const newRendezVousData = {
+      date: finalDate.toISOString().split('T')[0],
+      description: description.trim() || null,
+      adresse: adresse.trim(),
+      code_postal: code_postal.trim() || null,
+      ville: ville.trim() || null,
+      nom_contact: nom_contact.trim() || null,
+      telephone_contact: telephone_contact.trim() || null,
+      email_contact: email_contact.trim() || null,
+      heure: heure || null,
+      duree: duree.trim() || null,
+      latitude: latitude || null,
+      longitude: longitude || null,
+      note_personnelle: note_personnelle.trim() || null,
+      type_etat_des_lieux: typeEtatDesLieux || null,
+      type_bien: typeBien || null,
+      validation_finale: validationFinale,
+      releves_compteurs: relevesCompteurs.trim() || null,
+      etat_pieces: etatPieces.trim() || null,
+      remise_cles: remiseCles,
+    };
+
+    const { data: insertedData, error } = await supabase
+      .from('rendez_vous')
+      .insert([newRendezVousData])
+      .select();
+
+    if (error) {
+      console.error('Error adding rendez-vous:', error);
+      toast({
+        title: "Erreur d'ajout",
+        description: "Impossible d'ajouter le rendez-vous à la base de données. Message: " + error.message,
+        variant: "destructive",
+      });
+    } else if (insertedData && insertedData.length > 0) {
+      const newRendezVousWithDateObject: RendezVous = {
+        ...insertedData[0],
+        date: insertedData[0].date ? new Date(insertedData[0].date) : undefined,
+        validation_finale: Boolean(insertedData[0].validation_finale),
+        remise_cles: Boolean(insertedData[0].remise_cles),
+      };
+      
+      setRendezVous(prevRendezVous => [...prevRendezVous, newRendezVousWithDateObject].sort((a, b) => {
+        const dateA = a.date || new Date();
+        const dateB = b.date || new Date();
+        return dateA.getTime() - dateB.getTime();
+      }));
+
+      // Reset form fields
+      setDescription('');
+      setAdresse('');
+      setCode_postal('');
+      setVille('');
+      setLatitude(undefined);
+      setLongitude(undefined);
+      setNom_contact('');
+      setTelephone_contact('');
+      setEmail_contact('');
+      setHeure('');
+      setDuree('');
+      setNote_personnelle('');
+      setTypeEtatDesLieux(undefined);
+      setTypeBien(undefined);
+      setValidationFinale(false);
+      setRelevesCompteurs('');
+      setEtatPieces('');
+      setRemiseCles(false);
+      setValidationErrors({ adresse: false, validation_finale: false });
+
+      toast({
+        title: "Rendez-vous ajouté",
+        description: `Rendez-vous pour le ${finalDate.toLocaleDateString()} ${heure ? `à ${heure}` : ''} enregistré avec succès.`,
       });
     }
   };
 
-  // Original handleAddRendezVous for reference before Supabase integration
-  // const handleAddRendezVous_local = () => {
-  //   if (date && description && adresse && code_postal && ville && nom_contact && telephone_contact && email_contact && heure && duree && typeEtatDesLieux && typeBien) { // Changed codePostal
-  //     const newRendezVous: RendezVous = {
-  // date,
-  // description,
-  // adresse,
-  // code_postal, // Changed codePostal
-  // ville,
-  // nom_contact,
-  // telephone_contact,
-  // email_contact,
-  // heure,
-  // duree,
-  // latitude: latitude,
-  // longitude: longitude,
-  // note_personnelle: note_personnelle, // Changed from notePersonnelle
-  // typeEtatDesLieux: typeEtatDesLieux,
-  // typeBien: typeBien,
-  //     };
-  //     setRendezVous([...rendezVous, newRendezVous]);
-  //     setDescription('');
-  //     setAdresse('');
-  //     setCodePostal('');
-  //     setVille('');
-  //     setLatitude(undefined);
-  //     setLongitude(undefined);
-  //     setNom_contact('');
-  //     setTelephone_contact('');
-  //     setEmail_contact('');
-  //     setHeure('');
-  //     setDuree('');
-  //     setNotePersonnelle('');
-  //     setTypeEtatDesLieux(undefined);
-  //     setTypeBien(undefined);
-  //     toast({
-  //       title: "Rendez-vous ajouté",
-  //       description: `Rendez-vous pour le ${date.toLocaleDateString()} à ${heure} avec ${nom_contact}.`,
-  //     });
-  //   } else {
-  //     toast({
-  //       title: "Erreur",
-  //       description: "Veuillez remplir tous les champs obligatoires.",
-  //       variant: "destructive",
-  //     });
-  //   }
-  // };
+  const RequiredLabel = ({ htmlFor, children, isRequired = false, hasError = false }: {
+    htmlFor: string;
+    children: React.ReactNode;
+    isRequired?: boolean;
+    hasError?: boolean;
+  }) => (
+    <Label htmlFor={htmlFor} className={hasError ? "text-red-600" : ""}>
+      {children}
+      {isRequired && <span className="text-red-500 ml-1">*</span>}
+      {hasError && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-red-500 ml-1 cursor-help">⚠</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Ce champ est obligatoire</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+    </Label>
+  );
 
   return (
     <div className="container mx-auto p-4">
       <h2 className="text-2xl font-bold mb-4">Calendrier des États des Lieux</h2>
+      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+        <h3 className="font-semibold text-blue-800 mb-2">Champs obligatoires :</h3>
+        <ul className="text-sm text-blue-700 list-disc list-inside">
+          <li>Adresse du bien (pour identifier le type de bien)</li>
+          <li>Validation finale (case à cocher)</li>
+        </ul>
+        <p className="text-sm text-blue-600 mt-2">
+          <span className="text-red-500">*</span> Si la date n'est pas renseignée, la date du jour sera utilisée.
+        </p>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={setDate}
-            className="rounded-md border"
-          />
+          <div className="mb-4">
+            <Label>Date du rendez-vous (optionnel)</Label>
+            <p className="text-sm text-gray-500 mb-2">Si non renseignée, la date du jour sera utilisée</p>
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              className="rounded-md border"
+            />
+          </div>
+          
           <div className="mt-4">
-            <Label htmlFor="description">Description du rendez-vous</Label>
+            <Label htmlFor="description">Description du rendez-vous (optionnel)</Label>
             <Input
               id="description"
               type="text"
@@ -230,8 +271,9 @@ export function RendezVousCalendar() {
               className="mt-1"
             />
           </div>
+          
           <div className="mt-4">
-            <Label htmlFor="typeEtatDesLieux">Type d'état des lieux</Label>
+            <Label htmlFor="typeEtatDesLieux">Type d'état des lieux (optionnel)</Label>
             <Select value={typeEtatDesLieux} onValueChange={setTypeEtatDesLieux}>
               <SelectTrigger className="mt-1">
                 <SelectValue placeholder="Sélectionner un type" />
@@ -242,26 +284,28 @@ export function RendezVousCalendar() {
               </SelectContent>
             </Select>
           </div>
+          
           <div className="mt-4">
-            <Label htmlFor="typeBien">Type de bien</Label>
+            <Label htmlFor="typeBien">Type de bien (optionnel)</Label>
             <Select value={typeBien} onValueChange={setTypeBien}>
               <SelectTrigger className="mt-1">
                 <SelectValue placeholder="Sélectionner un type de bien" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="studio">Etat des lieux Studio</SelectItem>
-                <SelectItem value="t2-t3">Etat des lieux T2 – T3</SelectItem>
-                <SelectItem value="t4-t5">Etat des lieux T4 – T5</SelectItem>
+                <SelectItem value="studio">Studio</SelectItem>
+                <SelectItem value="t2-t3">T2 – T3</SelectItem>
+                <SelectItem value="t4-t5">T4 – T5</SelectItem>
                 <SelectItem value="mobilier">Inventaire du mobilier</SelectItem>
-                <SelectItem value="bureau">Etat des lieux Bureau</SelectItem>
-                <SelectItem value="local">Etat des lieux Local commercial</SelectItem>
-                <SelectItem value="garage">Etat des lieux Garage / Box</SelectItem>
+                <SelectItem value="bureau">Bureau</SelectItem>
+                <SelectItem value="local">Local commercial</SelectItem>
+                <SelectItem value="garage">Garage / Box</SelectItem>
                 <SelectItem value="pieces-supplementaires">Pièces supplémentaires</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          
           <div className="mt-4">
-            <Label htmlFor="heure">Heure du rendez-vous</Label>
+            <Label htmlFor="heure">Heure du rendez-vous (optionnel)</Label>
             <Input
               id="heure"
               type="time"
@@ -270,41 +314,56 @@ export function RendezVousCalendar() {
               className="mt-1"
             />
           </div>
+          
           <div className="mt-4">
-            <Label htmlFor="duree">Durée prévue (ex: 1h30)</Label>
+            <Label htmlFor="duree">Durée prévue (optionnel)</Label>
             <Input
               id="duree"
               type="text"
               value={duree}
               onChange={(e) => setDuree(e.target.value)}
-              placeholder="1h30"
+              placeholder="Ex: 1h30"
               className="mt-1"
             />
           </div>
+          
           <div className="mt-4">
-            <Label htmlFor="adresse">Adresse</Label>
+            <RequiredLabel 
+              htmlFor="adresse" 
+              isRequired={true} 
+              hasError={validationErrors.adresse}
+            >
+              Adresse du bien
+            </RequiredLabel>
             <Input
               id="adresse"
               type="text"
               value={adresse}
-              onChange={(e) => setAdresse(e.target.value)}
+              onChange={(e) => {
+                setAdresse(e.target.value);
+                if (validationErrors.adresse && e.target.value.trim()) {
+                  setValidationErrors(prev => ({ ...prev, adresse: false }));
+                }
+              }}
               placeholder="123 rue de la Paix"
-              className="mt-1"
+              className={`mt-1 ${validationErrors.adresse ? 'border-red-500 focus:border-red-500' : ''}`}
             />
           </div>
+          
           <div className="mt-4">
-            <Label htmlFor="code_postal">Code Postal</Label> {/* Changed htmlFor */}
+            <Label htmlFor="code_postal">Code Postal (optionnel)</Label>
             <Input
-              id="code_postal" // Changed id
+              id="code_postal"
               type="text"
-              value={code_postal} // Changed value
-              onChange={(e) => setCode_postal(e.target.value)} // Changed onChange
+              value={code_postal}
+              onChange={(e) => setCode_postal(e.target.value)}
               placeholder="75000"
               className="mt-1"
             />
           </div>
+          
           <div className="mt-4">
-            <Label htmlFor="ville">Ville</Label>
+            <Label htmlFor="ville">Ville (optionnel)</Label>
             <Input
               id="ville"
               type="text"
@@ -314,9 +373,10 @@ export function RendezVousCalendar() {
               className="mt-1"
             />
           </div>
+          
           {/* Location Picker */}
           <div className="mt-4">
-            <Label>Localisation du rendez-vous</Label>
+            <Label>Localisation du rendez-vous (optionnel)</Label>
             <LocationPicker
               latitude={latitude}
               longitude={longitude}
@@ -331,8 +391,9 @@ export function RendezVousCalendar() {
               </div>
             )}
           </div>
+          
           <div className="mt-4">
-            <Label htmlFor="nom_contact">Personne à contacter (Nom)</Label>
+            <Label htmlFor="nom_contact">Personne à contacter (optionnel)</Label>
             <Input
               id="nom_contact"
               type="text"
@@ -342,8 +403,9 @@ export function RendezVousCalendar() {
               className="mt-1"
             />
           </div>
+          
           <div className="mt-4">
-            <Label htmlFor="telephone_contact">Téléphone du contact</Label>
+            <Label htmlFor="telephone_contact">Téléphone du contact (optionnel)</Label>
             <Input
               id="telephone_contact"
               type="tel"
@@ -353,8 +415,9 @@ export function RendezVousCalendar() {
               className="mt-1"
             />
           </div>
+          
           <div className="mt-4">
-            <Label htmlFor="email_contact">Email du contact</Label>
+            <Label htmlFor="email_contact">Email du contact (optionnel)</Label>
             <Input
               id="email_contact"
               type="email"
@@ -364,20 +427,75 @@ export function RendezVousCalendar() {
               className="mt-1"
             />
           </div>
+          
           <div className="mt-4">
-            <Label htmlFor="note_personnelle">Note personnelle</Label>
+            <Label htmlFor="releves_compteurs">Relevés de compteurs (optionnel)</Label>
             <Textarea
-              id="note_personnelle" // Matches htmlFor for label linking
-              value={note_personnelle} // Changed from notePersonnelle
-              onChange={(e) => setNote_personnelle(e.target.value)} // Changed from setNotePersonnelle
+              id="releves_compteurs"
+              value={relevesCompteurs}
+              onChange={(e) => setRelevesCompteurs(e.target.value)}
+              placeholder="Électricité: 12345 kWh, Gaz: 6789 m³..."
+              className="mt-1"
+            />
+          </div>
+          
+          <div className="mt-4">
+            <Label htmlFor="etat_pieces">État détaillé des pièces (optionnel)</Label>
+            <Textarea
+              id="etat_pieces"
+              value={etatPieces}
+              onChange={(e) => setEtatPieces(e.target.value)}
+              placeholder="Salon: bon état, cuisine: évier rayé..."
+              className="mt-1"
+            />
+          </div>
+          
+          <div className="mt-4">
+            <Label htmlFor="note_personnelle">Note personnelle (optionnel)</Label>
+            <Textarea
+              id="note_personnelle"
+              value={note_personnelle}
+              onChange={(e) => setNote_personnelle(e.target.value)}
               placeholder="Ajouter une note personnelle ici..."
               className="mt-1"
             />
           </div>
-          <Button onClick={handleAddRendezVous} className="mt-4">
+          
+          <div className="mt-4 flex items-center space-x-2">
+            <Checkbox
+              id="remise_cles"
+              checked={remiseCles}
+              onCheckedChange={(checked) => setRemiseCles(checked as boolean)}
+            />
+            <Label htmlFor="remise_cles">Remise des clés (optionnel)</Label>
+          </div>
+          
+          <div className="mt-4 flex items-center space-x-2">
+            <Checkbox
+              id="validation_finale"
+              checked={validationFinale}
+              onCheckedChange={(checked) => {
+                setValidationFinale(checked as boolean);
+                if (validationErrors.validation_finale && checked) {
+                  setValidationErrors(prev => ({ ...prev, validation_finale: false }));
+                }
+              }}
+              className={validationErrors.validation_finale ? 'border-red-500' : ''}
+            />
+            <RequiredLabel 
+              htmlFor="validation_finale" 
+              isRequired={true} 
+              hasError={validationErrors.validation_finale}
+            >
+              Validation finale
+            </RequiredLabel>
+          </div>
+          
+          <Button onClick={handleAddRendezVous} className="mt-4 w-full">
             Ajouter un rendez-vous
           </Button>
         </div>
+        
         <div>
           <h3 className="text-xl font-semibold mb-2">Rendez-vous planifiés :</h3>
           {rendezVous.length === 0 ? (
@@ -385,30 +503,55 @@ export function RendezVousCalendar() {
           ) : (
             <ul className="space-y-2">
               {rendezVous
-                .sort((a, b) => a.date.getTime() - b.date.getTime())
+                .sort((a, b) => {
+                  const dateA = a.date || new Date();
+                  const dateB = b.date || new Date();
+                  return dateA.getTime() - dateB.getTime();
+                })
                 .map((rv, index) => (
                   <li key={index} className="p-2 border rounded-md">
                     <p className="font-medium">
-                      {rv.date.toLocaleDateString()} à {rv.heure} (Durée: {rv.duree})
+                      {rv.date ? rv.date.toLocaleDateString() : 'Date non spécifiée'}
+                      {rv.heure && ` à ${rv.heure}`}
+                      {rv.duree && ` (Durée: ${rv.duree})`}
+                      {rv.validation_finale && <span className="ml-2 text-green-600 font-semibold">✓ Validé</span>}
                     </p>
-                    <p className="text-sm text-gray-600">{rv.description}</p>
+                    {rv.description && <p className="text-sm text-gray-600">{rv.description}</p>}
                     {rv.type_etat_des_lieux && <p className="text-sm text-gray-600">Type d'EDL: {rv.type_etat_des_lieux}</p>}
                     {rv.type_bien && <p className="text-sm text-gray-600">Type de bien: {rv.type_bien}</p>}
                     <p className="text-sm text-gray-600">
-                      Adresse: {rv.adresse}, {rv.code_postal} {rv.ville} {/* Changed rv.codePostal */}
+                      Adresse: {rv.adresse}
+                      {rv.code_postal && `, ${rv.code_postal}`}
+                      {rv.ville && ` ${rv.ville}`}
                     </p>
-                    <p className="text-sm text-gray-600">
-                      Contact: {rv.nom_contact} - {rv.telephone_contact} - {rv.email_contact}
-                    </p>
-                    {(rv.latitude || rv.longitude) && (
+                    {(rv.nom_contact || rv.telephone_contact || rv.email_contact) && (
                       <p className="text-sm text-gray-600">
-                        Coordonnées: {rv.latitude}{rv.latitude && rv.longitude && ', '}
-                        {rv.longitude}
+                        Contact: {[rv.nom_contact, rv.telephone_contact, rv.email_contact].filter(Boolean).join(' - ')}
                       </p>
                     )}
-                    {rv.note_personnelle && ( // Changed from rv.notePersonnelle
+                    {(rv.latitude && rv.longitude) && (
+                      <p className="text-sm text-gray-600">
+                        Coordonnées: {rv.latitude}, {rv.longitude}
+                      </p>
+                    )}
+                    {rv.releves_compteurs && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        Compteurs: {rv.releves_compteurs}
+                      </p>
+                    )}
+                    {rv.etat_pieces && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        État des pièces: {rv.etat_pieces}
+                      </p>
+                    )}
+                    {rv.remise_cles && (
+                      <p className="text-sm text-green-600 mt-1">
+                        ✓ Clés remises
+                      </p>
+                    )}
+                    {rv.note_personnelle && (
                       <p className="text-sm text-gray-500 mt-1 italic">
-                        Note: {rv.note_personnelle} {/* Changed from rv.notePersonnelle */}
+                        Note: {rv.note_personnelle}
                       </p>
                     )}
                   </li>
@@ -451,17 +594,15 @@ function LocationPicker({ latitude, longitude, onLocationChange }: LocationPicke
     return null;
   }
 
-  // This is to ensure the map renders correctly after initial load or tab switches
   const [map, setMap] = useState<L.Map | null>(null);
   useEffect(() => {
     if (map) {
       const timer = setTimeout(() => {
         map.invalidateSize();
-      }, 100); // Small delay to ensure container is sized
+      }, 100);
       return () => clearTimeout(timer);
     }
   }, [map]);
-
 
   return (
     <MapContainer
