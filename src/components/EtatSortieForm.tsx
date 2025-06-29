@@ -171,35 +171,32 @@ const EtatSortieForm = () => {
     if (!isValidated) {
       toast({
         title: "Validation requise",
-        description: "Veuillez cocher la case de validation avant de finaliser.",
+        description: "Veuillez cocher la case de validation pour finaliser.",
         variant: "destructive",
       });
       return;
     }
 
-    // Les champs obligatoires identifiés sont :
-    // - Description du rendez-vous (implicitement l'existence de l'état des lieux)
-    // - Type d'état des lieux (implicitement 'sortie' car c'est EtatSortieForm)
-    // - Etat des lieux de sortie (la date de sortie, qui est facultative maintenant, mais la finalisation implique une sortie)
-    // - Type de bien (contenu dans etatDesLieux.adresse_bien)
-
+    // Le type de bien (via adresse_bien) est obligatoire
     if (!etatDesLieux?.adresse_bien) {
        toast({
         title: "Information manquante",
-        description: "L'adresse du bien (type de bien) est requise pour finaliser.",
+        description: "L'adresse du bien (et donc le type de bien) est requise pour finaliser.",
         variant: "destructive",
       });
       return;
     }
-    // La date de sortie n'est plus bloquante ici, elle peut être vide.
-    // Si elle est vide au moment de la finalisation, elle sera mise à la date du jour.
+
+    // Si la date de sortie n'est pas renseignée, utiliser la date du jour.
+    const finalDateSortie = dateSortie || new Date().toISOString().split('T')[0];
 
     if (id) {
       try {
-        // Marquer l'état des lieux comme finalisé
-        // Si dateSortie est vide, on met la date du jour comme date de sortie effective
-        const finalDateSortie = dateSortie || new Date().toISOString().split('T')[0];
-        await updateEtatSortie.mutateAsync({ id, date_sortie: finalDateSortie, statut: 'Terminé' }); // Ajout du statut
+        await updateEtatSortie.mutateAsync({
+          id,
+          date_sortie: finalDateSortie,
+          statut: 'Terminé'
+        });
         
         toast({
           title: "État des lieux finalisé",
@@ -212,8 +209,8 @@ const EtatSortieForm = () => {
         }, 2000);
       } catch (error) {
         toast({
-          title: "Erreur",
-          description: "Impossible de finaliser l'état des lieux.",
+          title: "Erreur lors de la finalisation",
+          description: "Impossible de finaliser l'état des lieux. Veuillez vérifier les informations ou contacter le support.",
           variant: "destructive",
         });
       }
@@ -228,13 +225,13 @@ const EtatSortieForm = () => {
             <CardHeader>
               <CardTitle>Informations générales</CardTitle>
               <CardDescription>
-                Renseignez la date de sortie et vérifiez les informations du bien
+                Vérifiez les informations du bien. La date de sortie est facultative ici ; si non renseignée, elle sera automatiquement mise à la date du jour lors de la finalisation.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label>Adresse du bien</Label>
+                  <Label>Adresse du bien (Requis pour finalisation)</Label>
                   <Input value={etatDesLieux.adresse_bien} disabled />
                 </div>
                 <div>
@@ -246,16 +243,16 @@ const EtatSortieForm = () => {
                   <Input value={etatDesLieux.date_entree || ''} disabled />
                 </div>
                 <div>
-                  <Label htmlFor="date_sortie">Date de sortie</Label>
+                  <Label htmlFor="date_sortie">Date de sortie (Optionnel)</Label>
                   <Input 
                     id="date_sortie"
                     type="date" 
                     value={dateSortie}
                     onChange={(e) => setDateSortie(e.target.value)}
+                    placeholder="Optionnel - Date du jour si non remplie à la finalisation"
                   />
                 </div>
               </div>
-              {/* Le bouton de sauvegarde est toujours actif, car la date de sortie est facultative */}
               <Button onClick={handleSaveEtat}>
                 Sauvegarder les informations générales
               </Button>
@@ -269,7 +266,7 @@ const EtatSortieForm = () => {
             <CardHeader>
               <CardTitle>Relevé des compteurs (Facultatif)</CardTitle>
               <CardDescription>
-                Saisissez les index des compteurs au moment de la sortie si nécessaire
+                Saisissez les index des compteurs au moment de la sortie. Cette étape est entièrement facultative.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -335,7 +332,6 @@ const EtatSortieForm = () => {
                   />
                 </div>
               </div>
-              {/* Le bouton de sauvegarde est toujours actif */}
               <Button onClick={handleSaveReleve}>
                 Sauvegarder le relevé (si renseigné)
               </Button>
@@ -350,7 +346,7 @@ const EtatSortieForm = () => {
               <CardHeader>
                 <CardTitle>État des pièces (Facultatif)</CardTitle>
                 <CardDescription>
-                  Comparez l'état d'entrée avec l'état de sortie si nécessaire. Ces champs sont facultatifs.
+                  Comparez l'état d'entrée avec l'état de sortie. Cette étape est entièrement facultative.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -458,7 +454,7 @@ const EtatSortieForm = () => {
             <CardHeader>
               <CardTitle>Remise des clés (Facultatif)</CardTitle>
               <CardDescription>
-                Vérifiez la restitution de toutes les clés et badges si applicable.
+                Vérifiez la restitution de toutes les clés et badges. Cette étape est entièrement facultative.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -468,7 +464,7 @@ const EtatSortieForm = () => {
                     <Label>{cle.type_cle_badge}</Label>
                   </div>
                   <div>
-                    <Label htmlFor={`cle_${index}_nombre`}>Nombre</Label>
+                    <Label htmlFor={`cle_${index}_nombre`}>Nombre (Optionnel)</Label>
                     <Input 
                       id={`cle_${index}_nombre`}
                       type="number" 
@@ -479,11 +475,11 @@ const EtatSortieForm = () => {
                         newClesData[index].nombre = parseInt(e.target.value) || 0;
                         setClesData(newClesData);
                       }}
-                      placeholder="Optionnel"
+                      placeholder="0"
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`cle_${index}_commentaires`}>Commentaires</Label>
+                    <Label htmlFor={`cle_${index}_commentaires`}>Commentaires (Optionnel)</Label>
                     <Input 
                       id={`cle_${index}_commentaires`}
                       value={cle.commentaires}
@@ -492,7 +488,7 @@ const EtatSortieForm = () => {
                         newClesData[index].commentaires = e.target.value;
                         setClesData(newClesData);
                       }}
-                      placeholder="Optionnel"
+                      placeholder="Ex: Clé de la cave"
                     />
                   </div>
                 </div>
