@@ -290,6 +290,45 @@ export const useEtatDesLieuxById = (id: string) => {
   });
 };
 
+// It's generally better to have a specific hook for updates rather than modifying useEtatDesLieuxById
+// Let's create a new hook for updating general information, similar to useUpdateEtatSortie but more generic.
+// Or, we can modify useUpdateEtatSortie to be more generic if it's not strictly for 'sortie' specific fields.
+
+// For now, let's assume useUpdateEtatSortie can be generalized or we create a new one.
+// The plan was to modify useEtatDesLieuxById, but that's not standard practice for react-query.
+// Instead, we should ensure a proper mutation hook is used in GeneralStep.tsx.
+// The existing useUpdateEtatSortie is a mutation hook. We need to check if its mutationFn is suitable.
+
+// The current useUpdateEtatSortie is:
+// mutationFn: async ({ id, date_sortie, statut }: { id: string; date_sortie?: string | null; statut?: string | null })
+// This is too specific. We need a more generic update hook.
+
+export const useUpdateEtatDesLieuxGeneral = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (updatedData: Partial<EtatDesLieux> & { id: string }) => {
+      const { id, ...updateFields } = updatedData;
+      const { data, error } = await supabase
+        .from('etat_des_lieux')
+        .update(updateFields)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['etat-des-lieux'] });
+      if (variables.id) {
+        queryClient.invalidateQueries({ queryKey: ['etat-des-lieux', variables.id] });
+      }
+    },
+  });
+};
+
+
 export const usePiecesByEtatId = (etatId: string) => {
   return useQuery({
     queryKey: ['pieces', etatId],
