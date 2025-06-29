@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { useEtatDesLieuxById, useUpdateEtatDesLieuxGeneral } from '@/hooks/useEtatDesLieux';
+import { useEtatDesLieuxById, useUpdateEtatDesLieux } from '@/hooks/useEtatDesLieux';
 
 interface GeneralStepProps {
   etatId: string;
@@ -13,7 +12,7 @@ interface GeneralStepProps {
 
 const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
   const { data: etatDesLieuxInitial, isLoading } = useEtatDesLieuxById(etatId);
-  const { mutate: updateEtatDesLieux, isLoading: isUpdating } = useUpdateEtatDesLieuxGeneral();
+  const { mutate: updateEtatDesLieux, isPending: isUpdating } = useUpdateEtatDesLieux();
 
   const [formData, setFormData] = useState({
     adresse_bien: '',
@@ -41,20 +40,21 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
   };
 
   const handleSave = () => {
-    // Construct the payload, ensuring you only send necessary fields for update
-    // The useUpdateEtatSortie hook expects id, date_sortie, statut.
-    // This needs to be adjusted if it's for general info or a new hook is needed.
-    // For now, let's assume we are updating general info and the hook can handle it,
-    // or we'll adjust the hook in the next step.
-    // This is a placeholder save function. The actual update logic might differ.
-    updateEtatDesLieux({ id: etatId, ...formData }, {
-      onSuccess: () => {
-        toast.success('Informations générales sauvegardées');
+    updateEtatDesLieux(
+      { 
+        id: etatId, 
+        ...formData 
       },
-      onError: () => {
-        toast.error('Erreur lors de la sauvegarde');
+      {
+        onSuccess: () => {
+          toast.success('Informations générales sauvegardées');
+        },
+        onError: (error) => {
+          console.error('Erreur lors de la sauvegarde:', error);
+          toast.error('Erreur lors de la sauvegarde');
+        }
       }
-    });
+    );
   };
 
   if (isLoading) {
