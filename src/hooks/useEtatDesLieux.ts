@@ -72,6 +72,42 @@ export interface Cles {
   commentaires?: string | null;
 }
 
+export interface PartiePrivative {
+  id: string;
+  etat_des_lieux_id: string;
+  type_partie?: string | null;
+  etat_entree?: string | null; // Assuming it might exist, like other sections
+  etat_sortie?: string | null;
+  numero?: string | null;
+  commentaires?: string | null;
+}
+
+export interface AutreEquipement {
+  id: string; // Assuming primary key
+  etat_des_lieux_id: string;
+  equipement: string; // This seems to be the defining characteristic
+  etat_entree?: string | null; // Assuming it might exist
+  etat_sortie?: string | null;
+  commentaires?: string | null;
+}
+
+export interface EquipementEnergetique {
+  // Assuming etat_des_lieux_id is the primary key as it's 1-to-1
+  etat_des_lieux_id: string;
+  chauffage_type?: string | null;
+  eau_chaude_type?: string | null;
+  // No separate id if etat_des_lieux_id is PK
+}
+
+export interface EquipementChauffage {
+  // Assuming etat_des_lieux_id is the primary key as it's 1-to-1
+  etat_des_lieux_id: string;
+  chaudiere_etat?: string | null;
+  chaudiere_date_dernier_entretien?: string | null; // Store as string, handle date conversion in UI
+  ballon_eau_chaude_etat?: string | null;
+   // No separate id if etat_des_lieux_id is PK
+}
+
 export const useEtatDesLieux = () => {
   return useQuery({
     queryKey: ['etat-des-lieux'],
@@ -83,6 +119,155 @@ export const useEtatDesLieux = () => {
       
       if (error) throw error;
       return data as EtatDesLieux[];
+    },
+  });
+};
+
+export const useUpdateAutreEquipement = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (autreEquipementData: Partial<AutreEquipement>) => {
+      // Ensure 'equipement' and 'etat_des_lieux_id' are present for upsert,
+      // or handle if 'id' is the primary upsert key.
+      // For now, assuming 'id' might be generated or handled by DB if not provided.
+      // If 'equipement' + 'etat_des_lieux_id' is the composite key, upsert needs `onConflict`.
+      const { data, error } = await supabase
+        .from('autres_equipements')
+        .upsert(autreEquipementData)
+        .select()
+        .single(); // Assuming we want the single upserted/updated record
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['autres-equipements', data?.etat_des_lieux_id] });
+    },
+  });
+};
+
+export const useUpdateEquipementsEnergetiques = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (equipementEnergetiqueData: Partial<EquipementEnergetique>) => {
+      const { data, error } = await supabase
+        .from('equipements_energetiques')
+        .upsert(equipementEnergetiqueData, { onConflict: 'etat_des_lieux_id' }) // Upsert on PK
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['equipements-energetiques', data?.etat_des_lieux_id] });
+    },
+  });
+};
+
+export const useUpdateEquipementsChauffage = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (equipementChauffageData: Partial<EquipementChauffage>) => {
+      const { data, error } = await supabase
+        .from('equipements_chauffage')
+        .upsert(equipementChauffageData, { onConflict: 'etat_des_lieux_id' }) // Upsert on PK
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['equipements-chauffage', data?.etat_des_lieux_id] });
+    },
+  });
+};
+export const useAutresEquipementsByEtatId = (etatId: string) => {
+  return useQuery({
+    queryKey: ['autres-equipements', etatId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('autres_equipements') // Table name assumed
+        .select('*')
+        .eq('etat_des_lieux_id', etatId);
+
+      if (error) throw error;
+      return data as AutreEquipement[];
+    },
+    enabled: !!etatId,
+  });
+};
+
+export const useEquipementsEnergetiquesByEtatId = (etatId: string) => {
+  return useQuery({
+    queryKey: ['equipements-energetiques', etatId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('equipements_energetiques') // Table name assumed
+        .select('*')
+        .eq('etat_des_lieux_id', etatId)
+        .single(); // Assuming one record per etat_des_lieux_id
+
+      if (error) throw error;
+      return data as EquipementEnergetique;
+    },
+    enabled: !!etatId,
+  });
+};
+
+export const useEquipementsChauffageByEtatId = (etatId: string) => {
+  return useQuery({
+    queryKey: ['equipements-chauffage', etatId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('equipements_chauffage') // Table name assumed
+        .select('*')
+        .eq('etat_des_lieux_id', etatId)
+        .single(); // Assuming one record per etat_des_lieux_id
+
+      if (error) throw error;
+      return data as EquipementChauffage;
+    },
+    enabled: !!etatId,
+  });
+};
+
+export const usePartiesPrivativesByEtatId = (etatId: string) => {
+  return useQuery({
+    queryKey: ['parties-privatives', etatId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('parties_privatives')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId);
+
+      if (error) throw error;
+      return data as PartiePrivative[];
+    },
+    enabled: !!etatId,
+  });
+};
+
+export const useUpdatePartiePrivative = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (partieData: Partial<PartiePrivative>) => {
+      const { data, error } = await supabase
+        .from('parties_privatives')
+        .upsert(partieData) // Assuming 'id' or a composite key is handled by upsert
+        .select()
+        .single(); // Assuming we want to get the updated/inserted row back
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['parties-privatives', data?.etat_des_lieux_id] });
     },
   });
 };

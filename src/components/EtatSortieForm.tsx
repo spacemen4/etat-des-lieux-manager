@@ -361,7 +361,7 @@ const EtatSortieForm = () => {
             etat_des_lieux_id: id,
             ...cle
           })
-        );
+        )); // Corrected to ensure Promise.all is correctly awaited
         toast({
           title: "Clés sauvegardées",
           description: "Les informations sur les clés ont été enregistrées.",
@@ -384,7 +384,7 @@ const EtatSortieForm = () => {
             etat_des_lieux_id: id,
             ...partie
           })
-        );
+        )); // Corrected to remove extraneous semicolon and ensure Promise.all is correctly awaited
         toast({
           title: "Parties privatives sauvegardées",
           description: "Les informations sur les parties privatives ont été enregistrées.",
@@ -407,7 +407,7 @@ const EtatSortieForm = () => {
             etat_des_lieux_id: id,
             ...equipement
           })
-        );
+        )); // Corrected to ensure Promise.all is correctly awaited
         toast({
           title: "Équipements sauvegardés",
           description: "Les informations sur les autres équipements ont été enregistrées.",
