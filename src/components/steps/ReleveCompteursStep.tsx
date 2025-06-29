@@ -12,7 +12,7 @@ interface ReleveCompteursStepProps {
 }
 
 const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => {
-  const { data: releveCompteurs } = useReleveCompteursByEtatId(etatId);
+  const { data: releveCompteurs, isLoading, isFetching, isSuccess, error } = useReleveCompteursByEtatId(etatId);
   const updateReleveCompteursMutation = useUpdateReleveCompteurs();
 
   const [formData, setFormData] = useState({
@@ -24,16 +24,31 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
   });
 
   useEffect(() => {
-    if (releveCompteurs) {
-      setFormData({
-        electricite_h_pleines: releveCompteurs.electricite_h_pleines || '',
-        electricite_h_creuses: releveCompteurs.electricite_h_creuses || '',
-        gaz_naturel_releve: releveCompteurs.gaz_naturel_releve || '',
-        eau_chaude_m3: releveCompteurs.eau_chaude_m3 || '',
-        eau_froide_m3: releveCompteurs.eau_froide_m3 || '',
-      });
+    if (isSuccess) {
+      if (releveCompteurs) {
+        // Data successfully fetched and available
+        setFormData({
+          electricite_h_pleines: releveCompteurs.electricite_h_pleines || '',
+          electricite_h_creuses: releveCompteurs.electricite_h_creuses || '',
+          gaz_naturel_releve: releveCompteurs.gaz_naturel_releve || '',
+          eau_chaude_m3: releveCompteurs.eau_chaude_m3 || '',
+          eau_froide_m3: releveCompteurs.eau_froide_m3 || '',
+        });
+      } else {
+        // Data successfully fetched, but no data exists (e.g., new record)
+        // Reset form to initial/empty state
+        setFormData({
+          electricite_h_pleines: '',
+          electricite_h_creuses: '',
+          gaz_naturel_releve: '',
+          eau_chaude_m3: '',
+          eau_froide_m3: '',
+        });
+      }
     }
-  }, [releveCompteurs]);
+    // If isLoading or isFetching, we wait. `formData` remains as is (initial or previous).
+    // If error, `formData` also remains as is. Error handling for the query can be done elsewhere if needed (e.g., showing a toast).
+  }, [releveCompteurs, isSuccess, isLoading, isFetching, error, etatId]); // etatId added as it's a key dependency for the data
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
