@@ -13,7 +13,6 @@ interface ReleveCompteursStepProps {
 
 const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => {
   const { data: releveCompteurs, isLoading } = useReleveCompteursByEtatId(etatId);
-  console.log('ReleveCompteursStep - Fetched data (releveCompteurs):', releveCompteurs);
   const updateReleveCompteursMutation = useUpdateReleveCompteurs();
 
   const [formData, setFormData] = useState({
@@ -35,7 +34,6 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
         eau_froide_m3: releveCompteurs.eau_froide_m3 || '',
       };
       setFormData(newFormData);
-      console.log('ReleveCompteursStep - useEffect - formData set to:', newFormData);
     }
   }, [releveCompteurs]);
 

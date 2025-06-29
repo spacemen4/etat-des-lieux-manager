@@ -353,10 +353,16 @@ export const useReleveCompteursByEtatId = (etatId: string) => {
         .from('releve_compteurs')
         .select('*')
         .eq('etat_des_lieux_id', etatId)
-        .single();
-      
-      if (error) throw error;
-      return data as ReleveCompteurs;
+        // Remove .single(), allow for zero or one record
+        .maybeSingle(); // Use .maybeSingle() to return null if no row, or the single row if one exists.
+
+      if (error) {
+        // If .maybeSingle() throws an error for other reasons (e.g. multiple rows), it should be handled.
+        console.error('Error fetching releve_compteurs:', error);
+        throw error;
+      }
+      // data will be the record or null if not found.
+      return data as ReleveCompteurs | null; // Adjust type to include null
     },
     enabled: !!etatId,
   });
