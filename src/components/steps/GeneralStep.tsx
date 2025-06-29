@@ -46,7 +46,11 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
     // For now, let's assume we are updating general info and the hook can handle it,
     // or we'll adjust the hook in the next step.
     // This is a placeholder save function. The actual update logic might differ.
-    updateEtatDesLieux({ id: etatId, ...formData });
+    updateEtatDesLieux({ id: etatId, ...formData }, {
+      onSuccess: () => {
+        alert('Sauvegardé');
+      }
+    });
   };
 
   if (isLoading) {
@@ -107,7 +111,7 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
           />
         </div>
         <Button onClick={handleSave} disabled={isUpdating}>
-          {isUpdating ? 'Enregistrement...' : 'Enregistrer les modifications'}
+          {isUpdating ? 'Enregistrement...' : 'Sauvegarder'}
         </Button>
       </CardContent>
     </Card>
