@@ -1,4 +1,5 @@
 
+// EquipementsChauffageStep.tsx
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,7 @@ interface EquipementsChauffageStepProps {
 }
 
 const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ etatId }) => {
-  const { data: equipementsChauffage } = useEquipementsChauffageByEtatId(etatId);
+  const { data: equipementsChauffage, refetch, isLoading } = useEquipementsChauffageByEtatId(etatId);
   const updateEquipementsChauffageMutation = useUpdateEquipementsChauffage();
 
   const [formData, setFormData] = useState({
@@ -35,19 +36,22 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
-    updateEquipementsChauffageMutation.mutate({
-      etat_des_lieux_id: etatId,
-      ...formData,
-    }, {
-      onSuccess: () => {
-        toast.success('Équipements de chauffage sauvegardés');
-      },
-      onError: () => {
-        toast.error('Erreur lors de la sauvegarde');
-      },
-    });
+  const handleSave = async () => {
+    try {
+      await updateEquipementsChauffageMutation.mutateAsync({
+        etat_des_lieux_id: etatId,
+        ...formData,
+      });
+      toast.success('Équipements de chauffage sauvegardés');
+      refetch();
+    } catch (error) {
+      toast.error('Erreur lors de la sauvegarde');
+    }
   };
+
+  if (isLoading) {
+    return <div>Chargement...</div>;
+  }
 
   return (
     <Card>
@@ -55,24 +59,25 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
         <CardTitle>Équipements de chauffage</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <Label htmlFor="chaudiere_etat">État de la chaudière</Label>
-          <Input
-            id="chaudiere_etat"
-            value={formData.chaudiere_etat}
-            onChange={(e) => handleInputChange('chaudiere_etat', e.target.value)}
-            placeholder="Ex: Bon état, Défaillante..."
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="chaudiere_date_dernier_entretien">Date du dernier entretien de la chaudière</Label>
-          <Input
-            id="chaudiere_date_dernier_entretien"
-            type="date"
-            value={formData.chaudiere_date_dernier_entretien}
-            onChange={(e) => handleInputChange('chaudiere_date_dernier_entretien', e.target.value)}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="chaudiere_etat">État de la chaudière</Label>
+            <Input
+              id="chaudiere_etat"
+              value={formData.chaudiere_etat}
+              onChange={(e) => handleInputChange('chaudiere_etat', e.target.value)}
+              placeholder="Ex: Bon état, Défaillante, À réviser..."
+            />
+          </div>
+          <div>
+            <Label htmlFor="chaudiere_date_dernier_entretien">Date du dernier entretien</Label>
+            <Input
+              id="chaudiere_date_dernier_entretien"
+              type="date"
+              value={formData.chaudiere_date_dernier_entretien}
+              onChange={(e) => handleInputChange('chaudiere_date_dernier_entretien', e.target.value)}
+            />
+          </div>
         </div>
 
         <div>
@@ -81,7 +86,7 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
             id="ballon_eau_chaude_etat"
             value={formData.ballon_eau_chaude_etat}
             onChange={(e) => handleInputChange('ballon_eau_chaude_etat', e.target.value)}
-            placeholder="Ex: Bon état, Défaillant..."
+            placeholder="Ex: Bon état, Défaillant, Fuite détectée..."
           />
         </div>
 
