@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +14,10 @@ import GeneralStep from '@/components/steps/GeneralStep';
 import ReleveCompteursStep from '@/components/steps/ReleveCompteursStep';
 import PiecesStep from '@/components/steps/PiecesStep';
 import ClesStep from '@/components/steps/ClesStep';
+import PartiesPrivativesStep from '@/components/steps/PartiesPrivativesStep';
+import AutresEquipementsStep from '@/components/steps/AutresEquipementsStep';
+import EquipementsEnergetiquesStep from '@/components/steps/EquipementsEnergetiquesStep';
+import EquipementsChauffageStep from '@/components/steps/EquipementsChauffageStep';
 
 interface EtatSortieFormProps {
   etatId: string;
@@ -104,64 +107,16 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
         return <ClesStep etatId={etatId} />;
       
       case 4: // Parties privatives
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Parties privatives</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>État des parties privatives (balcon, cave, parking, etc.).</p>
-              <p className="text-sm text-gray-600 mt-2">
-                Vérifiez l'état des espaces privatifs associés au logement.
-              </p>
-            </CardContent>
-          </Card>
-        );
+        return <PartiesPrivativesStep etatId={etatId} />;
       
       case 5: // Autres équipements
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Autres équipements</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Vérification des autres équipements du logement.</p>
-              <p className="text-sm text-gray-600 mt-2">
-                Contrôlez l'état des équipements supplémentaires (interphone, volets, etc.).
-              </p>
-            </CardContent>
-          </Card>
-        );
+        return <AutresEquipementsStep etatId={etatId} />;
       
       case 6: // Équipements énergétiques
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Équipements énergétiques</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>État des équipements de chauffage et de production d'eau chaude.</p>
-              <p className="text-sm text-gray-600 mt-2">
-                Vérifiez le fonctionnement des systèmes énergétiques.
-              </p>
-            </CardContent>
-          </Card>
-        );
+        return <EquipementsEnergetiquesStep etatId={etatId} />;
       
       case 7: // Équipements de chauffage
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Équipements de chauffage</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Contrôle détaillé des équipements de chauffage.</p>
-              <p className="text-sm text-gray-600 mt-2">
-                Vérifiez l'état de la chaudière, des radiateurs et de la ventilation.
-              </p>
-            </CardContent>
-          </Card>
-        );
+        return <EquipementsChauffageStep etatId={etatId} />;
       
       case 8: // Finalisation
         return (
