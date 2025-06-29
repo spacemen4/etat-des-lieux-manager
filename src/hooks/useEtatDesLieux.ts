@@ -20,6 +20,7 @@ export interface EtatDesLieux {
   updated_at?: string;
 }
 
+
 export interface Piece {
   id: string;
   etat_des_lieux_id: string;
@@ -445,6 +446,8 @@ export const useUpdatePiece = (
   });
 };
 
+// Replace the existing useUpdateReleveCompteurs hook in your useEtatDesLieux.ts file with this improved version
+
 export const useUpdateReleveCompteurs = (
   options?: MutationOptions<ReleveCompteurs, PostgrestError, Partial<ReleveCompteurs>>
 ) => {
@@ -452,14 +455,28 @@ export const useUpdateReleveCompteurs = (
 
   return useMutation({
     mutationFn: async (releveData: Partial<ReleveCompteurs>) => {
-      const { data, error } = await supabase
-        .from('releve_compteurs')
-        .upsert(releveData, { onConflict: 'etat_des_lieux_id' })
-        .select()
-        .single();
+      // If we have an ID, it's an update operation
+      if (releveData.id) {
+        const { data, error } = await supabase
+          .from('releve_compteurs')
+          .update(releveData)
+          .eq('id', releveData.id)
+          .select()
+          .single();
 
-      if (error) throw error;
-      return data as ReleveCompteurs;
+        if (error) throw error;
+        return data as ReleveCompteurs;
+      } else {
+        // If no ID, it's an insert operation
+        const { data, error } = await supabase
+          .from('releve_compteurs')
+          .insert(releveData)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data as ReleveCompteurs;
+      }
     },
     onSuccess: (data) => {
       if (data.etat_des_lieux_id) {
