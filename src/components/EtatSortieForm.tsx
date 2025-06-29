@@ -35,6 +35,7 @@ const EtatSortieForm = () => {
   const [steps, setSteps] = useState(STEPS);
   const [dateSortie, setDateSortie] = useState('');
   const [isValidated, setIsValidated] = useState(false);
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   // Hooks pour récupérer les données
   const { data: etatDesLieux, isLoading: loadingEtat } = useEtatDesLieuxById(id || '');
@@ -167,23 +168,35 @@ const EtatSortieForm = () => {
   };
 
   const handleFinalize = async () => {
+    setFormErrors({}); // Clear previous errors
+    let errors: { [key: string]: string } = {};
+
     // La validation de la checkbox reste obligatoire pour finaliser
     if (!isValidated) {
-      toast({
-        title: "Validation requise",
-        description: "Veuillez cocher la case de validation pour finaliser.",
-        variant: "destructive",
-      });
-      return;
+      errors.validation = "La case de validation doit être cochée pour finaliser.";
     }
 
     // Le type de bien (via adresse_bien) est obligatoire
     if (!etatDesLieux?.adresse_bien) {
-       toast({
-        title: "Information manquante",
-        description: "L'adresse du bien (et donc le type de bien) est requise pour finaliser.",
-        variant: "destructive",
-      });
+      errors.adresse_bien = "L'adresse du bien (et donc le type de bien) est requise pour finaliser.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      if (errors.validation) {
+        toast({
+          title: "Validation requise",
+          description: errors.validation,
+          variant: "destructive",
+        });
+      }
+      if (errors.adresse_bien) {
+        toast({
+          title: "Information manquante",
+          description: errors.adresse_bien,
+          variant: "destructive",
+        });
+      }
       return;
     }
 
@@ -232,7 +245,8 @@ const EtatSortieForm = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Adresse du bien (Requis pour finalisation)</Label>
-                  <Input value={etatDesLieux.adresse_bien} disabled />
+                  <Input value={etatDesLieux.adresse_bien} disabled className={formErrors.adresse_bien ? 'border-red-500' : ''} />
+                  {formErrors.adresse_bien && <p className="text-sm text-red-600 mt-1">{formErrors.adresse_bien}</p>}
                 </div>
                 <div>
                   <Label>Locataire</Label>
@@ -518,17 +532,24 @@ const EtatSortieForm = () => {
               </div>
               
               <div className="flex items-center space-x-2">
-                <input 
-                  type="checkbox" 
-                  id="validation" 
-                  className="rounded" 
+                  <input
+                    type="checkbox"
+                    id="validation"
+                    className={`rounded ${formErrors.validation ? 'border-red-500' : ''}`}
                   checked={isValidated}
-                  onChange={(e) => setIsValidated(e.target.checked)}
+                    onChange={(e) => {
+                      setIsValidated(e.target.checked);
+                      if (e.target.checked && formErrors.validation) {
+                        // Clear validation error if checkbox is checked
+                        setFormErrors(prev => ({ ...prev, validation: '' }));
+                      }
+                    }}
                 />
-                <Label htmlFor="validation">
+                  <Label htmlFor="validation" className={formErrors.validation ? 'text-red-600' : ''}>
                   Je certifie que toutes les informations renseignées sont exactes et que l'état des lieux a été réalisé en présence du locataire.
                 </Label>
               </div>
+                {formErrors.validation && <p className="text-sm text-red-600 mt-1">{formErrors.validation}</p>}
             </CardContent>
           </Card>
         );
