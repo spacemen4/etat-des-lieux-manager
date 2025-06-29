@@ -12,7 +12,8 @@ interface ReleveCompteursStepProps {
 }
 
 const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => {
-  const { data: releveCompteurs } = useReleveCompteursByEtatId(etatId);
+  const { data: releveCompteurs, isLoading } = useReleveCompteursByEtatId(etatId);
+  console.log('ReleveCompteursStep - Fetched data (releveCompteurs):', releveCompteurs);
   const updateReleveCompteursMutation = useUpdateReleveCompteurs();
 
   const [formData, setFormData] = useState({
@@ -24,14 +25,17 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
   });
 
   useEffect(() => {
+    console.log('ReleveCompteursStep - useEffect triggered. releveCompteurs:', releveCompteurs);
     if (releveCompteurs) {
-      setFormData({
+      const newFormData = {
         electricite_h_pleines: releveCompteurs.electricite_h_pleines || '',
         electricite_h_creuses: releveCompteurs.electricite_h_creuses || '',
         gaz_naturel_releve: releveCompteurs.gaz_naturel_releve || '',
         eau_chaude_m3: releveCompteurs.eau_chaude_m3 || '',
         eau_froide_m3: releveCompteurs.eau_froide_m3 || '',
-      });
+      };
+      setFormData(newFormData);
+      console.log('ReleveCompteursStep - useEffect - formData set to:', newFormData);
     }
   }, [releveCompteurs]);
 
