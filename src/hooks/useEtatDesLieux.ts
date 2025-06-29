@@ -1,25 +1,29 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { PostgrestError } from '@supabase/supabase-js';
 
-// Updated interfaces to match src/types/etatDesLieux.ts
+// ===== INTERFACES =====
+
 export interface EtatDesLieux {
   id: string;
   date_entree?: string | null;
   date_sortie?: string | null;
-  adresse_bien: string; // Required
+  adresse_bien: string;
   statut?: string | null;
-  type_etat_des_lieux: 'entree' | 'sortie'; // Required - Type of inventory
-  type_bien: 'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires'; // Required - Type of property
+  type_etat_des_lieux: 'entree' | 'sortie';
+  type_bien: 'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires';
   bailleur_nom?: string | null;
   bailleur_adresse?: string | null;
   locataire_nom?: string | null;
   locataire_adresse?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Piece {
   id: string;
   etat_des_lieux_id: string;
-  nom_piece: string; // Required
+  nom_piece: string;
   revetements_sols_entree?: string | null;
   revetements_sols_sortie?: string | null;
   murs_menuiseries_entree?: string | null;
@@ -28,7 +32,6 @@ export interface Piece {
   plafond_sortie?: string | null;
   electricite_plomberie_entree?: string | null;
   electricite_plomberie_sortie?: string | null;
-  // Added missing optional fields from src/types/etatDesLieux.ts for consistency
   placards_entree?: string | null;
   placards_sortie?: string | null;
   sanitaires_entree?: string | null;
@@ -55,11 +58,11 @@ export interface Piece {
 export interface ReleveCompteurs {
   id: string;
   etat_des_lieux_id: string;
-  nom_ancien_occupant?: string | null; // Added from src/types
-  electricite_n_compteur?: string | null; // Added from src/types
+  nom_ancien_occupant?: string | null;
+  electricite_n_compteur?: string | null;
   electricite_h_pleines?: string | null;
   electricite_h_creuses?: string | null;
-  gaz_naturel_n_compteur?: string | null; // Added from src/types
+  gaz_naturel_n_compteur?: string | null;
   gaz_naturel_releve?: string | null;
   eau_chaude_m3?: string | null;
   eau_froide_m3?: string | null;
@@ -68,8 +71,8 @@ export interface ReleveCompteurs {
 export interface Cles {
   id: string;
   etat_des_lieux_id: string;
-  type_cle_badge?: string | null; // Made optional
-  nombre?: number | null; // Made optional
+  type_cle_badge?: string | null;
+  nombre?: number | null;
   commentaires?: string | null;
 }
 
@@ -77,41 +80,70 @@ export interface PartiePrivative {
   id: string;
   etat_des_lieux_id: string;
   type_partie?: string | null;
-  etat_entree?: string | null; // Assuming it might exist, like other sections
+  etat_entree?: string | null;
   etat_sortie?: string | null;
   numero?: string | null;
   commentaires?: string | null;
 }
 
 export interface AutreEquipement {
-  id: string; // Assuming primary key
+  id: string;
   etat_des_lieux_id: string;
-  equipement: string; // This seems to be the defining characteristic
-  etat_entree?: string | null; // Assuming it might exist
+  equipement: string;
+  etat_entree?: string | null;
   etat_sortie?: string | null;
   commentaires?: string | null;
 }
 
 export interface EquipementEnergetique {
-  // Assuming etat_des_lieux_id is the primary key as it's 1-to-1
   etat_des_lieux_id: string;
   chauffage_type?: string | null;
   eau_chaude_type?: string | null;
-  // No separate id if etat_des_lieux_id is PK
 }
 
 export interface EquipementChauffage {
-  // Assuming etat_des_lieux_id is the primary key as it's 1-to-1
   etat_des_lieux_id: string;
   chaudiere_etat?: string | null;
-  chaudiere_date_dernier_entretien?: string | null; // Store as string, handle date conversion in UI
+  chaudiere_date_dernier_entretien?: string | null;
   ballon_eau_chaude_etat?: string | null;
-   // No separate id if etat_des_lieux_id is PK
 }
 
-export const useEtatDesLieux = () => {
+// ===== TYPES UTILITAIRES =====
+
+type MutationOptions<TData, TError, TVariables> = Omit<
+  UseMutationOptions<TData, TError, TVariables>,
+  'mutationFn'
+>;
+
+type QueryOptions<TData, TError> = Omit<
+  UseQueryOptions<TData, TError>,
+  'queryKey' | 'queryFn'
+>;
+
+// ===== CONSTANTES =====
+
+const QUERY_KEYS = {
+  etatDesLieux: ['etat-des-lieux'] as const,
+  etatDesLieuxById: (id: string) => ['etat-des-lieux', id] as const,
+  pieces: (etatId: string) => ['pieces', etatId] as const,
+  releveCompteurs: (etatId: string) => ['releve-compteurs', etatId] as const,
+  cles: (etatId: string) => ['cles', etatId] as const,
+  partiesPrivatives: (etatId: string) => ['parties-privatives', etatId] as const,
+  autresEquipements: (etatId: string) => ['autres-equipements', etatId] as const,
+  equipementsEnergetiques: (etatId: string) => ['equipements-energetiques', etatId] as const,
+  equipementsChauffage: (etatId: string) => ['equipements-chauffage', etatId] as const,
+} as const;
+
+const DEFAULT_STALE_TIME = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_CACHE_TIME = 10 * 60 * 1000; // 10 minutes
+
+// ===== HOOKS DE REQUÊTE =====
+
+export const useEtatDesLieux = (
+  options?: QueryOptions<EtatDesLieux[], PostgrestError>
+) => {
   return useQuery({
-    queryKey: ['etat-des-lieux'],
+    queryKey: QUERY_KEYS.etatDesLieux,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('etat_des_lieux')
@@ -121,161 +153,18 @@ export const useEtatDesLieux = () => {
       if (error) throw error;
       return data as EtatDesLieux[];
     },
+    staleTime: DEFAULT_STALE_TIME,
+    cacheTime: DEFAULT_CACHE_TIME,
+    ...options,
   });
 };
 
-export const useUpdateAutreEquipement = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (autreEquipementData: Partial<AutreEquipement>) => {
-      // Ensure 'equipement' and 'etat_des_lieux_id' are present for upsert,
-      // or handle if 'id' is the primary upsert key.
-      // For now, assuming 'id' might be generated or handled by DB if not provided.
-      // If 'equipement' + 'etat_des_lieux_id' is the composite key, upsert needs `onConflict`.
-      const { data, error } = await supabase
-        .from('autres_equipements')
-        .upsert(autreEquipementData)
-        .select()
-        .single(); // Assuming we want the single upserted/updated record
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['autres-equipements', data?.etat_des_lieux_id] });
-    },
-  });
-};
-
-export const useUpdateEquipementsEnergetiques = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (equipementEnergetiqueData: Partial<EquipementEnergetique>) => {
-      const { data, error } = await supabase
-        .from('equipements_energetiques')
-        .upsert(equipementEnergetiqueData, { onConflict: 'etat_des_lieux_id' }) // Upsert on PK
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['equipements-energetiques', data?.etat_des_lieux_id] });
-    },
-  });
-};
-
-export const useUpdateEquipementsChauffage = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (equipementChauffageData: Partial<EquipementChauffage>) => {
-      const { data, error } = await supabase
-        .from('equipements_chauffage')
-        .upsert(equipementChauffageData, { onConflict: 'etat_des_lieux_id' }) // Upsert on PK
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['equipements-chauffage', data?.etat_des_lieux_id] });
-    },
-  });
-};
-export const useAutresEquipementsByEtatId = (etatId: string) => {
+export const useEtatDesLieuxById = (
+  id: string,
+  options?: QueryOptions<EtatDesLieux, PostgrestError>
+) => {
   return useQuery({
-    queryKey: ['autres-equipements', etatId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('autres_equipements') // Table name assumed
-        .select('*')
-        .eq('etat_des_lieux_id', etatId);
-
-      if (error) throw error;
-      return data as AutreEquipement[];
-    },
-    enabled: !!etatId,
-  });
-};
-
-export const useEquipementsEnergetiquesByEtatId = (etatId: string) => {
-  return useQuery({
-    queryKey: ['equipements-energetiques', etatId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('equipements_energetiques') // Table name assumed
-        .select('*')
-        .eq('etat_des_lieux_id', etatId)
-        .single(); // Assuming one record per etat_des_lieux_id
-
-      if (error) throw error;
-      return data as EquipementEnergetique;
-    },
-    enabled: !!etatId,
-  });
-};
-
-export const useEquipementsChauffageByEtatId = (etatId: string) => {
-  return useQuery({
-    queryKey: ['equipements-chauffage', etatId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('equipements_chauffage') // Table name assumed
-        .select('*')
-        .eq('etat_des_lieux_id', etatId)
-        .single(); // Assuming one record per etat_des_lieux_id
-
-      if (error) throw error;
-      return data as EquipementChauffage;
-    },
-    enabled: !!etatId,
-  });
-};
-
-export const usePartiesPrivativesByEtatId = (etatId: string) => {
-  return useQuery({
-    queryKey: ['parties-privatives', etatId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('parties_privatives')
-        .select('*')
-        .eq('etat_des_lieux_id', etatId);
-
-      if (error) throw error;
-      return data as PartiePrivative[];
-    },
-    enabled: !!etatId,
-  });
-};
-
-export const useUpdatePartiePrivative = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (partieData: Partial<PartiePrivative>) => {
-      const { data, error } = await supabase
-        .from('parties_privatives')
-        .upsert(partieData) // Assuming 'id' or a composite key is handled by upsert
-        .select()
-        .single(); // Assuming we want to get the updated/inserted row back
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['parties-privatives', data?.etat_des_lieux_id] });
-    },
-  });
-};
-
-export const useEtatDesLieuxById = (id: string) => {
-  return useQuery({
-    queryKey: ['etat-des-lieux', id],
+    queryKey: QUERY_KEYS.etatDesLieuxById(id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('etat_des_lieux')
@@ -287,23 +176,175 @@ export const useEtatDesLieuxById = (id: string) => {
       return data as EtatDesLieux;
     },
     enabled: !!id,
+    staleTime: DEFAULT_STALE_TIME,
+    cacheTime: DEFAULT_CACHE_TIME,
+    ...options,
   });
 };
 
-// It's generally better to have a specific hook for updates rather than modifying useEtatDesLieuxById
-// Let's create a new hook for updating general information, similar to useUpdateEtatSortie but more generic.
-// Or, we can modify useUpdateEtatSortie to be more generic if it's not strictly for 'sortie' specific fields.
+export const usePiecesByEtatId = (
+  etatId: string,
+  options?: QueryOptions<Piece[], PostgrestError>
+) => {
+  return useQuery({
+    queryKey: QUERY_KEYS.pieces(etatId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pieces')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId)
+        .order('nom_piece');
+      
+      if (error) throw error;
+      return data as Piece[];
+    },
+    enabled: !!etatId,
+    staleTime: DEFAULT_STALE_TIME,
+    cacheTime: DEFAULT_CACHE_TIME,
+    ...options,
+  });
+};
 
-// For now, let's assume useUpdateEtatSortie can be generalized or we create a new one.
-// The plan was to modify useEtatDesLieuxById, but that's not standard practice for react-query.
-// Instead, we should ensure a proper mutation hook is used in GeneralStep.tsx.
-// The existing useUpdateEtatSortie is a mutation hook. We need to check if its mutationFn is suitable.
+export const useReleveCompteursByEtatId = (
+  etatId: string,
+  options?: QueryOptions<ReleveCompteurs | null, PostgrestError>
+) => {
+  return useQuery({
+    queryKey: QUERY_KEYS.releveCompteurs(etatId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('releve_compteurs')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId)
+        .maybeSingle();
 
-// The current useUpdateEtatSortie is:
-// mutationFn: async ({ id, date_sortie, statut }: { id: string; date_sortie?: string | null; statut?: string | null })
-// This is too specific. We need a more generic update hook.
+      if (error) throw error;
+      return data as ReleveCompteurs | null;
+    },
+    enabled: !!etatId,
+    staleTime: DEFAULT_STALE_TIME,
+    cacheTime: DEFAULT_CACHE_TIME,
+    ...options,
+  });
+};
 
-export const useUpdateEtatDesLieuxGeneral = () => {
+export const useClesByEtatId = (
+  etatId: string,
+  options?: QueryOptions<Cles[], PostgrestError>
+) => {
+  return useQuery({
+    queryKey: QUERY_KEYS.cles(etatId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cles')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId);
+      
+      if (error) throw error;
+      return data as Cles[];
+    },
+    enabled: !!etatId,
+    staleTime: DEFAULT_STALE_TIME,
+    cacheTime: DEFAULT_CACHE_TIME,
+    ...options,
+  });
+};
+
+export const usePartiesPrivativesByEtatId = (
+  etatId: string,
+  options?: QueryOptions<PartiePrivative[], PostgrestError>
+) => {
+  return useQuery({
+    queryKey: QUERY_KEYS.partiesPrivatives(etatId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('parties_privatives')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId);
+
+      if (error) throw error;
+      return data as PartiePrivative[];
+    },
+    enabled: !!etatId,
+    staleTime: DEFAULT_STALE_TIME,
+    cacheTime: DEFAULT_CACHE_TIME,
+    ...options,
+  });
+};
+
+export const useAutresEquipementsByEtatId = (
+  etatId: string,
+  options?: QueryOptions<AutreEquipement[], PostgrestError>
+) => {
+  return useQuery({
+    queryKey: QUERY_KEYS.autresEquipements(etatId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('autres_equipements')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId);
+
+      if (error) throw error;
+      return data as AutreEquipement[];
+    },
+    enabled: !!etatId,
+    staleTime: DEFAULT_STALE_TIME,
+    cacheTime: DEFAULT_CACHE_TIME,
+    ...options,
+  });
+};
+
+export const useEquipementsEnergetiquesByEtatId = (
+  etatId: string,
+  options?: QueryOptions<EquipementEnergetique | null, PostgrestError>
+) => {
+  return useQuery({
+    queryKey: QUERY_KEYS.equipementsEnergetiques(etatId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('equipements_energetiques')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as EquipementEnergetique | null;
+    },
+    enabled: !!etatId,
+    staleTime: DEFAULT_STALE_TIME,
+    cacheTime: DEFAULT_CACHE_TIME,
+    ...options,
+  });
+};
+
+export const useEquipementsChauffageByEtatId = (
+  etatId: string,
+  options?: QueryOptions<EquipementChauffage | null, PostgrestError>
+) => {
+  return useQuery({
+    queryKey: QUERY_KEYS.equipementsChauffage(etatId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('equipements_chauffage')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as EquipementChauffage | null;
+    },
+    enabled: !!etatId,
+    staleTime: DEFAULT_STALE_TIME,
+    cacheTime: DEFAULT_CACHE_TIME,
+    ...options,
+  });
+};
+
+// ===== HOOKS DE MUTATION =====
+
+export const useUpdateEtatDesLieux = (
+  options?: MutationOptions<EtatDesLieux, PostgrestError, Partial<EtatDesLieux> & { id: string }>
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -317,124 +358,71 @@ export const useUpdateEtatDesLieuxGeneral = () => {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as EtatDesLieux;
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['etat-des-lieux'] });
-      if (variables.id) {
-        queryClient.invalidateQueries({ queryKey: ['etat-des-lieux', variables.id] });
-      }
-    },
-  });
-};
-
-
-export const usePiecesByEtatId = (etatId: string) => {
-  return useQuery({
-    queryKey: ['pieces', etatId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pieces')
-        .select('*')
-        .eq('etat_des_lieux_id', etatId);
+      // Invalidation optimisée
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.etatDesLieux });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.etatDesLieuxById(variables.id) });
       
-      if (error) throw error;
-      return data as Piece[];
+      // Mise à jour optimiste du cache
+      queryClient.setQueryData(QUERY_KEYS.etatDesLieuxById(variables.id), data);
     },
-    enabled: !!etatId,
+    ...options,
   });
 };
 
-export const useReleveCompteursByEtatId = (etatId: string) => {
-  return useQuery({
-    queryKey: ['releve-compteurs', etatId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('releve_compteurs')
-        .select('*')
-        .eq('etat_des_lieux_id', etatId)
-        // Remove .single(), allow for zero or one record
-        .maybeSingle(); // Use .maybeSingle() to return null if no row, or the single row if one exists.
-
-      if (error) {
-        // If .maybeSingle() throws an error for other reasons (e.g. multiple rows), it should be handled.
-        console.error('Error fetching releve_compteurs:', error);
-        throw error;
-      }
-      // data will be the record or null if not found.
-      return data as ReleveCompteurs | null; // Adjust type to include null
-    },
-    enabled: !!etatId,
-  });
-};
-
-export const useClesByEtatId = (etatId: string) => {
-  return useQuery({
-    queryKey: ['cles', etatId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cles')
-        .select('*')
-        .eq('etat_des_lieux_id', etatId);
-      
-      if (error) throw error;
-      return data as Cles[];
-    },
-    enabled: !!etatId,
-  });
-};
-
-export const useUpdateEtatSortie = () => {
+export const useCreateEtatDesLieux = (
+  options?: MutationOptions<EtatDesLieux, PostgrestError, Omit<EtatDesLieux, 'id'>>
+) => {
   const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ id, date_sortie, statut }: { id: string; date_sortie?: string | null; statut?: string | null }) => {
-      const updateData: Partial<EtatDesLieux> = {};
-      if (date_sortie !== undefined) updateData.date_sortie = date_sortie;
-      if (statut !== undefined) updateData.statut = statut;
 
+  return useMutation({
+    mutationFn: async (newEtatData: Omit<EtatDesLieux, 'id'>) => {
       const { data, error } = await supabase
         .from('etat_des_lieux')
-        .update(updateData)
-        .eq('id', id)
+        .insert(newEtatData)
         .select()
         .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data, variables) => { // Added variables to access id for specific invalidation
-      queryClient.invalidateQueries({ queryKey: ['etat-des-lieux'] }); // General list
-      if (variables.id) {
-        queryClient.invalidateQueries({ queryKey: ['etat-des-lieux', variables.id] }); // Specific item
-      }
-    },
-  });
-};
 
-export const useUpdateReleveCompteurs = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (releveData: Partial<ReleveCompteurs>) => {
-      const { data, error } = await supabase
-        .from('releve_compteurs')
-        .upsert(releveData)
-        .select()
-        .single();
-      
       if (error) throw error;
-      return data;
+      return data as EtatDesLieux;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['releve-compteurs', data?.etat_des_lieux_id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.etatDesLieux });
+      queryClient.setQueryData(QUERY_KEYS.etatDesLieuxById(data.id), data);
     },
+    ...options,
   });
 };
 
-export const useUpdatePiece = () => {
+export const useDeleteEtatDesLieux = (
+  options?: MutationOptions<void, PostgrestError, string>
+) => {
   const queryClient = useQueryClient();
-  
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('etat_des_lieux')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.etatDesLieux });
+      queryClient.removeQueries({ queryKey: QUERY_KEYS.etatDesLieuxById(id) });
+    },
+    ...options,
+  });
+};
+
+export const useUpdatePiece = (
+  options?: MutationOptions<Piece, PostgrestError, Partial<Piece>>
+) => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (pieceData: Partial<Piece>) => {
       const { data, error } = await supabase
@@ -442,19 +430,53 @@ export const useUpdatePiece = () => {
         .upsert(pieceData)
         .select()
         .single();
-      
+
       if (error) throw error;
-      return data;
+      return data as Piece;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['pieces', data?.etat_des_lieux_id] });
+      if (data.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ 
+          queryKey: QUERY_KEYS.pieces(data.etat_des_lieux_id) 
+        });
+      }
     },
+    ...options,
   });
 };
 
-export const useUpdateCles = () => {
+export const useUpdateReleveCompteurs = (
+  options?: MutationOptions<ReleveCompteurs, PostgrestError, Partial<ReleveCompteurs>>
+) => {
   const queryClient = useQueryClient();
-  
+
+  return useMutation({
+    mutationFn: async (releveData: Partial<ReleveCompteurs>) => {
+      const { data, error } = await supabase
+        .from('releve_compteurs')
+        .upsert(releveData, { onConflict: 'etat_des_lieux_id' })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as ReleveCompteurs;
+    },
+    onSuccess: (data) => {
+      if (data.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ 
+          queryKey: QUERY_KEYS.releveCompteurs(data.etat_des_lieux_id) 
+        });
+      }
+    },
+    ...options,
+  });
+};
+
+export const useUpdateCles = (
+  options?: MutationOptions<Cles, PostgrestError, Partial<Cles>>
+) => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (clesData: Partial<Cles>) => {
       const { data, error } = await supabase
@@ -462,12 +484,198 @@ export const useUpdateCles = () => {
         .upsert(clesData)
         .select()
         .single();
-      
+
       if (error) throw error;
-      return data;
+      return data as Cles;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['cles', data?.etat_des_lieux_id] });
+      if (data.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ 
+          queryKey: QUERY_KEYS.cles(data.etat_des_lieux_id) 
+        });
+      }
     },
+    ...options,
   });
+};
+
+export const useUpdatePartiePrivative = (
+  options?: MutationOptions<PartiePrivative, PostgrestError, Partial<PartiePrivative>>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (partieData: Partial<PartiePrivative>) => {
+      const { data, error } = await supabase
+        .from('parties_privatives')
+        .upsert(partieData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as PartiePrivative;
+    },
+    onSuccess: (data) => {
+      if (data.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ 
+          queryKey: QUERY_KEYS.partiesPrivatives(data.etat_des_lieux_id) 
+        });
+      }
+    },
+    ...options,
+  });
+};
+
+export const useUpdateAutreEquipement = (
+  options?: MutationOptions<AutreEquipement, PostgrestError, Partial<AutreEquipement>>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (autreEquipementData: Partial<AutreEquipement>) => {
+      const { data, error } = await supabase
+        .from('autres_equipements')
+        .upsert(autreEquipementData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as AutreEquipement;
+    },
+    onSuccess: (data) => {
+      if (data.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ 
+          queryKey: QUERY_KEYS.autresEquipements(data.etat_des_lieux_id) 
+        });
+      }
+    },
+    ...options,
+  });
+};
+
+export const useUpdateEquipementsEnergetiques = (
+  options?: MutationOptions<EquipementEnergetique, PostgrestError, Partial<EquipementEnergetique>>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (equipementEnergetiqueData: Partial<EquipementEnergetique>) => {
+      const { data, error } = await supabase
+        .from('equipements_energetiques')
+        .upsert(equipementEnergetiqueData, { onConflict: 'etat_des_lieux_id' })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as EquipementEnergetique;
+    },
+    onSuccess: (data) => {
+      if (data.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ 
+          queryKey: QUERY_KEYS.equipementsEnergetiques(data.etat_des_lieux_id) 
+        });
+      }
+    },
+    ...options,
+  });
+};
+
+export const useUpdateEquipementsChauffage = (
+  options?: MutationOptions<EquipementChauffage, PostgrestError, Partial<EquipementChauffage>>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (equipementChauffageData: Partial<EquipementChauffage>) => {
+      const { data, error } = await supabase
+        .from('equipements_chauffage')
+        .upsert(equipementChauffageData, { onConflict: 'etat_des_lieux_id' })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as EquipementChauffage;
+    },
+    onSuccess: (data) => {
+      if (data.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ 
+          queryKey: QUERY_KEYS.equipementsChauffage(data.etat_des_lieux_id) 
+        });
+      }
+    },
+    ...options,
+  });
+};
+
+// ===== HOOKS COMPOSÉS =====
+
+/**
+ * Hook composé pour récupérer toutes les données liées à un état des lieux
+ */
+export const useEtatDesLieuxComplete = (etatId: string) => {
+  const etatDesLieux = useEtatDesLieuxById(etatId);
+  const pieces = usePiecesByEtatId(etatId);
+  const releveCompteurs = useReleveCompteursByEtatId(etatId);
+  const cles = useClesByEtatId(etatId);
+  const partiesPrivatives = usePartiesPrivativesByEtatId(etatId);
+  const autresEquipements = useAutresEquipementsByEtatId(etatId);
+  const equipementsEnergetiques = useEquipementsEnergetiquesByEtatId(etatId);
+  const equipementsChauffage = useEquipementsChauffageByEtatId(etatId);
+
+  return {
+    etatDesLieux,
+    pieces,
+    releveCompteurs,
+    cles,
+    partiesPrivatives,
+    autresEquipements,
+    equipementsEnergetiques,
+    equipementsChauffage,
+    isLoading: [
+      etatDesLieux,
+      pieces,
+      releveCompteurs,
+      cles,
+      partiesPrivatives,
+      autresEquipements,
+      equipementsEnergetiques,
+      equipementsChauffage,
+    ].some(query => query.isLoading),
+    isError: [
+      etatDesLieux,
+      pieces,
+      releveCompteurs,
+      cles,
+      partiesPrivatives,
+      autresEquipements,
+      equipementsEnergetiques,
+      equipementsChauffage,
+    ].some(query => query.isError),
+  };
+};
+
+// ===== HOOKS UTILITAIRES =====
+
+/**
+ * Hook pour invalider toutes les queries liées à un état des lieux
+ */
+export const useInvalidateEtatDesLieuxQueries = () => {
+  const queryClient = useQueryClient();
+
+  return (etatId: string) => {
+    const queriesToInvalidate = [
+      QUERY_KEYS.etatDesLieuxById(etatId),
+      QUERY_KEYS.pieces(etatId),
+      QUERY_KEYS.releveCompteurs(etatId),
+      QUERY_KEYS.cles(etatId),
+      QUERY_KEYS.partiesPrivatives(etatId),
+      QUERY_KEYS.autresEquipements(etatId),
+      QUERY_KEYS.equipementsEnergetiques(etatId),
+      QUERY_KEYS.equipementsChauffage(etatId),
+    ];
+
+    queriesToInvalidate.forEach(queryKey => {
+      queryClient.invalidateQueries({ queryKey });
+    });
+  };
 };
