@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEtatDesLieuxById, useUpdateEtatDesLieux } from '@/hooks/useEtatDesLieux';
 
 interface GeneralStepProps {
@@ -16,34 +17,72 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
 
   const [formData, setFormData] = useState({
     adresse_bien: '',
+    type_etat_des_lieux: '',
     type_bien: '',
     bailleur_nom: '',
+    bailleur_adresse: '',
     locataire_nom: '',
+    locataire_adresse: '',
     date_entree: '',
+    date_sortie: '',
+    statut: '',
   });
+
+  // Options pour les sélecteurs
+  const typeEtatDesLieuxOptions = [
+    { value: 'entree', label: 'Entrée' },
+    { value: 'sortie', label: 'Sortie' }
+  ];
+
+  const typeBienOptions = [
+    { value: 'studio', label: 'Studio' },
+    { value: 't2_t3', label: 'T2/T3' },
+    { value: 't4_t5', label: 'T4/T5' },
+    { value: 'inventaire_mobilier', label: 'Inventaire mobilier' },
+    { value: 'bureau', label: 'Bureau' },
+    { value: 'local_commercial', label: 'Local commercial' },
+    { value: 'garage_box', label: 'Garage/Box' },
+    { value: 'pieces_supplementaires', label: 'Pièces supplémentaires' }
+  ];
+
+  const statutOptions = [
+    { value: 'en_cours', label: 'En cours' },
+    { value: 'termine', label: 'Terminé' },
+    { value: 'brouillon', label: 'Brouillon' },
+    { value: 'valide', label: 'Validé' }
+  ];
 
   useEffect(() => {
     if (etatDesLieuxInitial) {
       setFormData({
         adresse_bien: etatDesLieuxInitial.adresse_bien || '',
+        type_etat_des_lieux: etatDesLieuxInitial.type_etat_des_lieux || '',
         type_bien: etatDesLieuxInitial.type_bien || '',
         bailleur_nom: etatDesLieuxInitial.bailleur_nom || '',
+        bailleur_adresse: etatDesLieuxInitial.bailleur_adresse || '',
         locataire_nom: etatDesLieuxInitial.locataire_nom || '',
+        locataire_adresse: etatDesLieuxInitial.locataire_adresse || '',
         date_entree: etatDesLieuxInitial.date_entree || '',
+        date_sortie: etatDesLieuxInitial.date_sortie || '',
+        statut: etatDesLieuxInitial.statut || '',
       });
     }
   }, [etatDesLieuxInitial]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
+  const handleSelectChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
   const handleSave = () => {
     updateEtatDesLieux(
-      { 
-        id: etatId, 
-        ...formData 
+      {
+        id: etatId,
+        ...formData
       },
       {
         onSuccess: () => {
@@ -58,7 +97,11 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
   };
 
   if (isLoading) {
-    return <div>Chargement...</div>;
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-lg">Chargement...</div>
+      </div>
+    );
   }
 
   return (
@@ -66,57 +109,173 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
       <CardHeader>
         <CardTitle>Informations générales</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <CardContent className="space-y-6">
+        {/* Section: Informations sur le bien */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-700">Bien immobilier</h3>
+          
           <div>
-            <Label htmlFor="adresse_bien">Adresse du bien</Label>
-            <Input 
+            <Label htmlFor="adresse_bien">Adresse du bien *</Label>
+            <Input
               id="adresse_bien"
               value={formData.adresse_bien}
-              onChange={handleChange}
+              onChange={handleInputChange}
+              placeholder="Adresse complète du bien"
             />
           </div>
-          <div>
-            <Label htmlFor="type_bien">Type de bien</Label>
-            <Input 
-              id="type_bien" 
-              value={formData.type_bien}
-              onChange={handleChange}
-            />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="type_etat_des_lieux">Type d'état des lieux *</Label>
+              <Select
+                value={formData.type_etat_des_lieux}
+                onValueChange={(value) => handleSelectChange('type_etat_des_lieux', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner le type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {typeEtatDesLieuxOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="type_bien">Type de bien *</Label>
+              <Select
+                value={formData.type_bien}
+                onValueChange={(value) => handleSelectChange('type_bien', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner le type de bien" />
+                </SelectTrigger>
+                <SelectContent>
+                  {typeBienOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {/* Section: Dates */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-700">Dates</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="date_entree">Date d'entrée</Label>
+              <Input
+                id="date_entree"
+                type="date"
+                value={formData.date_entree}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="date_sortie">Date de sortie</Label>
+              <Input
+                id="date_sortie"
+                type="date"
+                value={formData.date_sortie}
+                onChange={handleInputChange}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Section: Bailleur */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-700">Bailleur</h3>
+          
           <div>
-            <Label htmlFor="bailleur_nom">Bailleur</Label>
-            <Input 
+            <Label htmlFor="bailleur_nom">Nom du bailleur</Label>
+            <Input
               id="bailleur_nom"
               value={formData.bailleur_nom}
-              onChange={handleChange}
+              onChange={handleInputChange}
+              placeholder="Nom complet du bailleur ou de son représentant"
             />
           </div>
+
           <div>
-            <Label htmlFor="locataire_nom">Locataire</Label>
-            <Input 
-              id="locataire_nom"
-              value={formData.locataire_nom}
-              onChange={handleChange}
+            <Label htmlFor="bailleur_adresse">Adresse du bailleur</Label>
+            <Input
+              id="bailleur_adresse"
+              value={formData.bailleur_adresse}
+              onChange={handleInputChange}
+              placeholder="Adresse complète du bailleur"
             />
           </div>
         </div>
 
-        <div>
-          <Label htmlFor="date_entree">Date d'entrée</Label>
-          <Input 
-            id="date_entree" 
-            type="date"
-            value={formData.date_entree}
-            onChange={handleChange}
-          />
+        {/* Section: Locataire */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-700">Locataire</h3>
+          
+          <div>
+            <Label htmlFor="locataire_nom">Nom du locataire</Label>
+            <Input
+              id="locataire_nom"
+              value={formData.locataire_nom}
+              onChange={handleInputChange}
+              placeholder="Nom complet du ou des locataires"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="locataire_adresse">Adresse du locataire</Label>
+            <Input
+              id="locataire_adresse"
+              value={formData.locataire_adresse}
+              onChange={handleInputChange}
+              placeholder="Adresse complète du locataire"
+            />
+          </div>
         </div>
-        <Button onClick={handleSave} disabled={isUpdating}>
-          {isUpdating ? 'Enregistrement...' : 'Sauvegarder'}
-        </Button>
+
+        {/* Section: Statut */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-700">Statut</h3>
+          
+          <div>
+            <Label htmlFor="statut">Statut de l'état des lieux</Label>
+            <Select
+              value={formData.statut}
+              onValueChange={(value) => handleSelectChange('statut', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner le statut" />
+              </SelectTrigger>
+              <SelectContent>
+                {statutOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Bouton de sauvegarde */}
+        <div className="pt-4 border-t">
+          <Button 
+            onClick={handleSave} 
+            disabled={isUpdating}
+            className="w-full md:w-auto"
+          >
+            {isUpdating ? 'Enregistrement...' : 'Sauvegarder les informations'}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
