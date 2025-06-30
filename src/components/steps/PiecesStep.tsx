@@ -52,63 +52,177 @@ interface PieceFormData {
 }
 
 const PIECES_TYPES = [
+  // Pièces principales
   'Salon',
+  'Séjour',
+  'Salon/Séjour', 
   'Cuisine',
+  'Cuisine américaine',
+  'Cuisine équipée',
+  
+  // Chambres
+  'Chambre principale',
   'Chambre 1',
   'Chambre 2',
   'Chambre 3',
+  'Chambre parentale',
+  'Suite parentale',
+  'Chambre d\'enfant',
+  'Chambre d\'amis',
+  
+  // Sanitaires et WC
   'Salle de bain',
+  'Salle de bain principale',
+  'Salle d\'eau',
+  'Salle de douche',
   'WC',
-  'Couloir',
+  'WC invités',
+  'WC séparé',
+  
+  // Espaces de circulation
   'Entrée',
+  'Hall d\'entrée',
+  'Couloir',
+  'Palier',
+  'Dégagement',
+  
+  // Espaces de travail et rangement
+  'Bureau',
+  'Bibliothèque',
+  'Dressing',
+  'Placard',
+  'Cellier',
+  'Buanderie',
+  'Lingerie',
+  
+  // Espaces extérieurs
   'Balcon',
   'Terrasse',
+  'Loggia',
+  'Véranda',
+  'Jardin d\'hiver',
+  
+  // Espaces de stockage et techniques
   'Cave',
   'Garage',
-  'Buanderie'
+  'Box',
+  'Grenier',
+  'Combles',
+  'Local technique',
+  'Chaufferie',
+  
+  // Espaces spéciaux
+  'Mezzanine',
+  'Sous-sol',
+  'Duplex (étage)',
+  'Studio',
+  'Kitchenette'
 ];
 
-const FIELD_GROUPS = [
-  {
-    title: 'Structure',
-    fields: [
-      { key: 'revetements_sols', label: 'Revêtements sols', placeholder: 'État des revêtements de sols' },
-      { key: 'murs_menuiseries', label: 'Murs et menuiseries', placeholder: 'État des murs et menuiseries' },
-      { key: 'plafond', label: 'Plafond', placeholder: 'État du plafond' },
-      { key: 'menuiseries', label: 'Menuiseries', placeholder: 'État des menuiseries' },
-    ]
-  },
-  {
-    title: 'Équipements techniques',
-    fields: [
-      { key: 'electricite_plomberie', label: 'Électricité et plomberie', placeholder: 'État de l\'électricité et plomberie' },
-      { key: 'chauffage_tuyauterie', label: 'Chauffage et tuyauterie', placeholder: 'État du chauffage et tuyauterie' },
-    ]
-  },
-  {
-    title: 'Rangements et mobilier',
-    fields: [
-      { key: 'placards', label: 'Placards', placeholder: 'État des placards' },
-      { key: 'rangements', label: 'Rangements', placeholder: 'État des rangements' },
-    ]
-  },
-  {
-    title: 'Sanitaires',
-    fields: [
-      { key: 'sanitaires', label: 'Sanitaires', placeholder: 'État des sanitaires' },
-      { key: 'baignoire_douche', label: 'Baignoire/Douche', placeholder: 'État de la baignoire/douche' },
-      { key: 'eviers_robinetterie', label: 'Éviers et robinetterie', placeholder: 'État des éviers et robinetterie' },
-    ]
-  },
-  {
-    title: 'Cuisine',
-    fields: [
-      { key: 'meubles_cuisine', label: 'Meubles de cuisine', placeholder: 'État des meubles de cuisine' },
-      { key: 'hotte', label: 'Hotte', placeholder: 'État de la hotte' },
-      { key: 'plaque_cuisson', label: 'Plaque de cuisson', placeholder: 'État de la plaque de cuisson' },
-    ]
+// Configuration des champs par type de pièce
+const PIECE_FIELD_CONFIG = {
+  // Champs communs à toutes les pièces
+  common: [
+    { key: 'revetements_sols', label: 'Revêtements sols', placeholder: 'Parquet, carrelage, moquette...' },
+    { key: 'murs_menuiseries', label: 'Murs et peintures', placeholder: 'État des murs, peinture, papier peint...' },
+    { key: 'plafond', label: 'Plafond', placeholder: 'État du plafond, fissures, peinture...' },
+    { key: 'menuiseries', label: 'Menuiseries', placeholder: 'Portes, fenêtres, volets...' },
+    { key: 'electricite_plomberie', label: 'Électricité', placeholder: 'Prises, interrupteurs, éclairage...' },
+  ],
+  
+  // Champs spécifiques par type de pièce
+  cuisine: [
+    { key: 'meubles_cuisine', label: 'Meubles de cuisine', placeholder: 'Placards, tiroirs, plan de travail...' },
+    { key: 'hotte', label: 'Hotte aspirante', placeholder: 'État et fonctionnement de la hotte...' },
+    { key: 'plaque_cuisson', label: 'Plaque de cuisson', placeholder: 'Gaz, électrique, induction...' },
+    { key: 'eviers_robinetterie', label: 'Évier et robinetterie', placeholder: 'État de l\'évier et du robinet...' },
+    { key: 'electricite_plomberie', label: 'Électricité et plomberie', placeholder: 'Arrivées eau, gaz, prises spécialisées...' },
+  ],
+  
+  sanitaires: [
+    { key: 'sanitaires', label: 'Équipements sanitaires', placeholder: 'WC, lavabo, bidet...' },
+    { key: 'baignoire_douche', label: 'Baignoire/Douche', placeholder: 'État de la baignoire ou douche...' },
+    { key: 'eviers_robinetterie', label: 'Robinetterie', placeholder: 'Mitigeurs, robinets, état général...' },
+    { key: 'electricite_plomberie', label: 'Plomberie', placeholder: 'Arrivées d\'eau, évacuations...' },
+  ],
+  
+  rangement: [
+    { key: 'placards', label: 'Placards', placeholder: 'Placards intégrés, étagères...' },
+    { key: 'rangements', label: 'Rangements', placeholder: 'Penderies, tiroirs, aménagements...' },
+  ],
+  
+  technique: [
+    { key: 'chauffage_tuyauterie', label: 'Chauffage', placeholder: 'Radiateurs, tuyauterie, thermostat...' },
+    { key: 'electricite_plomberie', label: 'Installations techniques', placeholder: 'Compteurs, tableau électrique...' },
+  ],
+  
+  exterieur: [
+    { key: 'revetements_sols', label: 'Revêtement sol', placeholder: 'Carrelage, bois, béton...' },
+    { key: 'menuiseries', label: 'Menuiseries', placeholder: 'Garde-corps, portails, volets...' },
+  ]
+};
+
+// Fonction pour déterminer les champs à afficher selon le type de pièce
+const getFieldsForPiece = (pieceName: string) => {
+  const lowerPieceName = pieceName.toLowerCase();
+  let fields = [...PIECE_FIELD_CONFIG.common];
+  
+  // Cuisine
+  if (lowerPieceName.includes('cuisine')) {
+    fields = [...fields, ...PIECE_FIELD_CONFIG.cuisine];
   }
-];
+  
+  // Sanitaires
+  if (lowerPieceName.includes('salle de bain') || 
+      lowerPieceName.includes('salle d\'eau') || 
+      lowerPieceName.includes('salle de douche') ||
+      lowerPieceName.includes('wc')) {
+    fields = [...fields, ...PIECE_FIELD_CONFIG.sanitaires];
+  }
+  
+  // Espaces avec rangements
+  if (lowerPieceName.includes('chambre') || 
+      lowerPieceName.includes('dressing') ||
+      lowerPieceName.includes('placard') ||
+      lowerPieceName.includes('cellier') ||
+      lowerPieceName.includes('buanderie')) {
+    fields = [...fields, ...PIECE_FIELD_CONFIG.rangement];
+  }
+  
+  // Espaces techniques
+  if (lowerPieceName.includes('cave') ||
+      lowerPieceName.includes('garage') ||
+      lowerPieceName.includes('local technique') ||
+      lowerPieceName.includes('chaufferie') ||
+      lowerPieceName.includes('sous-sol')) {
+    fields = [...fields, ...PIECE_FIELD_CONFIG.technique];
+  }
+  
+  // Espaces extérieurs
+  if (lowerPieceName.includes('balcon') ||
+      lowerPieceName.includes('terrasse') ||
+      lowerPieceName.includes('loggia') ||
+      lowerPieceName.includes('véranda')) {
+    // Pour les extérieurs, on garde seulement certains champs
+    fields = PIECE_FIELD_CONFIG.exterieur;
+  }
+  
+  // Ajouter le chauffage pour toutes les pièces sauf extérieures
+  if (!lowerPieceName.includes('balcon') &&
+      !lowerPieceName.includes('terrasse') &&
+      !lowerPieceName.includes('loggia')) {
+    if (!fields.some(f => f.key === 'chauffage_tuyauterie')) {
+      fields.push({ key: 'chauffage_tuyauterie', label: 'Chauffage', placeholder: 'Radiateurs, convecteurs, chauffage au sol...' });
+    }
+  }
+  
+  // Supprimer les doublons
+  const uniqueFields = fields.filter((field, index, self) => 
+    index === self.findIndex(f => f.key === field.key)
+  );
+  
+  return uniqueFields;
+};
 
 const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
   const { data: pieces, isLoading, error, refetch } = usePiecesByEtatId(etatId);
@@ -293,14 +407,13 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
 
   const copyFromEntreeToSortie = () => {
     const updatedFormData = { ...formData };
+    const fieldsForPiece = getFieldsForPiece(selectedPiece.nom_piece);
     
-    // Copier tous les champs d'entrée vers sortie
-    FIELD_GROUPS.forEach(group => {
-      group.fields.forEach(field => {
-        const entreeKey = `${field.key}_entree` as keyof PieceFormData;
-        const sortieKey = `${field.key}_sortie` as keyof PieceFormData;
-        updatedFormData[sortieKey] = formData[entreeKey];
-      });
+    // Copier tous les champs pertinents d'entrée vers sortie
+    fieldsForPiece.forEach(field => {
+      const entreeKey = `${field.key}_entree` as keyof PieceFormData;
+      const sortieKey = `${field.key}_sortie` as keyof PieceFormData;
+      updatedFormData[sortieKey] = formData[entreeKey];
     });
     
     setFormData(updatedFormData);
@@ -308,31 +421,49 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     toast.success('État d\'entrée copié vers l\'état de sortie');
   };
 
-  const renderFieldGroup = (group: typeof FIELD_GROUPS[0], suffix: 'entree' | 'sortie') => (
-    <Card key={group.title} className="mb-4">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">{group.title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {group.fields.map((field) => {
-            const fieldKey = `${field.key}_${suffix}` as keyof PieceFormData;
-            return (
-              <div key={fieldKey}>
-                <Label htmlFor={fieldKey}>{field.label}</Label>
-                <Input
-                  id={fieldKey}
-                  value={formData[fieldKey]}
-                  onChange={(e) => handleInputChange(fieldKey, e.target.value)}
-                  placeholder={field.placeholder}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const renderPieceFields = (suffix: 'entree' | 'sortie') => {
+    if (!selectedPiece) return null;
+    
+    const fieldsForPiece = getFieldsForPiece(selectedPiece.nom_piece);
+    
+    return (
+      <Card className="mb-4">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            {suffix === 'entree' ? (
+              <>
+                <Home className="h-5 w-5" />
+                État d'entrée - {selectedPiece.nom_piece}
+              </>
+            ) : (
+              <>
+                <LogOut className="h-5 w-5" />
+                État de sortie - {selectedPiece.nom_piece}
+              </>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {fieldsForPiece.map((field) => {
+              const fieldKey = `${field.key}_${suffix}` as keyof PieceFormData;
+              return (
+                <div key={fieldKey}>
+                  <Label htmlFor={fieldKey}>{field.label}</Label>
+                  <Input
+                    id={fieldKey}
+                    value={formData[fieldKey]}
+                    onChange={(e) => handleInputChange(fieldKey, e.target.value)}
+                    placeholder={field.placeholder}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -435,7 +566,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
               <p className="text-sm text-gray-400 mb-6">
                 Créez rapidement des pièces courantes :
               </p>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
                 {PIECES_TYPES.map((piece) => (
                   <Button
                     key={piece}
@@ -505,11 +636,11 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
               </div>
 
               <TabsContent value="entree" className="space-y-4">
-                {FIELD_GROUPS.map(group => renderFieldGroup(group, 'entree'))}
+                {renderPieceFields('entree')}
               </TabsContent>
 
               <TabsContent value="sortie" className="space-y-4">
-                {FIELD_GROUPS.map(group => renderFieldGroup(group, 'sortie'))}
+                {renderPieceFields('sortie')}
               </TabsContent>
             </Tabs>
 
