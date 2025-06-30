@@ -172,6 +172,16 @@ export const useCreatePiece = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pieceData),
       });
+
+      // Vérifier si la réponse est OK (status 2xx)
+      if (!response.ok) {
+        // Essayer de parser le corps de la réponse comme JSON pour obtenir le message d'erreur
+        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
+        // Lancer une erreur avec le message du serveur ou un message par défaut
+        throw new Error(errorData?.error || `API Error: ${response.status} ${response.statusText}`);
+      }
+
+      // Si la réponse est OK, parser le JSON
       return response.json();
     },
   });
