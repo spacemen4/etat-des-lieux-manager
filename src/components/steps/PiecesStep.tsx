@@ -4,12 +4,51 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { usePiecesByEtatId, useUpdatePiece, useCreatePiece } from '@/hooks/useEtatDesLieux';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertCircle, Home, LogOut, MessageSquare } from 'lucide-react';
 
 interface PiecesStepProps {
   etatId: string;
+}
+
+interface PieceFormData {
+  // Champs d'entrée
+  revetements_sols_entree: string;
+  murs_menuiseries_entree: string;
+  plafond_entree: string;
+  electricite_plomberie_entree: string;
+  placards_entree: string;
+  sanitaires_entree: string;
+  menuiseries_entree: string;
+  rangements_entree: string;
+  baignoire_douche_entree: string;
+  eviers_robinetterie_entree: string;
+  chauffage_tuyauterie_entree: string;
+  meubles_cuisine_entree: string;
+  hotte_entree: string;
+  plaque_cuisson_entree: string;
+  
+  // Champs de sortie
+  revetements_sols_sortie: string;
+  murs_menuiseries_sortie: string;
+  plafond_sortie: string;
+  electricite_plomberie_sortie: string;
+  placards_sortie: string;
+  sanitaires_sortie: string;
+  menuiseries_sortie: string;
+  rangements_sortie: string;
+  baignoire_douche_sortie: string;
+  eviers_robinetterie_sortie: string;
+  chauffage_tuyauterie_sortie: string;
+  meubles_cuisine_sortie: string;
+  hotte_sortie: string;
+  plaque_cuisson_sortie: string;
+  
+  // Commentaires
+  commentaires: string;
 }
 
 const PIECES_TYPES = [
@@ -29,6 +68,48 @@ const PIECES_TYPES = [
   'Buanderie'
 ];
 
+const FIELD_GROUPS = [
+  {
+    title: 'Structure',
+    fields: [
+      { key: 'revetements_sols', label: 'Revêtements sols', placeholder: 'État des revêtements de sols' },
+      { key: 'murs_menuiseries', label: 'Murs et menuiseries', placeholder: 'État des murs et menuiseries' },
+      { key: 'plafond', label: 'Plafond', placeholder: 'État du plafond' },
+      { key: 'menuiseries', label: 'Menuiseries', placeholder: 'État des menuiseries' },
+    ]
+  },
+  {
+    title: 'Équipements techniques',
+    fields: [
+      { key: 'electricite_plomberie', label: 'Électricité et plomberie', placeholder: 'État de l\'électricité et plomberie' },
+      { key: 'chauffage_tuyauterie', label: 'Chauffage et tuyauterie', placeholder: 'État du chauffage et tuyauterie' },
+    ]
+  },
+  {
+    title: 'Rangements et mobilier',
+    fields: [
+      { key: 'placards', label: 'Placards', placeholder: 'État des placards' },
+      { key: 'rangements', label: 'Rangements', placeholder: 'État des rangements' },
+    ]
+  },
+  {
+    title: 'Sanitaires',
+    fields: [
+      { key: 'sanitaires', label: 'Sanitaires', placeholder: 'État des sanitaires' },
+      { key: 'baignoire_douche', label: 'Baignoire/Douche', placeholder: 'État de la baignoire/douche' },
+      { key: 'eviers_robinetterie', label: 'Éviers et robinetterie', placeholder: 'État des éviers et robinetterie' },
+    ]
+  },
+  {
+    title: 'Cuisine',
+    fields: [
+      { key: 'meubles_cuisine', label: 'Meubles de cuisine', placeholder: 'État des meubles de cuisine' },
+      { key: 'hotte', label: 'Hotte', placeholder: 'État de la hotte' },
+      { key: 'plaque_cuisson', label: 'Plaque de cuisson', placeholder: 'État de la plaque de cuisson' },
+    ]
+  }
+];
+
 const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
   const { data: pieces, isLoading, error, refetch } = usePiecesByEtatId(etatId);
   const updatePieceMutation = useUpdatePiece();
@@ -37,7 +118,26 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
   const [selectedPiece, setSelectedPiece] = useState<any>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newPieceName, setNewPieceName] = useState('');
-  const [formData, setFormData] = useState({
+  const [activeTab, setActiveTab] = useState<'entree' | 'sortie'>('entree');
+  
+  const [formData, setFormData] = useState<PieceFormData>({
+    // État d'entrée
+    revetements_sols_entree: '',
+    murs_menuiseries_entree: '',
+    plafond_entree: '',
+    electricite_plomberie_entree: '',
+    placards_entree: '',
+    sanitaires_entree: '',
+    menuiseries_entree: '',
+    rangements_entree: '',
+    baignoire_douche_entree: '',
+    eviers_robinetterie_entree: '',
+    chauffage_tuyauterie_entree: '',
+    meubles_cuisine_entree: '',
+    hotte_entree: '',
+    plaque_cuisson_entree: '',
+    
+    // État de sortie
     revetements_sols_sortie: '',
     murs_menuiseries_sortie: '',
     plafond_sortie: '',
@@ -52,12 +152,31 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     meubles_cuisine_sortie: '',
     hotte_sortie: '',
     plaque_cuisson_sortie: '',
+    
+    // Commentaires
     commentaires: '',
   });
 
   useEffect(() => {
     if (selectedPiece) {
       setFormData({
+        // État d'entrée
+        revetements_sols_entree: selectedPiece.revetements_sols_entree || '',
+        murs_menuiseries_entree: selectedPiece.murs_menuiseries_entree || '',
+        plafond_entree: selectedPiece.plafond_entree || '',
+        electricite_plomberie_entree: selectedPiece.electricite_plomberie_entree || '',
+        placards_entree: selectedPiece.placards_entree || '',
+        sanitaires_entree: selectedPiece.sanitaires_entree || '',
+        menuiseries_entree: selectedPiece.menuiseries_entree || '',
+        rangements_entree: selectedPiece.rangements_entree || '',
+        baignoire_douche_entree: selectedPiece.baignoire_douche_entree || '',
+        eviers_robinetterie_entree: selectedPiece.eviers_robinetterie_entree || '',
+        chauffage_tuyauterie_entree: selectedPiece.chauffage_tuyauterie_entree || '',
+        meubles_cuisine_entree: selectedPiece.meubles_cuisine_entree || '',
+        hotte_entree: selectedPiece.hotte_entree || '',
+        plaque_cuisson_entree: selectedPiece.plaque_cuisson_entree || '',
+        
+        // État de sortie
         revetements_sols_sortie: selectedPiece.revetements_sols_sortie || '',
         murs_menuiseries_sortie: selectedPiece.murs_menuiseries_sortie || '',
         plafond_sortie: selectedPiece.plafond_sortie || '',
@@ -72,12 +191,14 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
         meubles_cuisine_sortie: selectedPiece.meubles_cuisine_sortie || '',
         hotte_sortie: selectedPiece.hotte_sortie || '',
         plaque_cuisson_sortie: selectedPiece.plaque_cuisson_sortie || '',
+        
+        // Commentaires
         commentaires: selectedPiece.commentaires || '',
       });
     }
   }, [selectedPiece]);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof PieceFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -107,29 +228,19 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
       return;
     }
 
-    console.log('Tentative de création de pièce:', {
-      etat_des_lieux_id: etatId,
-      nom_piece: newPieceName.trim(),
-    });
-
     createPieceMutation.mutate({
       etat_des_lieux_id: etatId,
       nom_piece: newPieceName.trim(),
     }, {
       onSuccess: (data) => {
-        console.log('Pièce créée avec succès:', data);
         toast.success('Pièce créée avec succès');
         setIsCreateDialogOpen(false);
         setNewPieceName('');
         refetch();
       },
       onError: (error) => {
-        console.error('Erreur complète lors de la création:', error);
-        console.error('Type d\'erreur:', typeof error);
-        console.error('Message d\'erreur:', error?.message);
-        console.error('Response:', error?.response);
-
-        // Gestion spécifique des erreurs API
+        console.error('Erreur lors de la création:', error);
+        
         if (error?.message?.includes('<!DOCTYPE')) {
           toast.error('Erreur de configuration API - Page HTML reçue au lieu de JSON');
         } else if (error?.message?.includes('SyntaxError')) {
@@ -150,24 +261,17 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
   };
 
   const handleQuickCreatePiece = (pieceName: string) => {
-    console.log('Création rapide de pièce:', {
-      etat_des_lieux_id: etatId,
-      nom_piece: pieceName,
-    });
-
     createPieceMutation.mutate({
       etat_des_lieux_id: etatId,
       nom_piece: pieceName,
     }, {
-      onSuccess: (data) => {
-        console.log('Pièce créée avec succès:', data);
+      onSuccess: () => {
         toast.success(`${pieceName} créée avec succès`);
         refetch();
       },
       onError: (error) => {
-        console.error('Erreur complète lors de la création rapide:', error);
-
-        // Même gestion d'erreur que pour handleCreatePiece
+        console.error('Erreur lors de la création rapide:', error);
+        
         if (error?.message?.includes('<!DOCTYPE')) {
           toast.error('Erreur de configuration API - Page HTML reçue au lieu de JSON');
         } else if (error?.message?.includes('SyntaxError')) {
@@ -186,6 +290,49 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
       },
     });
   };
+
+  const copyFromEntreeToSortie = () => {
+    const updatedFormData = { ...formData };
+    
+    // Copier tous les champs d'entrée vers sortie
+    FIELD_GROUPS.forEach(group => {
+      group.fields.forEach(field => {
+        const entreeKey = `${field.key}_entree` as keyof PieceFormData;
+        const sortieKey = `${field.key}_sortie` as keyof PieceFormData;
+        updatedFormData[sortieKey] = formData[entreeKey];
+      });
+    });
+    
+    setFormData(updatedFormData);
+    setActiveTab('sortie');
+    toast.success('État d\'entrée copié vers l\'état de sortie');
+  };
+
+  const renderFieldGroup = (group: typeof FIELD_GROUPS[0], suffix: 'entree' | 'sortie') => (
+    <Card key={group.title} className="mb-4">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">{group.title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {group.fields.map((field) => {
+            const fieldKey = `${field.key}_${suffix}` as keyof PieceFormData;
+            return (
+              <div key={fieldKey}>
+                <Label htmlFor={fieldKey}>{field.label}</Label>
+                <Input
+                  id={fieldKey}
+                  value={formData[fieldKey]}
+                  onChange={(e) => handleInputChange(fieldKey, e.target.value)}
+                  placeholder={field.placeholder}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   if (isLoading) {
     return (
@@ -216,7 +363,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
   const isDevelopment = process.env.NODE_ENV === 'development';
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {isDevelopment && (
         <Card className="bg-yellow-50 border-yellow-200">
           <CardHeader>
@@ -236,7 +383,10 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Pièces de l'état des lieux</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Home className="h-5 w-5" />
+            Pièces de l'état des lieux
+          </CardTitle>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
@@ -324,153 +474,69 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Edit className="h-5 w-5" />
-              État de sortie - {selectedPiece.nom_piece}
+              {selectedPiece.nom_piece}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="revetements_sols_sortie">Revêtements sols</Label>
-                <Input
-                  id="revetements_sols_sortie"
-                  value={formData.revetements_sols_sortie}
-                  onChange={(e) => handleInputChange('revetements_sols_sortie', e.target.value)}
-                  placeholder="État des revêtements de sols"
-                />
+          <CardContent>
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'entree' | 'sortie')}>
+              <div className="flex items-center justify-between mb-4">
+                <TabsList className="grid w-fit grid-cols-2">
+                  <TabsTrigger value="entree" className="flex items-center gap-2">
+                    <Home className="h-4 w-4" />
+                    État d'entrée
+                  </TabsTrigger>
+                  <TabsTrigger value="sortie" className="flex items-center gap-2">
+                    <LogOut className="h-4 w-4" />
+                    État de sortie
+                  </TabsTrigger>
+                </TabsList>
+                
+                {activeTab === 'sortie' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyFromEntreeToSortie}
+                    className="flex items-center gap-2"
+                  >
+                    <Home className="h-4 w-4" />
+                    Copier depuis l'entrée
+                  </Button>
+                )}
               </div>
 
-              <div>
-                <Label htmlFor="murs_menuiseries_sortie">Murs et menuiseries</Label>
-                <Input
-                  id="murs_menuiseries_sortie"
-                  value={formData.murs_menuiseries_sortie}
-                  onChange={(e) => handleInputChange('murs_menuiseries_sortie', e.target.value)}
-                  placeholder="État des murs et menuiseries"
-                />
-              </div>
+              <TabsContent value="entree" className="space-y-4">
+                {FIELD_GROUPS.map(group => renderFieldGroup(group, 'entree'))}
+              </TabsContent>
 
-              <div>
-                <Label htmlFor="plafond_sortie">Plafond</Label>
-                <Input
-                  id="plafond_sortie"
-                  value={formData.plafond_sortie}
-                  onChange={(e) => handleInputChange('plafond_sortie', e.target.value)}
-                  placeholder="État du plafond"
-                />
-              </div>
+              <TabsContent value="sortie" className="space-y-4">
+                {FIELD_GROUPS.map(group => renderFieldGroup(group, 'sortie'))}
+              </TabsContent>
+            </Tabs>
 
-              <div>
-                <Label htmlFor="electricite_plomberie_sortie">Électricité et plomberie</Label>
-                <Input
-                  id="electricite_plomberie_sortie"
-                  value={formData.electricite_plomberie_sortie}
-                  onChange={(e) => handleInputChange('electricite_plomberie_sortie', e.target.value)}
-                  placeholder="État de l'électricité et plomberie"
-                />
-              </div>
+            {/* Section commentaires commune */}
+            <Card className="mt-4">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Commentaires
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div>
+                  <Label htmlFor="commentaires">Commentaires généraux</Label>
+                  <Textarea
+                    id="commentaires"
+                    value={formData.commentaires}
+                    onChange={(e) => handleInputChange('commentaires', e.target.value)}
+                    placeholder="Commentaires généraux sur la pièce, observations particulières..."
+                    rows={4}
+                    className="resize-none"
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-              <div>
-                <Label htmlFor="placards_sortie">Placards</Label>
-                <Input
-                  id="placards_sortie"
-                  value={formData.placards_sortie}
-                  onChange={(e) => handleInputChange('placards_sortie', e.target.value)}
-                  placeholder="État des placards"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="sanitaires_sortie">Sanitaires</Label>
-                <Input
-                  id="sanitaires_sortie"
-                  value={formData.sanitaires_sortie}
-                  onChange={(e) => handleInputChange('sanitaires_sortie', e.target.value)}
-                  placeholder="État des sanitaires"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="rangements_sortie">Rangements</Label>
-                <Input
-                  id="rangements_sortie"
-                  value={formData.rangements_sortie}
-                  onChange={(e) => handleInputChange('rangements_sortie', e.target.value)}
-                  placeholder="État des rangements"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="baignoire_douche_sortie">Baignoire/Douche</Label>
-                <Input
-                  id="baignoire_douche_sortie"
-                  value={formData.baignoire_douche_sortie}
-                  onChange={(e) => handleInputChange('baignoire_douche_sortie', e.target.value)}
-                  placeholder="État de la baignoire/douche"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="eviers_robinetterie_sortie">Éviers et robinetterie</Label>
-                <Input
-                  id="eviers_robinetterie_sortie"
-                  value={formData.eviers_robinetterie_sortie}
-                  onChange={(e) => handleInputChange('eviers_robinetterie_sortie', e.target.value)}
-                  placeholder="État des éviers et robinetterie"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="chauffage_tuyauterie_sortie">Chauffage et tuyauterie</Label>
-                <Input
-                  id="chauffage_tuyauterie_sortie"
-                  value={formData.chauffage_tuyauterie_sortie}
-                  onChange={(e) => handleInputChange('chauffage_tuyauterie_sortie', e.target.value)}
-                  placeholder="État du chauffage et tuyauterie"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="meubles_cuisine_sortie">Meubles de cuisine</Label>
-                <Input
-                  id="meubles_cuisine_sortie"
-                  value={formData.meubles_cuisine_sortie}
-                  onChange={(e) => handleInputChange('meubles_cuisine_sortie', e.target.value)}
-                  placeholder="État des meubles de cuisine"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="hotte_sortie">Hotte</Label>
-                <Input
-                  id="hotte_sortie"
-                  value={formData.hotte_sortie}
-                  onChange={(e) => handleInputChange('hotte_sortie', e.target.value)}
-                  placeholder="État de la hotte"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="plaque_cuisson_sortie">Plaque de cuisson</Label>
-                <Input
-                  id="plaque_cuisson_sortie"
-                  value={formData.plaque_cuisson_sortie}
-                  onChange={(e) => handleInputChange('plaque_cuisson_sortie', e.target.value)}
-                  placeholder="État de la plaque de cuisson"
-                />
-              </div>
-            </div>
-
-            <div className="col-span-full">
-              <Label htmlFor="commentaires">Commentaires</Label>
-              <Input
-                id="commentaires"
-                value={formData.commentaires}
-                onChange={(e) => handleInputChange('commentaires', e.target.value)}
-                placeholder="Commentaires généraux sur la pièce"
-              />
-            </div>
-
-            <div className="flex gap-2 pt-4">
+            <div className="flex gap-2 pt-6">
               <Button
                 onClick={handleSave}
                 disabled={updatePieceMutation.isPending}
@@ -482,7 +548,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
                 variant="outline"
                 onClick={() => setSelectedPiece(null)}
               >
-                Annuler
+                Fermer
               </Button>
             </div>
           </CardContent>
