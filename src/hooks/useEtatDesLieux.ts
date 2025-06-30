@@ -638,21 +638,53 @@ export const useUpdateEquipementsEnergetiques = (
 
   return useMutation({
     mutationFn: async (equipementEnergetiqueData: Partial<EquipementEnergetique>) => {
-      const { data, error } = await supabase
-        .from('equipements_energetiques')
-        .upsert(equipementEnergetiqueData, { onConflict: 'etat_des_lieux_id' })
-        .select()
-        .single();
+      console.log('=== MUTATION EQUIPEMENTS ENERGETIQUES ===');
+      console.log('Données reçues:', equipementEnergetiqueData);
+      
+      // Vérification des données requises
+      if (!equipementEnergetiqueData.etat_des_lieux_id) {
+        console.error('ERREUR: etat_des_lieux_id manquant');
+        throw new Error('etat_des_lieux_id est requis');
+      }
 
-      if (error) throw error;
-      return data as EquipementEnergetique;
+      try {
+        console.log('Tentative upsert avec Supabase...');
+        const { data, error } = await supabase
+          .from('equipements_energetiques')
+          .upsert(equipementEnergetiqueData, { 
+            onConflict: 'etat_des_lieux_id',
+            ignoreDuplicates: false 
+          })
+          .select()
+          .single();
+
+        console.log('Réponse Supabase - data:', data);
+        console.log('Réponse Supabase - error:', error);
+
+        if (error) {
+          console.error('Erreur Supabase:', error);
+          throw error;
+        }
+
+        console.log('Mutation réussie:', data);
+        return data as EquipementEnergetique;
+        
+      } catch (supabaseError) {
+        console.error('Erreur dans le try/catch:', supabaseError);
+        throw supabaseError;
+      }
     },
     onSuccess: (data) => {
+      console.log('onSuccess appelé avec:', data);
       if (data.etat_des_lieux_id) {
+        console.log('Invalidation du cache pour:', data.etat_des_lieux_id);
         queryClient.invalidateQueries({ 
           queryKey: QUERY_KEYS.equipementsEnergetiques(data.etat_des_lieux_id) 
         });
       }
+    },
+    onError: (error) => {
+      console.error('onError appelé avec:', error);
     },
     ...options,
   });
