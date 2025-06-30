@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { usePiecesByEtatId, useUpdatePiece, useCreatePiece } from '@/hooks/useEtatDesLieux';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, AlertCircle, Home, LogOut, MessageSquare } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertCircle, Home, LogOut, MessageSquare, Check } from 'lucide-react';
 
 interface PiecesStepProps {
   etatId: string;
@@ -118,6 +118,67 @@ const PIECES_TYPES = [
   'Studio',
   'Kitchenette'
 ];
+
+// Suggestions organisées par catégories
+const PIECES_SUGGESTIONS = {
+  'Pièces principales': [
+    'Salon',
+    'Séjour',
+    'Salon/Séjour',
+    'Cuisine',
+    'Cuisine américaine',
+    'Cuisine équipée'
+  ],
+  'Chambres': [
+    'Chambre principale',
+    'Chambre parentale',
+    'Suite parentale',
+    'Chambre 1',
+    'Chambre 2',
+    'Chambre 3',
+    'Chambre d\'enfant',
+    'Chambre d\'amis'
+  ],
+  'Sanitaires': [
+    'Salle de bain',
+    'Salle de bain principale',
+    'Salle d\'eau',
+    'Salle de douche',
+    'WC',
+    'WC invités',
+    'WC séparé'
+  ],
+  'Circulation': [
+    'Entrée',
+    'Hall d\'entrée',
+    'Couloir',
+    'Palier',
+    'Dégagement'
+  ],
+  'Rangement': [
+    'Dressing',
+    'Placard',
+    'Cellier',
+    'Buanderie',
+    'Lingerie',
+    'Bureau'
+  ],
+  'Extérieur': [
+    'Balcon',
+    'Terrasse',
+    'Loggia',
+    'Véranda',
+    'Jardin d\'hiver'
+  ],
+  'Stockage': [
+    'Cave',
+    'Garage',
+    'Box',
+    'Grenier',
+    'Combles',
+    'Local technique'
+  ]
+};
 
 // Configuration des champs par type de pièce
 const PIECE_FIELD_CONFIG = {
@@ -232,6 +293,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
   const [selectedPiece, setSelectedPiece] = useState<any>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newPieceName, setNewPieceName] = useState('');
+  const [selectedSuggestion, setSelectedSuggestion] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'entree' | 'sortie'>('entree');
   
   const [formData, setFormData] = useState<PieceFormData>({
@@ -337,19 +399,22 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
   };
 
   const handleCreatePiece = () => {
-    if (!newPieceName.trim()) {
-      toast.error('Veuillez saisir un nom de pièce');
+    const pieceName = (selectedSuggestion || newPieceName).trim();
+    
+    if (!pieceName) {
+      toast.error('Veuillez saisir un nom de pièce ou sélectionner une suggestion');
       return;
     }
 
     createPieceMutation.mutate({
       etat_des_lieux_id: etatId,
-      nom_piece: newPieceName.trim(),
+      nom_piece: pieceName,
     }, {
       onSuccess: (data) => {
         toast.success('Pièce créée avec succès');
         setIsCreateDialogOpen(false);
         setNewPieceName('');
+        setSelectedSuggestion('');
         refetch();
       },
       onError: (error) => {
@@ -403,6 +468,11 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
         }
       },
     });
+  };
+
+  const handleSuggestionSelect = (suggestion: string) => {
+    setSelectedSuggestion(suggestion);
+    setNewPieceName(''); // Vider le champ personnalisé
   };
 
   const copyFromEntreeToSortie = () => {
@@ -525,24 +595,86 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
                 Ajouter une pièce
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Ajouter une nouvelle pièce</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Suggestions organisées par catégories */}
                 <div>
-                  <Label htmlFor="piece-name">Nom de la pièce</Label>
+                  <Label className="text-base font-semibold">Suggestions de pièces</Label>
+                  <p className="text-sm text-gray-600 mb-4">Cliquez sur une suggestion ou saisissez un nom personnalisé</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {Object.entries(PIECES_SUGGESTIONS).map(([category, suggestions]) => (
+                      <div key={category} className="space-y-2">
+                        <h4 className="font-medium text-sm text-gray-700 border-b pb-1">
+                          {category}
+                        </h4>
+                        <div className="grid grid-cols-1 gap-1">
+                          {suggestions.map((suggestion) => (
+                            <Button
+                              key={suggestion}
+                              variant={selectedSuggestion === suggestion ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleSuggestionSelect(suggestion)}
+                              className="justify-start text-sm h-8"
+                            >
+                              {selectedSuggestion === suggestion && (
+                                <Check className="h-3 w-3 mr-2" />
+                              )}
+                              {suggestion}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Ligne de séparation */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-gray-500">ou</span>
+                  </div>
+                </div>
+
+                {/* Champ de saisie personnalisé */}
+                <div>
+                  <Label htmlFor="piece-name">Nom personnalisé</Label>
                   <Input
                     id="piece-name"
                     value={newPieceName}
-                    onChange={(e) => setNewPieceName(e.target.value)}
-                    placeholder="Ex: Salon, Chambre 1, Cuisine..."
+                    onChange={(e) => {
+                      setNewPieceName(e.target.value);
+                      if (e.target.value) {
+                        setSelectedSuggestion(''); // Vider la suggestion si on tape du texte
+                      }
+                    }}
+                    placeholder="Ex: Salon/Salle à manger, Chambre bureau, Salle de jeux..."
                   />
                 </div>
-                <div className="flex gap-2 justify-end">
+
+                {/* Aperçu de la sélection */}
+                {(selectedSuggestion || newPieceName) && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <p className="text-sm text-blue-800">
+                      <strong>Pièce à créer :</strong> {selectedSuggestion || newPieceName}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-2 justify-end pt-4">
                   <Button
                     variant="outline"
-                    onClick={() => setIsCreateDialogOpen(false)}
+                    onClick={() => {
+                      setIsCreateDialogOpen(false);
+                      setNewPieceName('');
+                      setSelectedSuggestion('');
+                    }}
                   >
                     Annuler
                   </Button>
