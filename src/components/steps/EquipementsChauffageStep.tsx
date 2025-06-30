@@ -1,4 +1,3 @@
-
 // EquipementsChauffageStep.tsx
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +25,9 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
     if (equipementsChauffage) {
       setFormData({
         chaudiere_etat: equipementsChauffage.chaudiere_etat || '',
-        chaudiere_date_dernier_entretien: equipementsChauffage.chaudiere_date_dernier_entretien || '',
+        chaudiere_date_dernier_entretien: equipementsChauffage.chaudiere_date_dernier_entretien 
+          ? new Date(equipementsChauffage.chaudiere_date_dernier_entretien).toISOString().split('T')[0] 
+          : '',
         ballon_eau_chaude_etat: equipementsChauffage.ballon_eau_chaude_etat || '',
       });
     }
@@ -38,19 +39,48 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
 
   const handleSave = async () => {
     try {
-      await updateEquipementsChauffageMutation.mutateAsync({
+      // Validation basique
+      if (!etatId) {
+        toast.error('ID de l\'état des lieux manquant');
+        return;
+      }
+
+      // Préparer les données pour l'envoi
+      const dataToSend = {
         etat_des_lieux_id: etatId,
-        ...formData,
-      });
+        chaudiere_etat: formData.chaudiere_etat || null,
+        chaudiere_date_dernier_entretien: formData.chaudiere_date_dernier_entretien || null,
+        ballon_eau_chaude_etat: formData.ballon_eau_chaude_etat || null,
+      };
+
+      console.log('Données à envoyer:', dataToSend); // Pour débugger
+
+      await updateEquipementsChauffageMutation.mutateAsync(dataToSend);
+      
       toast.success('Équipements de chauffage sauvegardés');
       refetch();
     } catch (error) {
-      toast.error('Erreur lors de la sauvegarde');
+      console.error('Erreur détaillée:', error); // Pour débugger
+      
+      // Affichage d'erreur plus détaillé
+      if (error instanceof Error) {
+        toast.error(`Erreur: ${error.message}`);
+      } else if (typeof error === 'object' && error !== null && 'message' in error) {
+        toast.error(`Erreur: ${(error as any).message}`);
+      } else {
+        toast.error('Erreur lors de la sauvegarde des équipements de chauffage');
+      }
     }
   };
 
   if (isLoading) {
-    return <div>Chargement...</div>;
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div>Chargement des équipements de chauffage...</div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -90,8 +120,8 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
           />
         </div>
 
-        <Button 
-          onClick={handleSave} 
+        <Button
+          onClick={handleSave}
           disabled={updateEquipementsChauffageMutation.isPending}
           className="w-full"
         >
