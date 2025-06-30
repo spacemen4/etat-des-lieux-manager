@@ -35,6 +35,7 @@ const ClesStep: React.FC<ClesStepProps> = ({ etatId }) => {
       etat_des_lieux_id: etatId,
       type_cle_badge: '',
       nombre: 1,
+      numero_cle: '',
       commentaires: '',
     }]);
   };
@@ -80,7 +81,7 @@ const ClesStep: React.FC<ClesStepProps> = ({ etatId }) => {
               </Button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor={`type_${index}`}>Type de clé/badge</Label>
                 <Input
@@ -98,6 +99,15 @@ const ClesStep: React.FC<ClesStepProps> = ({ etatId }) => {
                   value={cle.nombre || 1}
                   onChange={(e) => handleInputChange(index, 'nombre', parseInt(e.target.value) || 1)}
                   min="1"
+                />
+              </div>
+              <div>
+                <Label htmlFor={`numero_cle_${index}`}>Numéro de clé</Label>
+                <Input
+                  id={`numero_cle_${index}`}
+                  value={cle.numero_cle || ''}
+                  onChange={(e) => handleInputChange(index, 'numero_cle', e.target.value)}
+                  placeholder="Numéro ou référence"
                 />
               </div>
             </div>

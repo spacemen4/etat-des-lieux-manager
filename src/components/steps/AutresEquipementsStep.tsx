@@ -34,6 +34,7 @@ const AutresEquipementsStep: React.FC<AutresEquipementsStepProps> = ({ etatId })
     setEquipementsList(prev => [...prev, {
       etat_des_lieux_id: etatId,
       equipement: '',
+      etat_entree: '',
       etat_sortie: '',
       commentaires: '',
     }]);
@@ -90,14 +91,25 @@ const AutresEquipementsStep: React.FC<AutresEquipementsStepProps> = ({ etatId })
               />
             </div>
             
-            <div>
-              <Label htmlFor={`etat_sortie_${index}`}>État de sortie</Label>
-              <Input
-                id={`etat_sortie_${index}`}
-                value={equipement.etat_sortie || ''}
-                onChange={(e) => handleInputChange(index, 'etat_sortie', e.target.value)}
-                placeholder="État de l'équipement"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor={`etat_entree_${index}`}>État d'entrée</Label>
+                <Input
+                  id={`etat_entree_${index}`}
+                  value={equipement.etat_entree || ''}
+                  onChange={(e) => handleInputChange(index, 'etat_entree', e.target.value)}
+                  placeholder="État à l'entrée"
+                />
+              </div>
+              <div>
+                <Label htmlFor={`etat_sortie_${index}`}>État de sortie</Label>
+                <Input
+                  id={`etat_sortie_${index}`}
+                  value={equipement.etat_sortie || ''}
+                  onChange={(e) => handleInputChange(index, 'etat_sortie', e.target.value)}
+                  placeholder="État de sortie"
+                />
+              </div>
             </div>
             
             <div>
