@@ -107,35 +107,82 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
       return;
     }
 
+    console.log('Tentative de création de pièce:', {
+      etat_des_lieux_id: etatId,
+      nom_piece: newPieceName.trim(),
+    });
+
     createPieceMutation.mutate({
       etat_des_lieux_id: etatId,
       nom_piece: newPieceName.trim(),
     }, {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        console.log('Pièce créée avec succès:', data);
         toast.success('Pièce créée avec succès');
         setIsCreateDialogOpen(false);
         setNewPieceName('');
         refetch();
       },
       onError: (error) => {
-        console.error('Erreur lors de la création:', error);
-        toast.error('Erreur lors de la création de la pièce');
+        console.error('Erreur complète lors de la création:', error);
+        console.error('Type d\'erreur:', typeof error);
+        console.error('Message d\'erreur:', error?.message);
+        console.error('Response:', error?.response);
+        
+        // Gestion spécifique des erreurs API
+        if (error?.message?.includes('<!DOCTYPE')) {
+          toast.error('Erreur de configuration API - Page HTML reçue au lieu de JSON');
+        } else if (error?.message?.includes('SyntaxError')) {
+          toast.error('Erreur de format de réponse API');
+        } else if (error?.response?.status === 401) {
+          toast.error('Erreur d\'authentification - Veuillez vous reconnecter');
+        } else if (error?.response?.status === 403) {
+          toast.error('Permissions insuffisantes');
+        } else if (error?.response?.status === 404) {
+          toast.error('Endpoint API non trouvé');
+        } else if (error?.response?.status >= 500) {
+          toast.error('Erreur serveur - Veuillez réessayer plus tard');
+        } else {
+          toast.error(`Erreur lors de la création: ${error?.message || 'Erreur inconnue'}`);
+        }
       },
     });
   };
 
   const handleQuickCreatePiece = (pieceName: string) => {
+    console.log('Création rapide de pièce:', {
+      etat_des_lieux_id: etatId,
+      nom_piece: pieceName,
+    });
+
     createPieceMutation.mutate({
       etat_des_lieux_id: etatId,
       nom_piece: pieceName,
     }, {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        console.log('Pièce créée avec succès:', data);
         toast.success(`${pieceName} créée avec succès`);
         refetch();
       },
       onError: (error) => {
-        console.error('Erreur lors de la création:', error);
-        toast.error(`Erreur lors de la création de ${pieceName}`);
+        console.error('Erreur complète lors de la création rapide:', error);
+        
+        // Même gestion d'erreur que pour handleCreatePiece
+        if (error?.message?.includes('<!DOCTYPE')) {
+          toast.error('Erreur de configuration API - Page HTML reçue au lieu de JSON');
+        } else if (error?.message?.includes('SyntaxError')) {
+          toast.error('Erreur de format de réponse API');
+        } else if (error?.response?.status === 401) {
+          toast.error('Erreur d\'authentification - Veuillez vous reconnecter');
+        } else if (error?.response?.status === 403) {
+          toast.error('Permissions insuffisantes');
+        } else if (error?.response?.status === 404) {
+          toast.error('Endpoint API non trouvé');
+        } else if (error?.response?.status >= 500) {
+          toast.error('Erreur serveur - Veuillez réessayer plus tard');
+        } else {
+          toast.error(`Erreur lors de la création de ${pieceName}: ${error?.message || 'Erreur inconnue'}`);
+        }
       },
     });
   };
@@ -165,8 +212,28 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     );
   }
 
+  // Debug: Affichage des informations pour le développement
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
   return (
     <div className="space-y-4">
+      {isDevelopment && (
+        <Card className="bg-yellow-50 border-yellow-200">
+          <CardHeader>
+            <CardTitle className="text-yellow-800">Debug Info</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-yellow-700">
+            <div className="space-y-1">
+              <p><strong>EtatId:</strong> {etatId}</p>
+              <p><strong>Pieces count:</strong> {pieces?.length || 0}</p>
+              <p><strong>Loading:</strong> {isLoading ? 'Oui' : 'Non'}</p>
+              <p><strong>Error:</strong> {error ? error.message : 'Aucune'}</p>
+              <p><strong>CreatePiece pending:</strong> {createPieceMutation.isPending ? 'Oui' : 'Non'}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Pièces de l'état des lieux</CardTitle>
