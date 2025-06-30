@@ -38,13 +38,20 @@ CREATE TABLE releve_compteurs (
     eau_froide_m3 TEXT -- Cold water consumption in cubic meters.
 );
 
+
+
 -- Table: equipements_energetiques
 -- Stores information about the type of heating and hot water systems.
 CREATE TABLE equipements_energetiques (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each energy equipment record.
     etat_des_lieux_id UUID REFERENCES etat_des_lieux(id), -- Foreign key linking to the main 'état des lieux' record.
     chauffage_type TEXT, -- Type of heating (e.g., electric, gas, collective, other).
-    eau_chaude_type TEXT -- Type of hot water system (e.g., electric, gas, collective, other).
+    eau_chaude_type TEXT, -- Type of hot water system (e.g., electric, gas, collective, other).
+    dpe_classe TEXT, -- DPE (Diagnostic de Performance Énergétique) class (e.g., 'A', 'B', 'C').
+    ges_classe TEXT, -- GES (Gaz à Effet de Serre) class (e.g., 'A', 'B', 'C').
+    date_dpe DATE, -- Date of the DPE.
+    presence_panneaux_solaires BOOLEAN, -- Indicates presence of solar panels.
+    type_isolation TEXT -- Type of insulation (e.g., 'interieure', 'exterieure', 'combles').
 );
 
 -- Table: equipements_chauffage
@@ -54,16 +61,24 @@ CREATE TABLE equipements_chauffage (
     etat_des_lieux_id UUID REFERENCES etat_des_lieux(id), -- Foreign key linking to the main 'état des lieux' record.
     chaudiere_etat TEXT, -- Condition of the boiler.
     chaudiere_date_dernier_entretien DATE, -- Date of the last boiler maintenance.
-    ballon_eau_chaude_etat TEXT -- Condition of the hot water tank.
+    ballon_eau_chaude_etat TEXT, -- Condition of the hot water tank.
+    radiateurs_nombre INTEGER, -- Number of radiators.
+    radiateurs_etat TEXT, -- General condition of radiators.
+    thermostat_present BOOLEAN, -- Indicates presence of a thermostat.
+    thermostat_etat TEXT, -- Condition of the thermostat.
+    pompe_a_chaleur_present BOOLEAN, -- Indicates presence of a heat pump.
+    pompe_a_chaleur_etat TEXT -- Condition of the heat pump.
 );
+
 
 -- Table: cles
 -- Stores information about keys and badges provided with the property.
 CREATE TABLE cles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each key record.
     etat_des_lieux_id UUID REFERENCES etat_des_lieux(id), -- Foreign key linking to the main 'état des lieux' record.
-    type_cle_badge TEXT, -- Type of key or badge.
+    type_cle_badge TEXT, -- Type of key or badge (e.g., 'clé porte entrée', 'clé boîte aux lettres', 'bip portail', 'badge immeuble').
     nombre INTEGER, -- Number of keys/badges of this type.
+    numero_cle TEXT, -- Key number or reference.
     commentaires TEXT -- Additional comments about the keys/badges.
 );
 
@@ -84,7 +99,7 @@ CREATE TABLE parties_privatives (
 CREATE TABLE autres_equipements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each other equipment record.
     etat_des_lieux_id UUID REFERENCES etat_des_lieux(id), -- Foreign key linking to the main 'état des lieux' record.
-    equipement TEXT NOT NULL, -- Name of the equipment (e.g., Sonnette / Interphone, Boite aux lettres, Internet).
+    equipement TEXT NOT NULL, -- Name of the equipment (e.g., 'Sonnette / Interphone', 'Boîte aux lettres', 'Internet', 'Alarme', 'Détecteur de fumée', 'VMC', 'Cheminée', 'Piscine', 'Jacuzzi', 'Sauna', 'Portail électrique', 'Volets roulants électriques', 'Store banne').
     etat_entree TEXT, -- Condition at entry.
     etat_sortie TEXT, -- Condition at exit.
     commentaires TEXT -- Additional comments about the equipment.
