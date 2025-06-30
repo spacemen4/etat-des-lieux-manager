@@ -20,7 +20,6 @@ export interface EtatDesLieux {
   updated_at?: string;
 }
 
-
 export interface Piece {
   id: string;
   etat_des_lieux_id: string;
@@ -74,6 +73,7 @@ export interface Cles {
   etat_des_lieux_id: string;
   type_cle_badge?: string | null;
   nombre?: number | null;
+  numero_cle?: string | null;
   commentaires?: string | null;
 }
 
@@ -97,16 +97,29 @@ export interface AutreEquipement {
 }
 
 export interface EquipementEnergetique {
+  id?: string;
   etat_des_lieux_id: string;
   chauffage_type?: string | null;
   eau_chaude_type?: string | null;
+  dpe_classe?: string | null;
+  ges_classe?: string | null;
+  date_dpe?: string | null;
+  presence_panneaux_solaires?: boolean | null;
+  type_isolation?: string | null;
 }
 
 export interface EquipementChauffage {
+  id?: string;
   etat_des_lieux_id: string;
   chaudiere_etat?: string | null;
   chaudiere_date_dernier_entretien?: string | null;
   ballon_eau_chaude_etat?: string | null;
+  radiateurs_nombre?: number | null;
+  radiateurs_etat?: string | null;
+  thermostat_present?: boolean | null;
+  thermostat_etat?: string | null;
+  pompe_a_chaleur_present?: boolean | null;
+  pompe_a_chaleur_etat?: string | null;
 }
 
 // ===== TYPES UTILITAIRES =====
@@ -136,7 +149,7 @@ const QUERY_KEYS = {
 } as const;
 
 const DEFAULT_STALE_TIME = 5 * 60 * 1000; // 5 minutes
-const DEFAULT_CACHE_TIME = 10 * 60 * 1000; // 10 minutes
+const DEFAULT_GC_TIME = 10 * 60 * 1000; // 10 minutes
 
 // ===== HOOKS DE REQUÊTE =====
 
@@ -155,7 +168,7 @@ export const useEtatDesLieux = (
       return data as EtatDesLieux[];
     },
     staleTime: DEFAULT_STALE_TIME,
-    cacheTime: DEFAULT_CACHE_TIME,
+    gcTime: DEFAULT_GC_TIME,
     ...options,
   });
 };
@@ -209,7 +222,7 @@ export const useEtatDesLieuxById = (
     },
     enabled: !!id,
     staleTime: DEFAULT_STALE_TIME,
-    cacheTime: DEFAULT_CACHE_TIME,
+    gcTime: DEFAULT_GC_TIME,
     ...options,
   });
 };
@@ -232,7 +245,7 @@ export const usePiecesByEtatId = (
     },
     enabled: !!etatId,
     staleTime: DEFAULT_STALE_TIME,
-    cacheTime: DEFAULT_CACHE_TIME,
+    gcTime: DEFAULT_GC_TIME,
     ...options,
   });
 };
@@ -255,7 +268,7 @@ export const useReleveCompteursByEtatId = (
     },
     enabled: !!etatId,
     staleTime: DEFAULT_STALE_TIME,
-    cacheTime: DEFAULT_CACHE_TIME,
+    gcTime: DEFAULT_GC_TIME,
     ...options,
   });
 };
@@ -277,7 +290,7 @@ export const useClesByEtatId = (
     },
     enabled: !!etatId,
     staleTime: DEFAULT_STALE_TIME,
-    cacheTime: DEFAULT_CACHE_TIME,
+    gcTime: DEFAULT_GC_TIME,
     ...options,
   });
 };
@@ -299,7 +312,7 @@ export const usePartiesPrivativesByEtatId = (
     },
     enabled: !!etatId,
     staleTime: DEFAULT_STALE_TIME,
-    cacheTime: DEFAULT_CACHE_TIME,
+    gcTime: DEFAULT_GC_TIME,
     ...options,
   });
 };
@@ -321,7 +334,7 @@ export const useAutresEquipementsByEtatId = (
     },
     enabled: !!etatId,
     staleTime: DEFAULT_STALE_TIME,
-    cacheTime: DEFAULT_CACHE_TIME,
+    gcTime: DEFAULT_GC_TIME,
     ...options,
   });
 };
@@ -344,7 +357,7 @@ export const useEquipementsEnergetiquesByEtatId = (
     },
     enabled: !!etatId,
     staleTime: DEFAULT_STALE_TIME,
-    cacheTime: DEFAULT_CACHE_TIME,
+    gcTime: DEFAULT_GC_TIME,
     ...options,
   });
 };
@@ -367,7 +380,7 @@ export const useEquipementsChauffageByEtatId = (
     },
     enabled: !!etatId,
     staleTime: DEFAULT_STALE_TIME,
-    cacheTime: DEFAULT_CACHE_TIME,
+    gcTime: DEFAULT_GC_TIME,
     ...options,
   });
 };
@@ -636,7 +649,7 @@ export const useUpdateEquipementsEnergetiques = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data) => {
+    mutationFn: async (data: EquipementEnergetique) => {
       console.log('=== MUTATION EQUIPEMENTS ENERGETIQUES ===');
       console.log('Données reçues:', data);
       
@@ -662,7 +675,11 @@ export const useUpdateEquipementsEnergetiques = () => {
           .update({
             chauffage_type: data.chauffage_type,
             eau_chaude_type: data.eau_chaude_type,
-            updated_at: new Date().toISOString()
+            dpe_classe: data.dpe_classe,
+            ges_classe: data.ges_classe,
+            date_dpe: data.date_dpe,
+            presence_panneaux_solaires: data.presence_panneaux_solaires,
+            type_isolation: data.type_isolation,
           })
           .eq('id', existingData.id)
           .select()
@@ -684,8 +701,11 @@ export const useUpdateEquipementsEnergetiques = () => {
             etat_des_lieux_id: data.etat_des_lieux_id,
             chauffage_type: data.chauffage_type,
             eau_chaude_type: data.eau_chaude_type,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            dpe_classe: data.dpe_classe,
+            ges_classe: data.ges_classe,
+            date_dpe: data.date_dpe,
+            presence_panneaux_solaires: data.presence_panneaux_solaires,
+            type_isolation: data.type_isolation,
           })
           .select()
           .single();
@@ -716,12 +736,7 @@ export const useUpdateEquipementsChauffage = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: {
-      etat_des_lieux_id: string;
-      chaudiere_etat?: string | null;
-      chaudiere_date_dernier_entretien?: string | null;
-      ballon_eau_chaude_etat?: string | null;
-    }) => {
+    mutationFn: async (data: EquipementChauffage) => {
       // Méthode 1: Vérifier si un enregistrement existe déjà
       const { data: existing, error: fetchError } = await supabase
         .from('equipements_chauffage')
@@ -742,6 +757,12 @@ export const useUpdateEquipementsChauffage = () => {
             chaudiere_etat: data.chaudiere_etat,
             chaudiere_date_dernier_entretien: data.chaudiere_date_dernier_entretien,
             ballon_eau_chaude_etat: data.ballon_eau_chaude_etat,
+            radiateurs_nombre: data.radiateurs_nombre,
+            radiateurs_etat: data.radiateurs_etat,
+            thermostat_present: data.thermostat_present,
+            thermostat_etat: data.thermostat_etat,
+            pompe_a_chaleur_present: data.pompe_a_chaleur_present,
+            pompe_a_chaleur_etat: data.pompe_a_chaleur_etat,
           })
           .eq('id', existing.id)
           .select()
@@ -758,6 +779,12 @@ export const useUpdateEquipementsChauffage = () => {
             chaudiere_etat: data.chaudiere_etat,
             chaudiere_date_dernier_entretien: data.chaudiere_date_dernier_entretien,
             ballon_eau_chaude_etat: data.ballon_eau_chaude_etat,
+            radiateurs_nombre: data.radiateurs_nombre,
+            radiateurs_etat: data.radiateurs_etat,
+            thermostat_present: data.thermostat_present,
+            thermostat_etat: data.thermostat_etat,
+            pompe_a_chaleur_present: data.pompe_a_chaleur_present,
+            pompe_a_chaleur_etat: data.pompe_a_chaleur_etat,
           })
           .select()
           .single();

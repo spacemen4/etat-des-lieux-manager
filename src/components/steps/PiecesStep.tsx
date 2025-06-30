@@ -424,14 +424,10 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
           toast.error('Erreur de configuration API - Page HTML reçue au lieu de JSON');
         } else if (error?.message?.includes('SyntaxError')) {
           toast.error('Erreur de format de réponse API');
-        } else if (error?.response?.status === 401) {
-          toast.error('Erreur d\'authentification - Veuillez vous reconnecter');
-        } else if (error?.response?.status === 403) {
-          toast.error('Permissions insuffisantes');
-        } else if (error?.response?.status === 404) {
-          toast.error('Endpoint API non trouvé');
-        } else if (error?.response?.status >= 500) {
-          toast.error('Erreur serveur - Veuillez réessayer plus tard');
+        } else if (error?.code === '23505') {
+          toast.error('Cette pièce existe déjà');
+        } else if (error?.code === '23503') {
+          toast.error('Erreur de référence - État des lieux introuvable');
         } else {
           toast.error(`Erreur lors de la création: ${error?.message || 'Erreur inconnue'}`);
         }
@@ -455,14 +451,10 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
           toast.error('Erreur de configuration API - Page HTML reçue au lieu de JSON');
         } else if (error?.message?.includes('SyntaxError')) {
           toast.error('Erreur de format de réponse API');
-        } else if (error?.response?.status === 401) {
-          toast.error('Erreur d\'authentification - Veuillez vous reconnecter');
-        } else if (error?.response?.status === 403) {
-          toast.error('Permissions insuffisantes');
-        } else if (error?.response?.status === 404) {
-          toast.error('Endpoint API non trouvé');
-        } else if (error?.response?.status >= 500) {
-          toast.error('Erreur serveur - Veuillez réessayer plus tard');
+        } else if (error?.code === '23505') {
+          toast.error('Cette pièce existe déjà');
+        } else if (error?.code === '23503') {
+          toast.error('Erreur de référence - État des lieux introuvable');
         } else {
           toast.error(`Erreur lors de la création de ${pieceName}: ${error?.message || 'Erreur inconnue'}`);
         }

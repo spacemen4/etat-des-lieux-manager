@@ -17,8 +17,8 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
 
   const [formData, setFormData] = useState({
     adresse_bien: '',
-    type_etat_des_lieux: '',
-    type_bien: '',
+    type_etat_des_lieux: '' as 'entree' | 'sortie' | '',
+    type_bien: '' as 'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires' | '',
     bailleur_nom: '',
     bailleur_adresse: '',
     locataire_nom: '',
@@ -79,11 +79,23 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
   };
 
   const handleSave = () => {
+    // Type validation before sending
+    const validatedData = {
+      id: etatId,
+      adresse_bien: formData.adresse_bien,
+      type_etat_des_lieux: formData.type_etat_des_lieux as 'entree' | 'sortie',
+      type_bien: formData.type_bien as 'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires',
+      bailleur_nom: formData.bailleur_nom,
+      bailleur_adresse: formData.bailleur_adresse,
+      locataire_nom: formData.locataire_nom,
+      locataire_adresse: formData.locataire_adresse,
+      date_entree: formData.date_entree,
+      date_sortie: formData.date_sortie,
+      statut: formData.statut,
+    };
+
     updateEtatDesLieux(
-      {
-        id: etatId,
-        ...formData
-      },
+      validatedData,
       {
         onSuccess: () => {
           toast.success('Informations générales sauvegardées');
