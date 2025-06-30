@@ -631,62 +631,84 @@ export const useUpdateEtatSortie = (
   });
 };
 
-export const useUpdateEquipementsEnergetiques = (
-  options?: MutationOptions<EquipementEnergetique, PostgrestError, Partial<EquipementEnergetique>>
-) => {
+// In your mutation hook file (e.g., useEtatDesLieux.ts)
+export const useUpdateEquipementsEnergetiques = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (equipementEnergetiqueData: Partial<EquipementEnergetique>) => {
+    mutationFn: async (data) => {
       console.log('=== MUTATION EQUIPEMENTS ENERGETIQUES ===');
-      console.log('Données reçues:', equipementEnergetiqueData);
+      console.log('Données reçues:', data);
       
-      // Vérification des données requises
-      if (!equipementEnergetiqueData.etat_des_lieux_id) {
-        console.error('ERREUR: etat_des_lieux_id manquant');
-        throw new Error('etat_des_lieux_id est requis');
+      // First, check if a record already exists
+      const { data: existingData, error: checkError } = await supabase
+        .from('equipements_energetiques')
+        .select('id')
+        .eq('etat_des_lieux_id', data.etat_des_lieux_id)
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Erreur lors de la vérification:', checkError);
+        throw checkError;
       }
 
-      try {
-        console.log('Tentative upsert avec Supabase...');
-        const { data, error } = await supabase
+      let result;
+      
+      if (existingData) {
+        // Update existing record
+        console.log('Mise à jour de l\'enregistrement existant:', existingData.id);
+        const { data: updateData, error: updateError } = await supabase
           .from('equipements_energetiques')
-          .upsert(equipementEnergetiqueData, { 
-            onConflict: 'etat_des_lieux_id',
-            ignoreDuplicates: false 
+          .update({
+            chauffage_type: data.chauffage_type,
+            eau_chaude_type: data.eau_chaude_type,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingData.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('Erreur lors de la mise à jour:', updateError);
+          throw updateError;
+        }
+        
+        result = updateData;
+        console.log('Mise à jour réussie:', result);
+      } else {
+        // Create new record
+        console.log('Création d\'un nouvel enregistrement');
+        const { data: insertData, error: insertError } = await supabase
+          .from('equipements_energetiques')
+          .insert({
+            etat_des_lieux_id: data.etat_des_lieux_id,
+            chauffage_type: data.chauffage_type,
+            eau_chaude_type: data.eau_chaude_type,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           })
           .select()
           .single();
 
-        console.log('Réponse Supabase - data:', data);
-        console.log('Réponse Supabase - error:', error);
-
-        if (error) {
-          console.error('Erreur Supabase:', error);
-          throw error;
+        if (insertError) {
+          console.error('Erreur lors de l\'insertion:', insertError);
+          throw insertError;
         }
-
-        console.log('Mutation réussie:', data);
-        return data as EquipementEnergetique;
         
-      } catch (supabaseError) {
-        console.error('Erreur dans le try/catch:', supabaseError);
-        throw supabaseError;
+        result = insertData;
+        console.log('Insertion réussie:', result);
       }
+
+      return result;
     },
     onSuccess: (data) => {
-      console.log('onSuccess appelé avec:', data);
-      if (data.etat_des_lieux_id) {
-        console.log('Invalidation du cache pour:', data.etat_des_lieux_id);
-        queryClient.invalidateQueries({ 
-          queryKey: QUERY_KEYS.equipementsEnergetiques(data.etat_des_lieux_id) 
-        });
-      }
+      console.log('Mutation réussie:', data);
+      // Invalidate and refetch related queries
+      queryClient.invalidateQueries(['equipements-energetiques']);
     },
     onError: (error) => {
-      console.error('onError appelé avec:', error);
-    },
-    ...options,
+      console.error('Erreur dans la mutation:', error);
+    }
   });
 };
 
