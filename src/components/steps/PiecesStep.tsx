@@ -128,7 +128,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
         console.error('Type d\'erreur:', typeof error);
         console.error('Message d\'erreur:', error?.message);
         console.error('Response:', error?.response);
-        
+
         // Gestion spécifique des erreurs API
         if (error?.message?.includes('<!DOCTYPE')) {
           toast.error('Erreur de configuration API - Page HTML reçue au lieu de JSON');
@@ -166,7 +166,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
       },
       onError: (error) => {
         console.error('Erreur complète lors de la création rapide:', error);
-        
+
         // Même gestion d'erreur que pour handleCreatePiece
         if (error?.message?.includes('<!DOCTYPE')) {
           toast.error('Erreur de configuration API - Page HTML reçue au lieu de JSON');
@@ -259,13 +259,13 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
                   />
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => setIsCreateDialogOpen(false)}
                   >
                     Annuler
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleCreatePiece}
                     disabled={createPieceMutation.isPending}
                   >
@@ -471,14 +471,14 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
             </div>
 
             <div className="flex gap-2 pt-4">
-              <Button 
-                onClick={handleSave} 
+              <Button
+                onClick={handleSave}
                 disabled={updatePieceMutation.isPending}
                 className="flex-1"
               >
                 {updatePieceMutation.isPending ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => setSelectedPiece(null)}
               >

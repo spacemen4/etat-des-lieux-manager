@@ -160,30 +160,34 @@ export const useEtatDesLieux = (
   });
 };
 
-export const useCreatePiece = () => {
+export const useCreatePiece = (
+  options?: MutationOptions<Piece, PostgrestError, Omit<Piece, 'id'>>
+) => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (pieceData: {
       etat_des_lieux_id: string;
       nom_piece: string;
     }) => {
-      // Votre logique d'appel API ici
-      const response = await fetch('/api/pieces', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(pieceData),
-      });
+      // Utiliser Supabase au lieu de fetch vers /api/pieces
+      const { data, error } = await supabase
+        .from('pieces')
+        .insert(pieceData)
+        .select()
+        .single();
 
-      // Vérifier si la réponse est OK (status 2xx)
-      if (!response.ok) {
-        // Essayer de parser le corps de la réponse comme JSON pour obtenir le message d'erreur
-        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
-        // Lancer une erreur avec le message du serveur ou un message par défaut
-        throw new Error(errorData?.error || `API Error: ${response.status} ${response.statusText}`);
-      }
-
-      // Si la réponse est OK, parser le JSON
-      return response.json();
+      if (error) throw error;
+      return data as Piece;
     },
+    onSuccess: (data) => {
+      if (data.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ 
+          queryKey: QUERY_KEYS.pieces(data.etat_des_lieux_id) 
+        });
+      }
+    },
+    ...options,
   });
 };
 
