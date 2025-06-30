@@ -712,30 +712,66 @@ export const useUpdateEquipementsEnergetiques = () => {
   });
 };
 
-export const useUpdateEquipementsChauffage = (
-  options?: MutationOptions<EquipementChauffage, PostgrestError, Partial<EquipementChauffage>>
-) => {
+export const useUpdateEquipementsChauffage = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (equipementChauffageData: Partial<EquipementChauffage>) => {
-      const { data, error } = await supabase
+    mutationFn: async (data: {
+      etat_des_lieux_id: string;
+      chaudiere_etat?: string | null;
+      chaudiere_date_dernier_entretien?: string | null;
+      ballon_eau_chaude_etat?: string | null;
+    }) => {
+      // Méthode 1: Vérifier si un enregistrement existe déjà
+      const { data: existing, error: fetchError } = await supabase
         .from('equipements_chauffage')
-        .upsert(equipementChauffageData, { onConflict: 'etat_des_lieux_id' })
-        .select()
+        .select('id')
+        .eq('etat_des_lieux_id', data.etat_des_lieux_id)
         .single();
 
-      if (error) throw error;
-      return data as EquipementChauffage;
-    },
-    onSuccess: (data) => {
-      if (data.etat_des_lieux_id) {
-        queryClient.invalidateQueries({ 
-          queryKey: QUERY_KEYS.equipementsChauffage(data.etat_des_lieux_id) 
-        });
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        // PGRST116 = "No rows found" - c'est normal si pas d'enregistrement
+        throw fetchError;
+      }
+
+      if (existing) {
+        // Mise à jour de l'enregistrement existant
+        const { data: updated, error: updateError } = await supabase
+          .from('equipements_chauffage')
+          .update({
+            chaudiere_etat: data.chaudiere_etat,
+            chaudiere_date_dernier_entretien: data.chaudiere_date_dernier_entretien,
+            ballon_eau_chaude_etat: data.ballon_eau_chaude_etat,
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+        return updated;
+      } else {
+        // Création d'un nouvel enregistrement
+        const { data: created, error: insertError } = await supabase
+          .from('equipements_chauffage')
+          .insert({
+            etat_des_lieux_id: data.etat_des_lieux_id,
+            chaudiere_etat: data.chaudiere_etat,
+            chaudiere_date_dernier_entretien: data.chaudiere_date_dernier_entretien,
+            ballon_eau_chaude_etat: data.ballon_eau_chaude_etat,
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        return created;
       }
     },
-    ...options,
+    onSuccess: () => {
+      // Invalider le cache pour recharger les données
+      queryClient.invalidateQueries({ 
+        queryKey: ['equipements-chauffage'] 
+      });
+    },
   });
 };
 
