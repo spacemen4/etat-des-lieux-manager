@@ -106,6 +106,7 @@ export interface EquipementEnergetique {
   date_dpe?: string | null;
   presence_panneaux_solaires?: boolean | null;
   type_isolation?: string | null;
+  commentaires?: string | null;
 }
 
 export interface EquipementChauffage {
@@ -120,6 +121,7 @@ export interface EquipementChauffage {
   thermostat_etat?: string | null;
   pompe_a_chaleur_present?: boolean | null;
   pompe_a_chaleur_etat?: string | null;
+  commentaires?: string | null;
 }
 
 // ===== TYPES UTILITAIRES =====
@@ -680,6 +682,7 @@ export const useUpdateEquipementsEnergetiques = () => {
             date_dpe: data.date_dpe,
             presence_panneaux_solaires: data.presence_panneaux_solaires,
             type_isolation: data.type_isolation,
+            commentaires: data.commentaires,
           })
           .eq('id', existingData.id)
           .select()
@@ -706,6 +709,7 @@ export const useUpdateEquipementsEnergetiques = () => {
             date_dpe: data.date_dpe,
             presence_panneaux_solaires: data.presence_panneaux_solaires,
             type_isolation: data.type_isolation,
+            commentaires: data.commentaires,
           })
           .select()
           .single();
@@ -763,6 +767,7 @@ export const useUpdateEquipementsChauffage = () => {
             thermostat_etat: data.thermostat_etat,
             pompe_a_chaleur_present: data.pompe_a_chaleur_present,
             pompe_a_chaleur_etat: data.pompe_a_chaleur_etat,
+            commentaires: data.commentaires,
           })
           .eq('id', existing.id)
           .select()
@@ -785,6 +790,7 @@ export const useUpdateEquipementsChauffage = () => {
             thermostat_etat: data.thermostat_etat,
             pompe_a_chaleur_present: data.pompe_a_chaleur_present,
             pompe_a_chaleur_etat: data.pompe_a_chaleur_etat,
+            commentaires: data.commentaires,
           })
           .select()
           .single();

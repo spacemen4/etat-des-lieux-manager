@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { useEquipementsEnergetiquesByEtatId, useUpdateEquipementsEnergetiques } from '@/hooks/useEtatDesLieux';
 import { toast } from 'sonner';
 
@@ -24,6 +25,7 @@ const EquipementsEnergetiquesStep: React.FC<EquipementsEnergetiquesStepProps> = 
     date_dpe: '',
     presence_panneaux_solaires: false,
     type_isolation: '',
+    commentaires: '',
   });
 
   useEffect(() => {
@@ -38,6 +40,7 @@ const EquipementsEnergetiquesStep: React.FC<EquipementsEnergetiquesStepProps> = 
           : '',
         presence_panneaux_solaires: equipementsEnergetiques.presence_panneaux_solaires || false,
         type_isolation: equipementsEnergetiques.type_isolation || '',
+        commentaires: equipementsEnergetiques.commentaires || '',
       });
     }
   }, [equipementsEnergetiques]);
@@ -149,6 +152,17 @@ const EquipementsEnergetiquesStep: React.FC<EquipementsEnergetiquesStepProps> = 
               placeholder="Ex: Intérieure, Extérieure, Combles..."
             />
           </div>
+        </div>
+
+        <div>
+          <Label htmlFor="commentaires">Commentaires</Label>
+          <Textarea
+            id="commentaires"
+            value={formData.commentaires}
+            onChange={(e) => handleInputChange('commentaires', e.target.value)}
+            placeholder="Ajoutez vos observations sur les équipements énergétiques..."
+            rows={4}
+          />
         </div>
 
         <Button

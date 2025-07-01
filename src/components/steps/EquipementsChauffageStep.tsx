@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { useEquipementsChauffageByEtatId, useUpdateEquipementsChauffage } from '@/hooks/useEtatDesLieux';
 import { toast } from 'sonner';
 
@@ -26,6 +27,7 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
     thermostat_etat: '',
     pompe_a_chaleur_present: false,
     pompe_a_chaleur_etat: '',
+    commentaires: '',
   });
 
   useEffect(() => {
@@ -42,6 +44,7 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
         thermostat_etat: equipementsChauffage.thermostat_etat || '',
         pompe_a_chaleur_present: equipementsChauffage.pompe_a_chaleur_present || false,
         pompe_a_chaleur_etat: equipementsChauffage.pompe_a_chaleur_etat || '',
+        commentaires: equipementsChauffage.commentaires || '',
       });
     }
   }, [equipementsChauffage]);
@@ -196,6 +199,18 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
               />
             </div>
           )}
+        </div>
+
+        {/* Commentaires */}
+        <div>
+          <Label htmlFor="commentaires">Commentaires</Label>
+          <Textarea
+            id="commentaires"
+            value={formData.commentaires}
+            onChange={(e) => handleInputChange('commentaires', e.target.value)}
+            placeholder="Ajoutez vos observations sur les équipements de chauffage..."
+            rows={4}
+          />
         </div>
 
         <Button
