@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useEtatDesLieuxById, useUpdateEtatDesLieux } from '@/hooks/useEtatDesLieux';
+import { useEtatDesLieuxById, useUpdateEtatDesLieux, useRendezVousById } from '@/hooks/useEtatDesLieux';
 
 interface GeneralStepProps {
   etatId: string;
@@ -13,6 +13,7 @@ interface GeneralStepProps {
 
 const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
   const { data: etatDesLieuxInitial, isLoading } = useEtatDesLieuxById(etatId);
+  const { data: rendezVousData } = useRendezVousById(etatDesLieuxInitial?.rendez_vous_id || null);
   const { mutate: updateEtatDesLieux, isPending: isUpdating } = useUpdateEtatDesLieux();
 
   const [formData, setFormData] = useState({
@@ -69,6 +70,18 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
     }
   }, [etatDesLieuxInitial]);
 
+  // New useEffect to pre-fill data from rendez-vous
+  useEffect(() => {
+    if (rendezVousData && (!formData.type_etat_des_lieux || !formData.type_bien)) {
+      setFormData(prev => ({
+        ...prev,
+        type_etat_des_lieux: prev.type_etat_des_lieux || rendezVousData.type_etat_des_lieux || '',
+        type_bien: prev.type_bien || rendezVousData.type_bien || '',
+        adresse_bien: prev.adresse_bien || rendezVousData.adresse || '',
+      }));
+    }
+  }, [rendezVousData, formData.type_etat_des_lieux, formData.type_bien]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
@@ -120,6 +133,11 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
     <Card>
       <CardHeader>
         <CardTitle>Informations générales</CardTitle>
+        {rendezVousData && (
+          <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+            Informations pré-remplies depuis le rendez-vous du {new Date(rendezVousData.date).toLocaleDateString('fr-FR')}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Section: Informations sur le bien */}
