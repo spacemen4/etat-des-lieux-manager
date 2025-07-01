@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, User, FileText, Loader2, Building2 } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, Loader2, Building2, Plus, LogIn, LogOut } from 'lucide-react';
 import { useEtatDesLieux } from '@/hooks/useEtatDesLieux';
 import EtatDesLieuxViewer from './EtatDesLieuxViewer';
 
@@ -61,9 +61,20 @@ const Dashboard = () => {
             Gérez vos états des lieux d'entrée et de sortie
           </p>
         </div>
-        <Button asChild className="bg-blue-600 hover:bg-blue-700">
-          <a href="/new-etat-des-lieux">Créer un état des lieux</a>
-        </Button>
+        <div className="flex gap-3">
+          <Button asChild className="bg-green-600 hover:bg-green-700">
+            <a href="/new-etat-des-lieux?type=entree" className="flex items-center gap-2">
+              <LogIn className="h-4 w-4" />
+              État d'entrée
+            </a>
+          </Button>
+          <Button asChild className="bg-blue-600 hover:bg-blue-700">
+            <a href="/new-etat-des-lieux?type=sortie" className="flex items-center gap-2">
+              <LogOut className="h-4 w-4" />
+              État de sortie
+            </a>
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

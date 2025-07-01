@@ -1,6 +1,5 @@
-
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +12,7 @@ import EtatDesLieuxTypeSelector from '@/components/EtatDesLieuxTypeSelector';
 
 const NewEtatDesLieux = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [typeEtatDesLieux, setTypeEtatDesLieux] = useState<'entree' | 'sortie'>('entree');
   const [typeBien, setTypeBien] = useState<'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires'>('studio');
@@ -24,6 +24,14 @@ const NewEtatDesLieux = () => {
     locataire_nom: '',
     locataire_adresse: ''
   });
+
+  // Pré-sélectionner le type d'état des lieux basé sur le paramètre URL
+  useEffect(() => {
+    const typeParam = searchParams.get('type');
+    if (typeParam === 'entree' || typeParam === 'sortie') {
+      setTypeEtatDesLieux(typeParam);
+    }
+  }, [searchParams]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
