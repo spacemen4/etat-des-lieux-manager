@@ -1,4 +1,3 @@
-
 -- This SQL DDL script defines the schema for a PostgreSQL database to manage 'état des lieux' (property inventory) forms.
 -- It is designed to be compatible with Supabase.
 
@@ -18,10 +17,9 @@ CREATE TABLE etat_des_lieux (
     bailleur_nom TEXT, -- Name of the landlord or their representative.
     bailleur_adresse TEXT, -- Address of the landlord or their representative.
     locataire_nom TEXT, -- Name of the tenant(s).
-    locataire_adresse TEXT -- Address of the tenant(s).
+    locataire_adresse TEXT, -- Address of the tenant(s).
+    rendez_vous_id UUID -- Foreign key linking to the appointment that led to this inventory.
 );
-
--- ... keep existing code (all other tables remain unchanged)
 
 -- Table: releve_compteurs
 -- Stores meter readings for electricity, gas, and water.
@@ -38,8 +36,6 @@ CREATE TABLE releve_compteurs (
     eau_froide_m3 TEXT -- Cold water consumption in cubic meters.
 );
 
-
-
 -- Table: equipements_energetiques
 -- Stores information about the type of heating and hot water systems.
 CREATE TABLE equipements_energetiques (
@@ -51,7 +47,8 @@ CREATE TABLE equipements_energetiques (
     ges_classe TEXT, -- GES (Gaz à Effet de Serre) class (e.g., 'A', 'B', 'C').
     date_dpe DATE, -- Date of the DPE.
     presence_panneaux_solaires BOOLEAN, -- Indicates presence of solar panels.
-    type_isolation TEXT -- Type of insulation (e.g., 'interieure', 'exterieure', 'combles').
+    type_isolation TEXT, -- Type of insulation (e.g., 'interieure', 'exterieure', 'combles').
+    commentaires TEXT -- Comments and observations about energy equipment.
 );
 
 -- Table: equipements_chauffage
@@ -67,9 +64,9 @@ CREATE TABLE equipements_chauffage (
     thermostat_present BOOLEAN, -- Indicates presence of a thermostat.
     thermostat_etat TEXT, -- Condition of the thermostat.
     pompe_a_chaleur_present BOOLEAN, -- Indicates presence of a heat pump.
-    pompe_a_chaleur_etat TEXT -- Condition of the heat pump.
+    pompe_a_chaleur_etat TEXT, -- Condition of the heat pump.
+    commentaires TEXT -- Comments and observations about heating equipment.
 );
-
 
 -- Table: cles
 -- Stores information about keys and badges provided with the property.
@@ -161,19 +158,52 @@ CREATE TABLE rendez_vous (
     note_personnelle TEXT, -- Any personal notes regarding the appointment.
     type_etat_des_lieux TEXT, -- Type of inventory (e.g., "entree", "sortie").
     type_bien TEXT, -- Type of property (e.g., "studio", "t2-t3", "local").
-    created_at TIMESTAMPTZ DEFAULT now() -- Timestamp of when the appointment was created.
+    created_at TIMESTAMPTZ DEFAULT now(), -- Timestamp of when the appointment was created.
+    statut TEXT DEFAULT 'planifie' CHECK (statut IN ('planifie', 'realise', 'annule', 'reporte')), -- Status of the appointment.
+    etat_des_lieux_id UUID -- Reference to the inventory created from this appointment.
 );
 
--- Migration pour ajouter la colonne commentaires aux tables equipements_energetiques et equipements_chauffage
+-- Add foreign key constraints after table creation to avoid circular dependency issues
+ALTER TABLE etat_des_lieux 
+ADD CONSTRAINT fk_etat_des_lieux_rendez_vous 
+FOREIGN KEY (rendez_vous_id) REFERENCES rendez_vous(id);
 
--- Ajouter la colonne commentaires à la table equipements_energetiques
-ALTER TABLE equipements_energetiques 
-ADD COLUMN commentaires TEXT;
+ALTER TABLE rendez_vous 
+ADD CONSTRAINT fk_rendez_vous_etat_des_lieux 
+FOREIGN KEY (etat_des_lieux_id) REFERENCES etat_des_lieux(id);
 
--- Ajouter la colonne commentaires à la table equipements_chauffage
-ALTER TABLE equipements_chauffage 
-ADD COLUMN commentaires TEXT;
-
--- Optionnel : Ajouter des commentaires sur les colonnes pour la documentation
+-- Add comments for documentation
+COMMENT ON COLUMN etat_des_lieux.rendez_vous_id IS 'Référence vers le rendez-vous qui a donné lieu à cet état des lieux';
+COMMENT ON COLUMN rendez_vous.statut IS 'Statut du rendez-vous: planifie, realise, annule, reporte';
+COMMENT ON COLUMN rendez_vous.etat_des_lieux_id IS 'Référence vers l''état des lieux créé suite à ce rendez-vous';
 COMMENT ON COLUMN equipements_energetiques.commentaires IS 'Commentaires et observations sur les équipements énergétiques';
 COMMENT ON COLUMN equipements_chauffage.commentaires IS 'Commentaires et observations sur les équipements de chauffage';
+
+-- Create indexes for better performance
+CREATE INDEX idx_etat_des_lieux_rendez_vous ON etat_des_lieux(rendez_vous_id);
+CREATE INDEX idx_rendez_vous_etat_des_lieux ON rendez_vous(etat_des_lieux_id);
+CREATE INDEX idx_rendez_vous_statut ON rendez_vous(statut);
+CREATE INDEX idx_rendez_vous_date ON rendez_vous(date);
+CREATE INDEX idx_etat_des_lieux_type ON etat_des_lieux(type_etat_des_lieux);
+CREATE INDEX idx_etat_des_lieux_statut ON etat_des_lieux(statut);
+
+-- Function to automatically update appointment status when an inventory is created
+CREATE OR REPLACE FUNCTION update_rendez_vous_statut()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Update appointment status when an inventory is created with this appointment_id
+    IF NEW.rendez_vous_id IS NOT NULL THEN
+        UPDATE rendez_vous 
+        SET statut = 'realise',
+            etat_des_lieux_id = NEW.id
+        WHERE id = NEW.rendez_vous_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to automate status updates
+CREATE TRIGGER trigger_update_rendez_vous_statut
+    AFTER INSERT ON etat_des_lieux
+    FOR EACH ROW
+    EXECUTE FUNCTION update_rendez_vous_statut();
