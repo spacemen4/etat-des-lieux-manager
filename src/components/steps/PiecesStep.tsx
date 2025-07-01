@@ -424,9 +424,9 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
           toast.error('Erreur de configuration API - Page HTML reçue au lieu de JSON');
         } else if (error?.message?.includes('SyntaxError')) {
           toast.error('Erreur de format de réponse API');
-        } else if (error?.code === '23505') {
+        } else if ((error as any)?.code === '23505') {
           toast.error('Cette pièce existe déjà');
-        } else if (error?.code === '23503') {
+        } else if ((error as any)?.code === '23503') {
           toast.error('Erreur de référence - État des lieux introuvable');
         } else {
           toast.error(`Erreur lors de la création: ${error?.message || 'Erreur inconnue'}`);
@@ -451,9 +451,9 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
           toast.error('Erreur de configuration API - Page HTML reçue au lieu de JSON');
         } else if (error?.message?.includes('SyntaxError')) {
           toast.error('Erreur de format de réponse API');
-        } else if (error?.code === '23505') {
+        } else if ((error as any)?.code === '23505') {
           toast.error('Cette pièce existe déjà');
-        } else if (error?.code === '23503') {
+        } else if ((error as any)?.code === '23503') {
           toast.error('Erreur de référence - État des lieux introuvable');
         } else {
           toast.error(`Erreur lors de la création de ${pieceName}: ${error?.message || 'Erreur inconnue'}`);
