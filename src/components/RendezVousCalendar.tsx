@@ -11,35 +11,30 @@ import { toast } from '@/components/ui/use-toast';
 
 interface RendezVous {
   id?: string;
-  date: Date; // Obligatoire dans la DB
-  heure: string; // Obligatoire dans la DB
+  date?: Date;
+  heure: string; // Obligatoire
   duree?: string;
   description?: string;
-  adresse: string; // Obligatoire dans la DB
-  code_postal: string; // Obligatoire dans la DB
-  ville: string; // Obligatoire dans la DB
+  adresse?: string;
+  code_postal?: string;
+  ville?: string;
   latitude?: number;
   longitude?: number;
-  nom_contact: string; // Obligatoire dans la DB
-  telephone_contact: string; // Obligatoire dans la DB
-  email_contact: string; // Obligatoire dans la DB
+  nom_contact?: string;
+  telephone_contact?: string;
+  email_contact?: string;
   note_personnelle?: string;
-  type_etat_des_lieux?: string; // Optionnel dans la DB
-  type_bien?: string; // Optionnel dans la DB
+  type_etat_des_lieux: string; // Obligatoire
+  type_bien: string; // Obligatoire
   created_at?: Date;
   statut?: string; // planifie, realise, annule, reporte
   etat_des_lieux_id?: string;
 }
 
 interface ValidationErrors {
-  date: boolean;
+  type_etat_des_lieux: boolean;
+  type_bien: boolean;
   heure: boolean;
-  adresse: boolean;
-  code_postal: boolean;
-  ville: boolean;
-  nom_contact: boolean;
-  telephone_contact: boolean;
-  email_contact: boolean;
 }
 
 export function RendezVousCalendar() {
@@ -63,26 +58,16 @@ export function RendezVousCalendar() {
   
   // État pour les erreurs de validation
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({
-    date: false,
-    heure: false,
-    adresse: false,
-    code_postal: false,
-    ville: false,
-    nom_contact: false,
-    telephone_contact: false,
-    email_contact: false
+    type_etat_des_lieux: false,
+    type_bien: false,
+    heure: false
   });
 
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {
-      date: !date,
-      heure: !heure.trim(),
-      adresse: !adresse.trim(),
-      code_postal: !code_postal.trim(),
-      ville: !ville.trim(),
-      nom_contact: !nom_contact.trim(),
-      telephone_contact: !telephone_contact.trim(),
-      email_contact: !email_contact.trim() || !email_contact.includes('@')
+      type_etat_des_lieux: !typeEtatDesLieux.trim(),
+      type_bien: !typeBien.trim(),
+      heure: !heure.trim()
     };
 
     setValidationErrors(errors);
@@ -96,36 +81,41 @@ export function RendezVousCalendar() {
     if (!validateForm()) {
       toast({
         title: "Champs obligatoires manquants",
-        description: "Veuillez remplir tous les champs obligatoires marqués d'un astérisque (*)",
+        description: "Veuillez remplir tous les champs obligatoires : Type d'état des lieux, Type de bien et Heure du rendez-vous.",
         variant: "destructive",
       });
       return;
     }
 
+    // Utilise la date du jour si aucune date n'est sélectionnée
+    const finalDate = date || new Date();
+
     const newRendezVous: RendezVous = {
       id: `rdv-${Date.now()}`, // Génération d'un ID temporaire
-      date: date!,
+      date: finalDate,
       heure: heure.trim(),
       duree: duree.trim() || undefined,
       description: description.trim() || undefined,
-      adresse: adresse.trim(),
-      code_postal: code_postal.trim(),
-      ville: ville.trim(),
+      adresse: adresse.trim() || undefined,
+      code_postal: code_postal.trim() || undefined,
+      ville: ville.trim() || undefined,
       latitude: latitude || undefined,
       longitude: longitude || undefined,
-      nom_contact: nom_contact.trim(),
-      telephone_contact: telephone_contact.trim(),
-      email_contact: email_contact.trim(),
+      nom_contact: nom_contact.trim() || undefined,
+      telephone_contact: telephone_contact.trim() || undefined,
+      email_contact: email_contact.trim() || undefined,
       note_personnelle: note_personnelle.trim() || undefined,
-      type_etat_des_lieux: typeEtatDesLieux || undefined,
-      type_bien: typeBien || undefined,
+      type_etat_des_lieux: typeEtatDesLieux,
+      type_bien: typeBien,
       created_at: new Date(),
       statut: statut,
       etat_des_lieux_id: undefined
     };
       
-    setRendezVous(prevRendezVous => [...prevRendezVous, newRendezVous].sort((a, b) => {
-      return a.date.getTime() - b.date.getTime();
+          setRendezVous(prevRendezVous => [...prevRendezVous, newRendezVous].sort((a, b) => {
+      const dateA = a.date || new Date();
+      const dateB = b.date || new Date();
+      return dateA.getTime() - dateB.getTime();
     }));
 
     // Reset form fields
