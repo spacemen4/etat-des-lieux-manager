@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -125,7 +126,7 @@ const Dashboard = () => {
           </h3>
           {etatsEnCours.length > 0 ? (
             <div className="text-sm text-slate-600">
-              Sélectionnez un bien en cours pour faire l'état de sortie
+              Sélectionnez un bien en cours pour faire l'état de sortie ou d'entrée
             </div>
           ) : (
             <div className="text-sm text-slate-600">
@@ -181,14 +182,31 @@ const Dashboard = () => {
                           {!etat.date_sortie ? "En cours" : "Terminé"}
                         </Badge>
                       </div>
-                      {!etat.date_sortie && etat.type_etat_des_lieux === 'entree' && (
-                        <Button 
-                          size="sm" 
-                          asChild
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <a href={`/sortie/${etat.id}`}>Faire l'état de sortie</a>
-                        </Button>
+                      {!etat.date_sortie && (
+                        <div className="flex gap-2 mt-2">
+                          <Button 
+                            size="sm" 
+                            asChild
+                            className="bg-blue-600 hover:bg-blue-700"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <a href={`/sortie/${etat.id}`} className="flex items-center gap-1">
+                              <LogOut className="h-3 w-3" />
+                              État de sortie
+                            </a>
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            asChild
+                            variant="outline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <a href={`/new-etat-des-lieux?type=entree`} className="flex items-center gap-1">
+                              <LogIn className="h-3 w-3" />
+                              État d'entrée
+                            </a>
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
