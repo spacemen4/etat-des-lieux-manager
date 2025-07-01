@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,7 @@ interface ValidationErrors {
   heure: boolean;
 }
 
-export function RendezVousCalendar() {
+export default function RendezVousCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
   const [description, setDescription] = useState('');
@@ -66,25 +66,6 @@ export function RendezVousCalendar() {
     type_bien: false,
     heure: false
   });
-
-  // Simulation de l'état avec des données en mémoire
-  useEffect(() => {
-    // Données d'exemple pour la démonstration
-    const exampleData: RendezVous[] = [
-      {
-        id: 1,
-        date: new Date('2025-07-01'),
-        description: 'État des lieux d\'entrée',
-        adresse: '123 rue de la Paix',
-        ville: 'Paris',
-        heure: '14:00',
-        type_etat_des_lieux: 'entree',
-        type_bien: 't2-t3',
-        validation_finale: true
-      }
-    ];
-    setRendezVous(exampleData);
-  }, []);
 
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {
@@ -456,68 +437,131 @@ export function RendezVousCalendar() {
         </div>
         
         <div>
-          <h3 className="text-xl font-semibold mb-2">Rendez-vous planifiés :</h3>
           {rendezVous.length === 0 ? (
-            <p>Aucun rendez-vous planifié.</p>
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Rendez-vous :</h3>
+              <p className="text-gray-500">Aucun rendez-vous planifié.</p>
+            </div>
           ) : (
-            <ul className="space-y-2">
-              {rendezVous
-                .sort((a, b) => {
+            <div>
+              {(() => {
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                
+                // Séparer les rendez-vous en deux catégories
+                const rdvAVenir = rendezVous.filter(rv => {
+                  const rvDate = rv.date || new Date();
+                  const rvDateOnly = new Date(rvDate.getFullYear(), rvDate.getMonth(), rvDate.getDate());
+                  return rvDateOnly >= today;
+                }).sort((a, b) => {
                   const dateA = a.date || new Date();
                   const dateB = b.date || new Date();
                   return dateA.getTime() - dateB.getTime();
-                })
-                .map((rv, index) => (
-                  <li key={index} className="p-2 border rounded-md">
-                    <p className="font-medium">
-                      {rv.date ? rv.date.toLocaleDateString() : 'Date non spécifiée'}
-                      {rv.heure && ` à ${rv.heure}`}
-                      {rv.duree && ` (Durée: ${rv.duree})`}
-                      {rv.validation_finale && <span className="ml-2 text-green-600 font-semibold">✓ Validé</span>}
-                    </p>
-                    {rv.description && <p className="text-sm text-gray-600">{rv.description}</p>}
-                    {rv.type_etat_des_lieux && <p className="text-sm text-gray-600">Type d'EDL: {rv.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}</p>}
-                    {rv.type_bien && <p className="text-sm text-gray-600">Type de bien: {rv.type_bien}</p>}
+                });
+                
+                const rdvPasses = rendezVous.filter(rv => {
+                  const rvDate = rv.date || new Date();
+                  const rvDateOnly = new Date(rvDate.getFullYear(), rvDate.getMonth(), rvDate.getDate());
+                  return rvDateOnly < today;
+                }).sort((a, b) => {
+                  const dateA = a.date || new Date();
+                  const dateB = b.date || new Date();
+                  return dateB.getTime() - dateA.getTime(); // Plus récents en premier
+                });
+
+                const renderRendezVous = (rv: RendezVous, index: number, isPast: boolean = false) => (
+                  <li key={index} className={`p-3 border rounded-md ${isPast ? 'bg-gray-50 border-gray-300' : 'bg-white border-blue-200'}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className={`font-medium ${isPast ? 'text-gray-600' : 'text-black'}`}>
+                        {rv.date ? rv.date.toLocaleDateString() : 'Date non spécifiée'}
+                        {rv.heure && ` à ${rv.heure}`}
+                        {rv.duree && ` (Durée: ${rv.duree})`}
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        {isPast && <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">Terminé</span>}
+                        {!isPast && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">À venir</span>}
+                        {rv.validation_finale && <span className="text-green-600 font-semibold">✓ Validé</span>}
+                      </div>
+                    </div>
+                    {rv.description && <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>{rv.description}</p>}
+                    {rv.type_etat_des_lieux && <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>Type d'EDL: {rv.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}</p>}
+                    {rv.type_bien && <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>Type de bien: {rv.type_bien}</p>}
                     {rv.adresse && (
-                      <p className="text-sm text-gray-600">
+                      <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>
                         Adresse: {rv.adresse}
                         {rv.code_postal && `, ${rv.code_postal}`}
                         {rv.ville && ` ${rv.ville}`}
                       </p>
                     )}
                     {(rv.nom_contact || rv.telephone_contact || rv.email_contact) && (
-                      <p className="text-sm text-gray-600">
+                      <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>
                         Contact: {[rv.nom_contact, rv.telephone_contact, rv.email_contact].filter(Boolean).join(' - ')}
                       </p>
                     )}
                     {(rv.latitude && rv.longitude) && (
-                      <p className="text-sm text-gray-600">
+                      <p className={`text-sm ${isPast ? 'text-gray-400' : 'text-gray-600'}`}>
                         Coordonnées: {rv.latitude}, {rv.longitude}
                       </p>
                     )}
                     {rv.releves_compteurs && (
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className={`text-sm ${isPast ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
                         Compteurs: {rv.releves_compteurs}
                       </p>
                     )}
                     {rv.etat_pieces && (
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className={`text-sm ${isPast ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
                         État des pièces: {rv.etat_pieces}
                       </p>
                     )}
                     {rv.remise_cles && (
-                      <p className="text-sm text-green-600 mt-1">
+                      <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-green-600'} mt-1`}>
                         ✓ Clés remises
                       </p>
                     )}
                     {rv.note_personnelle && (
-                      <p className="text-sm text-gray-500 mt-1 italic">
+                      <p className={`text-sm ${isPast ? 'text-gray-400' : 'text-gray-500'} mt-1 italic`}>
                         Note: {rv.note_personnelle}
                       </p>
                     )}
                   </li>
-                ))}
-            </ul>
+                );
+
+                return (
+                  <div>
+                    {/* Rendez-vous à venir */}
+                    {rdvAVenir.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-xl font-semibold mb-3 text-blue-700 flex items-center">
+                          <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                          Rendez-vous à venir ({rdvAVenir.length})
+                        </h3>
+                        <ul className="space-y-3">
+                          {rdvAVenir.map((rv, index) => renderRendezVous(rv, index, false))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Rendez-vous passés */}
+                    {rdvPasses.length > 0 && (
+                      <div>
+                        <h3 className="text-xl font-semibold mb-3 text-gray-600 flex items-center">
+                          <span className="w-3 h-3 bg-gray-400 rounded-full mr-2"></span>
+                          Rendez-vous terminés ({rdvPasses.length})
+                        </h3>
+                        <ul className="space-y-3">
+                          {rdvPasses.map((rv, index) => renderRendezVous(rv, index + rdvAVenir.length, true))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Message si aucun rendez-vous dans une catégorie */}
+                    {rdvAVenir.length === 0 && rdvPasses.length === 0 && (
+                      <p className="text-gray-500">Aucun rendez-vous planifié.</p>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
           )}
         </div>
       </div>
