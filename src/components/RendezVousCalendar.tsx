@@ -10,35 +10,39 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from '@/components/ui/use-toast';
 
 interface RendezVous {
-  id?: number;
-  date?: Date;
-  description?: string;
-  adresse?: string;
-  code_postal?: string;
-  ville?: string;
-  nom_contact?: string;
-  telephone_contact?: string;
-  email_contact?: string;
-  heure: string; // Obligatoire
+  id?: string;
+  date: Date; // Obligatoire dans la DB
+  heure: string; // Obligatoire dans la DB
   duree?: string;
+  description?: string;
+  adresse: string; // Obligatoire dans la DB
+  code_postal: string; // Obligatoire dans la DB
+  ville: string; // Obligatoire dans la DB
   latitude?: number;
   longitude?: number;
+  nom_contact: string; // Obligatoire dans la DB
+  telephone_contact: string; // Obligatoire dans la DB
+  email_contact: string; // Obligatoire dans la DB
   note_personnelle?: string;
-  type_etat_des_lieux: string; // Obligatoire
-  type_bien: string; // Obligatoire
-  validation_finale?: boolean;
-  releves_compteurs?: string;
-  etat_pieces?: string;
-  remise_cles?: boolean;
+  type_etat_des_lieux?: string; // Optionnel dans la DB
+  type_bien?: string; // Optionnel dans la DB
+  created_at?: Date;
+  statut?: string; // planifie, realise, annule, reporte
+  etat_des_lieux_id?: string;
 }
 
 interface ValidationErrors {
-  type_etat_des_lieux: boolean;
-  type_bien: boolean;
+  date: boolean;
   heure: boolean;
+  adresse: boolean;
+  code_postal: boolean;
+  ville: boolean;
+  nom_contact: boolean;
+  telephone_contact: boolean;
+  email_contact: boolean;
 }
 
-export function RendezVousCalendar() {
+export default function RendezVousCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
   const [description, setDescription] = useState('');
@@ -55,23 +59,30 @@ export function RendezVousCalendar() {
   const [note_personnelle, setNote_personnelle] = useState('');
   const [typeEtatDesLieux, setTypeEtatDesLieux] = useState<string>('');
   const [typeBien, setTypeBien] = useState<string>('');
-  const [validationFinale, setValidationFinale] = useState(false);
-  const [relevesCompteurs, setRelevesCompteurs] = useState('');
-  const [etatPieces, setEtatPieces] = useState('');
-  const [remiseCles, setRemiseCles] = useState(false);
+  const [statut, setStatut] = useState<string>('planifie');
   
   // État pour les erreurs de validation
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({
-    type_etat_des_lieux: false,
-    type_bien: false,
-    heure: false
+    date: false,
+    heure: false,
+    adresse: false,
+    code_postal: false,
+    ville: false,
+    nom_contact: false,
+    telephone_contact: false,
+    email_contact: false
   });
 
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {
-      type_etat_des_lieux: !typeEtatDesLieux.trim(),
-      type_bien: !typeBien.trim(),
-      heure: !heure.trim()
+      date: !date,
+      heure: !heure.trim(),
+      adresse: !adresse.trim(),
+      code_postal: !code_postal.trim(),
+      ville: !ville.trim(),
+      nom_contact: !nom_contact.trim(),
+      telephone_contact: !telephone_contact.trim(),
+      email_contact: !email_contact.trim() || !email_contact.includes('@')
     };
 
     setValidationErrors(errors);
@@ -85,42 +96,36 @@ export function RendezVousCalendar() {
     if (!validateForm()) {
       toast({
         title: "Champs obligatoires manquants",
-        description: "Veuillez remplir tous les champs obligatoires : Type d'état des lieux, Type de bien et Heure du rendez-vous.",
+        description: "Veuillez remplir tous les champs obligatoires marqués d'un astérisque (*)",
         variant: "destructive",
       });
       return;
     }
 
-    // Utilise la date du jour si aucune date n'est sélectionnée
-    const finalDate = date || new Date();
-
     const newRendezVous: RendezVous = {
-      id: rendezVous.length + 1,
-      date: finalDate,
-      description: description.trim() || undefined,
-      adresse: adresse.trim() || undefined,
-      code_postal: code_postal.trim() || undefined,
-      ville: ville.trim() || undefined,
-      nom_contact: nom_contact.trim() || undefined,
-      telephone_contact: telephone_contact.trim() || undefined,
-      email_contact: email_contact.trim() || undefined,
+      id: `rdv-${Date.now()}`, // Génération d'un ID temporaire
+      date: date!,
       heure: heure.trim(),
       duree: duree.trim() || undefined,
+      description: description.trim() || undefined,
+      adresse: adresse.trim(),
+      code_postal: code_postal.trim(),
+      ville: ville.trim(),
       latitude: latitude || undefined,
       longitude: longitude || undefined,
+      nom_contact: nom_contact.trim(),
+      telephone_contact: telephone_contact.trim(),
+      email_contact: email_contact.trim(),
       note_personnelle: note_personnelle.trim() || undefined,
-      type_etat_des_lieux: typeEtatDesLieux,
-      type_bien: typeBien,
-      validation_finale: validationFinale,
-      releves_compteurs: relevesCompteurs.trim() || undefined,
-      etat_pieces: etatPieces.trim() || undefined,
-      remise_cles: remiseCles,
+      type_etat_des_lieux: typeEtatDesLieux || undefined,
+      type_bien: typeBien || undefined,
+      created_at: new Date(),
+      statut: statut,
+      etat_des_lieux_id: undefined
     };
       
     setRendezVous(prevRendezVous => [...prevRendezVous, newRendezVous].sort((a, b) => {
-      const dateA = a.date || new Date();
-      const dateB = b.date || new Date();
-      return dateA.getTime() - dateB.getTime();
+      return a.date.getTime() - b.date.getTime();
     }));
 
     // Reset form fields
@@ -138,15 +143,21 @@ export function RendezVousCalendar() {
     setNote_personnelle('');
     setTypeEtatDesLieux('');
     setTypeBien('');
-    setValidationFinale(false);
-    setRelevesCompteurs('');
-    setEtatPieces('');
-    setRemiseCles(false);
-    setValidationErrors({ type_etat_des_lieux: false, type_bien: false, heure: false });
+    setStatut('planifie');
+    setValidationErrors({ 
+      date: false, 
+      heure: false, 
+      adresse: false, 
+      code_postal: false, 
+      ville: false, 
+      nom_contact: false, 
+      telephone_contact: false, 
+      email_contact: false 
+    });
 
     toast({
       title: "Rendez-vous ajouté",
-      description: `Rendez-vous ${finalDate.toLocaleDateString()} à ${heure} enregistré avec succès.`,
+      description: `Rendez-vous ${date!.toLocaleDateString()} à ${heure} enregistré avec succès.`,
     });
   };
 
@@ -178,100 +189,40 @@ export function RendezVousCalendar() {
     <div className="container mx-auto p-4">
       <h2 className="text-2xl font-bold mb-4">Calendrier des États des Lieux</h2>
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-        <h3 className="font-semibold text-blue-800 mb-2">Champs obligatoires :</h3>
-        <ul className="text-sm text-blue-700 list-disc list-inside">
-          <li>Type d'état des lieux</li>
-          <li>Type de bien</li>
+        <h3 className="font-semibold text-blue-800 mb-2">Champs obligatoires dans la base de données :</h3>
+        <ul className="text-sm text-blue-700 list-disc list-inside grid grid-cols-2 gap-1">
+          <li>Date du rendez-vous</li>
           <li>Heure du rendez-vous</li>
+          <li>Adresse complète</li>
+          <li>Code postal</li>
+          <li>Ville</li>
+          <li>Nom du contact</li>
+          <li>Téléphone du contact</li>
+          <li>Email du contact</li>
         </ul>
-        <p className="text-sm text-blue-600 mt-2">
-          <span className="text-red-500">*</span> Si la date n'est pas renseignée, la date du jour sera utilisée.
-        </p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <div className="mb-4">
-            <Label>Date du rendez-vous (optionnel)</Label>
-            <p className="text-sm text-gray-500 mb-2">Si non renseignée, la date du jour sera utilisée</p>
+            <RequiredLabel 
+              htmlFor="date" 
+              isRequired={true} 
+              hasError={validationErrors.date}
+            >
+              Date du rendez-vous
+            </RequiredLabel>
             <Calendar
               mode="single"
               selected={date}
-              onSelect={setDate}
-              className="rounded-md border"
-            />
-          </div>
-          
-          <div className="mt-4">
-            <Label htmlFor="description">Description du rendez-vous (optionnel)</Label>
-            <Input
-              id="description"
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ex: État des lieux d'entrée pour M. Dupont"
-              className="mt-1"
-            />
-          </div>
-          
-          <div className="mt-4">
-            <RequiredLabel 
-              htmlFor="typeEtatDesLieux" 
-              isRequired={true} 
-              hasError={validationErrors.type_etat_des_lieux}
-            >
-              Type d'état des lieux
-            </RequiredLabel>
-            <Select 
-              value={typeEtatDesLieux} 
-              onValueChange={(value) => {
-                setTypeEtatDesLieux(value);
-                if (validationErrors.type_etat_des_lieux && value) {
-                  setValidationErrors(prev => ({ ...prev, type_etat_des_lieux: false }));
+              onSelect={(newDate) => {
+                setDate(newDate);
+                if (validationErrors.date && newDate) {
+                  setValidationErrors(prev => ({ ...prev, date: false }));
                 }
               }}
-            >
-              <SelectTrigger className={`mt-1 ${validationErrors.type_etat_des_lieux ? 'border-red-500 focus:border-red-500' : ''}`}>
-                <SelectValue placeholder="Sélectionner un type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="entree">État des lieux d'entrée</SelectItem>
-                <SelectItem value="sortie">État des lieux de sortie</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="mt-4">
-            <RequiredLabel 
-              htmlFor="typeBien" 
-              isRequired={true} 
-              hasError={validationErrors.type_bien}
-            >
-              Type de bien
-            </RequiredLabel>
-            <Select 
-              value={typeBien} 
-              onValueChange={(value) => {
-                setTypeBien(value);
-                if (validationErrors.type_bien && value) {
-                  setValidationErrors(prev => ({ ...prev, type_bien: false }));
-                }
-              }}
-            >
-              <SelectTrigger className={`mt-1 ${validationErrors.type_bien ? 'border-red-500 focus:border-red-500' : ''}`}>
-                <SelectValue placeholder="Sélectionner un type de bien" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="studio">Studio</SelectItem>
-                <SelectItem value="t2-t3">T2 – T3</SelectItem>
-                <SelectItem value="t4-t5">T4 – T5</SelectItem>
-                <SelectItem value="mobilier">Inventaire du mobilier</SelectItem>
-                <SelectItem value="bureau">Bureau</SelectItem>
-                <SelectItem value="local">Local commercial</SelectItem>
-                <SelectItem value="garage">Garage / Box</SelectItem>
-                <SelectItem value="pieces-supplementaires">Pièces supplémentaires</SelectItem>
-              </SelectContent>
-            </Select>
+              className={`rounded-md border mt-1 ${validationErrors.date ? 'border-red-500' : ''}`}
+            />
           </div>
           
           <div className="mt-4">
@@ -297,6 +248,156 @@ export function RendezVousCalendar() {
           </div>
           
           <div className="mt-4">
+            <Label htmlFor="description">Description du rendez-vous (optionnel)</Label>
+            <Input
+              id="description"
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Ex: État des lieux d'entrée pour M. Dupont"
+              className="mt-1"
+            />
+          </div>
+          
+          <div className="mt-4">
+            <RequiredLabel 
+              htmlFor="adresse" 
+              isRequired={true} 
+              hasError={validationErrors.adresse}
+            >
+              Adresse du bien
+            </RequiredLabel>
+            <Input
+              id="adresse"
+              type="text"
+              value={adresse}
+              onChange={(e) => {
+                setAdresse(e.target.value);
+                if (validationErrors.adresse && e.target.value.trim()) {
+                  setValidationErrors(prev => ({ ...prev, adresse: false }));
+                }
+              }}
+              placeholder="123 rue de la Paix"
+              className={`mt-1 ${validationErrors.adresse ? 'border-red-500 focus:border-red-500' : ''}`}
+            />
+          </div>
+          
+          <div className="mt-4">
+            <RequiredLabel 
+              htmlFor="code_postal" 
+              isRequired={true} 
+              hasError={validationErrors.code_postal}
+            >
+              Code Postal
+            </RequiredLabel>
+            <Input
+              id="code_postal"
+              type="text"
+              value={code_postal}
+              onChange={(e) => {
+                setCode_postal(e.target.value);
+                if (validationErrors.code_postal && e.target.value.trim()) {
+                  setValidationErrors(prev => ({ ...prev, code_postal: false }));
+                }
+              }}
+              placeholder="75000"
+              className={`mt-1 ${validationErrors.code_postal ? 'border-red-500 focus:border-red-500' : ''}`}
+            />
+          </div>
+          
+          <div className="mt-4">
+            <RequiredLabel 
+              htmlFor="ville" 
+              isRequired={true} 
+              hasError={validationErrors.ville}
+            >
+              Ville
+            </RequiredLabel>
+            <Input
+              id="ville"
+              type="text"
+              value={ville}
+              onChange={(e) => {
+                setVille(e.target.value);
+                if (validationErrors.ville && e.target.value.trim()) {
+                  setValidationErrors(prev => ({ ...prev, ville: false }));
+                }
+              }}
+              placeholder="Paris"
+              className={`mt-1 ${validationErrors.ville ? 'border-red-500 focus:border-red-500' : ''}`}
+            />
+          </div>
+          
+          <div className="mt-4">
+            <RequiredLabel 
+              htmlFor="nom_contact" 
+              isRequired={true} 
+              hasError={validationErrors.nom_contact}
+            >
+              Personne à contacter
+            </RequiredLabel>
+            <Input
+              id="nom_contact"
+              type="text"
+              value={nom_contact}
+              onChange={(e) => {
+                setNom_contact(e.target.value);
+                if (validationErrors.nom_contact && e.target.value.trim()) {
+                  setValidationErrors(prev => ({ ...prev, nom_contact: false }));
+                }
+              }}
+              placeholder="Jean Dupont"
+              className={`mt-1 ${validationErrors.nom_contact ? 'border-red-500 focus:border-red-500' : ''}`}
+            />
+          </div>
+          
+          <div className="mt-4">
+            <RequiredLabel 
+              htmlFor="telephone_contact" 
+              isRequired={true} 
+              hasError={validationErrors.telephone_contact}
+            >
+              Téléphone du contact
+            </RequiredLabel>
+            <Input
+              id="telephone_contact"
+              type="tel"
+              value={telephone_contact}
+              onChange={(e) => {
+                setTelephone_contact(e.target.value);
+                if (validationErrors.telephone_contact && e.target.value.trim()) {
+                  setValidationErrors(prev => ({ ...prev, telephone_contact: false }));
+                }
+              }}
+              placeholder="0612345678"
+              className={`mt-1 ${validationErrors.telephone_contact ? 'border-red-500 focus:border-red-500' : ''}`}
+            />
+          </div>
+          
+          <div className="mt-4">
+            <RequiredLabel 
+              htmlFor="email_contact" 
+              isRequired={true} 
+              hasError={validationErrors.email_contact}
+            >
+              Email du contact
+            </RequiredLabel>
+            <Input
+              id="email_contact"
+              type="email"
+              value={email_contact}
+              onChange={(e) => {
+                setEmail_contact(e.target.value);
+                if (validationErrors.email_contact && e.target.value.trim() && e.target.value.includes('@')) {
+                  setValidationErrors(prev => ({ ...prev, email_contact: false }));
+                }
+              }}
+              placeholder="jean.dupont@example.com"
+              className={`mt-1 ${validationErrors.email_contact ? 'border-red-500 focus:border-red-500' : ''}`}
+            />
+          </div>
+          
+          <div className="mt-4">
             <Label htmlFor="duree">Durée prévue (optionnel)</Label>
             <Input
               id="duree"
@@ -308,98 +409,78 @@ export function RendezVousCalendar() {
             />
           </div>
           
-          <div className="mt-4">
-            <Label htmlFor="adresse">Adresse du bien (optionnel)</Label>
-            <Input
-              id="adresse"
-              type="text"
-              value={adresse}
-              onChange={(e) => setAdresse(e.target.value)}
-              placeholder="123 rue de la Paix"
-              className="mt-1"
-            />
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="latitude">Latitude (optionnel)</Label>
+              <Input
+                id="latitude"
+                type="number"
+                step="any"
+                value={latitude || ''}
+                onChange={(e) => setLatitude(e.target.value ? parseFloat(e.target.value) : undefined)}
+                placeholder="48.8566"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="longitude">Longitude (optionnel)</Label>
+              <Input
+                id="longitude"
+                type="number"
+                step="any"
+                value={longitude || ''}
+                onChange={(e) => setLongitude(e.target.value ? parseFloat(e.target.value) : undefined)}
+                placeholder="2.3522"
+                className="mt-1"
+              />
+            </div>
           </div>
           
           <div className="mt-4">
-            <Label htmlFor="code_postal">Code Postal (optionnel)</Label>
-            <Input
-              id="code_postal"
-              type="text"
-              value={code_postal}
-              onChange={(e) => setCode_postal(e.target.value)}
-              placeholder="75000"
-              className="mt-1"
-            />
+            <Label htmlFor="typeEtatDesLieux">Type d'état des lieux (optionnel)</Label>
+            <Select value={typeEtatDesLieux} onValueChange={setTypeEtatDesLieux}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Sélectionner un type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="entree">État des lieux d'entrée</SelectItem>
+                <SelectItem value="sortie">État des lieux de sortie</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="mt-4">
-            <Label htmlFor="ville">Ville (optionnel)</Label>
-            <Input
-              id="ville"
-              type="text"
-              value={ville}
-              onChange={(e) => setVille(e.target.value)}
-              placeholder="Paris"
-              className="mt-1"
-            />
+            <Label htmlFor="typeBien">Type de bien (optionnel)</Label>
+            <Select value={typeBien} onValueChange={setTypeBien}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Sélectionner un type de bien" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="studio">Studio</SelectItem>
+                <SelectItem value="t2-t3">T2 – T3</SelectItem>
+                <SelectItem value="t4-t5">T4 – T5</SelectItem>
+                <SelectItem value="mobilier">Inventaire du mobilier</SelectItem>
+                <SelectItem value="bureau">Bureau</SelectItem>
+                <SelectItem value="local">Local commercial</SelectItem>
+                <SelectItem value="garage">Garage / Box</SelectItem>
+                <SelectItem value="pieces-supplementaires">Pièces supplémentaires</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="mt-4">
-            <Label htmlFor="nom_contact">Personne à contacter (optionnel)</Label>
-            <Input
-              id="nom_contact"
-              type="text"
-              value={nom_contact}
-              onChange={(e) => setNom_contact(e.target.value)}
-              placeholder="Jean Dupont"
-              className="mt-1"
-            />
-          </div>
-          
-          <div className="mt-4">
-            <Label htmlFor="telephone_contact">Téléphone du contact (optionnel)</Label>
-            <Input
-              id="telephone_contact"
-              type="tel"
-              value={telephone_contact}
-              onChange={(e) => setTelephone_contact(e.target.value)}
-              placeholder="0612345678"
-              className="mt-1"
-            />
-          </div>
-          
-          <div className="mt-4">
-            <Label htmlFor="email_contact">Email du contact (optionnel)</Label>
-            <Input
-              id="email_contact"
-              type="email"
-              value={email_contact}
-              onChange={(e) => setEmail_contact(e.target.value)}
-              placeholder="jean.dupont@example.com"
-              className="mt-1"
-            />
-          </div>
-          
-          <div className="mt-4">
-            <Label htmlFor="releves_compteurs">Relevés de compteurs (optionnel)</Label>
-            <Textarea
-              id="releves_compteurs"
-              value={relevesCompteurs}
-              onChange={(e) => setRelevesCompteurs(e.target.value)}
-              placeholder="Électricité: 12345 kWh, Gaz: 6789 m³..."
-              className="mt-1"
-            />
-          </div>
-          
-          <div className="mt-4">
-            <Label htmlFor="etat_pieces">État détaillé des pièces (optionnel)</Label>
-            <Textarea
-              id="etat_pieces"
-              value={etatPieces}
-              onChange={(e) => setEtatPieces(e.target.value)}
-              placeholder="Salon: bon état, cuisine: évier rayé..."
-              className="mt-1"
-            />
+            <Label htmlFor="statut">Statut du rendez-vous</Label>
+            <Select value={statut} onValueChange={setStatut}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Sélectionner un statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="planifie">Planifié</SelectItem>
+                <SelectItem value="realise">Réalisé</SelectItem>
+                <SelectItem value="annule">Annulé</SelectItem>
+                <SelectItem value="reporte">Reporté</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="mt-4">
@@ -411,24 +492,6 @@ export function RendezVousCalendar() {
               placeholder="Ajouter une note personnelle ici..."
               className="mt-1"
             />
-          </div>
-          
-          <div className="mt-4 flex items-center space-x-2">
-            <Checkbox
-              id="remise_cles"
-              checked={remiseCles}
-              onCheckedChange={(checked) => setRemiseCles(checked as boolean)}
-            />
-            <Label htmlFor="remise_cles">Remise des clés (optionnel)</Label>
-          </div>
-          
-          <div className="mt-4 flex items-center space-x-2">
-            <Checkbox
-              id="validation_finale"
-              checked={validationFinale}
-              onCheckedChange={(checked) => setValidationFinale(checked as boolean)}
-            />
-            <Label htmlFor="validation_finale">Validation finale (optionnel)</Label>
           </div>
           
           <Button onClick={handleAddRendezVous} className="mt-4 w-full">
@@ -450,72 +513,61 @@ export function RendezVousCalendar() {
                 
                 // Séparer les rendez-vous en deux catégories
                 const rdvAVenir = rendezVous.filter(rv => {
-                  const rvDate = rv.date || new Date();
-                  const rvDateOnly = new Date(rvDate.getFullYear(), rvDate.getMonth(), rvDate.getDate());
+                  const rvDateOnly = new Date(rv.date.getFullYear(), rv.date.getMonth(), rv.date.getDate());
                   return rvDateOnly >= today;
-                }).sort((a, b) => {
-                  const dateA = a.date || new Date();
-                  const dateB = b.date || new Date();
-                  return dateA.getTime() - dateB.getTime();
-                });
+                }).sort((a, b) => a.date.getTime() - b.date.getTime());
                 
                 const rdvPasses = rendezVous.filter(rv => {
-                  const rvDate = rv.date || new Date();
-                  const rvDateOnly = new Date(rvDate.getFullYear(), rvDate.getMonth(), rvDate.getDate());
+                  const rvDateOnly = new Date(rv.date.getFullYear(), rv.date.getMonth(), rv.date.getDate());
                   return rvDateOnly < today;
-                }).sort((a, b) => {
-                  const dateA = a.date || new Date();
-                  const dateB = b.date || new Date();
-                  return dateB.getTime() - dateA.getTime(); // Plus récents en premier
-                });
+                }).sort((a, b) => b.date.getTime() - a.date.getTime());
+
+                const getStatutColor = (statut: string) => {
+                  switch(statut) {
+                    case 'planifie': return 'bg-blue-100 text-blue-700';
+                    case 'realise': return 'bg-green-100 text-green-700';
+                    case 'annule': return 'bg-red-100 text-red-700';
+                    case 'reporte': return 'bg-yellow-100 text-yellow-700';
+                    default: return 'bg-gray-100 text-gray-700';
+                  }
+                };
+
+                const getStatutLabel = (statut: string) => {
+                  switch(statut) {
+                    case 'planifie': return 'Planifié';
+                    case 'realise': return 'Réalisé';
+                    case 'annule': return 'Annulé';
+                    case 'reporte': return 'Reporté';
+                    default: return statut;
+                  }
+                };
 
                 const renderRendezVous = (rv: RendezVous, index: number, isPast: boolean = false) => (
                   <li key={index} className={`p-3 border rounded-md ${isPast ? 'bg-gray-50 border-gray-300' : 'bg-white border-blue-200'}`}>
                     <div className="flex items-center justify-between mb-2">
                       <p className={`font-medium ${isPast ? 'text-gray-600' : 'text-black'}`}>
-                        {rv.date ? rv.date.toLocaleDateString() : 'Date non spécifiée'}
+                        {rv.date.toLocaleDateString()}
                         {rv.heure && ` à ${rv.heure}`}
                         {rv.duree && ` (Durée: ${rv.duree})`}
                       </p>
                       <div className="flex items-center space-x-2">
-                        {isPast && <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">Terminé</span>}
-                        {!isPast && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">À venir</span>}
-                        {rv.validation_finale && <span className="text-green-600 font-semibold">✓ Validé</span>}
+                        <span className={`text-xs px-2 py-1 rounded ${getStatutColor(rv.statut || 'planifie')}`}>
+                          {getStatutLabel(rv.statut || 'planifie')}
+                        </span>
                       </div>
                     </div>
                     {rv.description && <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>{rv.description}</p>}
                     {rv.type_etat_des_lieux && <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>Type d'EDL: {rv.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}</p>}
                     {rv.type_bien && <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>Type de bien: {rv.type_bien}</p>}
-                    {rv.adresse && (
-                      <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>
-                        Adresse: {rv.adresse}
-                        {rv.code_postal && `, ${rv.code_postal}`}
-                        {rv.ville && ` ${rv.ville}`}
-                      </p>
-                    )}
-                    {(rv.nom_contact || rv.telephone_contact || rv.email_contact) && (
-                      <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>
-                        Contact: {[rv.nom_contact, rv.telephone_contact, rv.email_contact].filter(Boolean).join(' - ')}
-                      </p>
-                    )}
+                    <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>
+                      Adresse: {rv.adresse}, {rv.code_postal} {rv.ville}
+                    </p>
+                    <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>
+                      Contact: {rv.nom_contact} - {rv.telephone_contact} - {rv.email_contact}
+                    </p>
                     {(rv.latitude && rv.longitude) && (
                       <p className={`text-sm ${isPast ? 'text-gray-400' : 'text-gray-600'}`}>
                         Coordonnées: {rv.latitude}, {rv.longitude}
-                      </p>
-                    )}
-                    {rv.releves_compteurs && (
-                      <p className={`text-sm ${isPast ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
-                        Compteurs: {rv.releves_compteurs}
-                      </p>
-                    )}
-                    {rv.etat_pieces && (
-                      <p className={`text-sm ${isPast ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
-                        État des pièces: {rv.etat_pieces}
-                      </p>
-                    )}
-                    {rv.remise_cles && (
-                      <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-green-600'} mt-1`}>
-                        ✓ Clés remises
                       </p>
                     )}
                     {rv.note_personnelle && (
@@ -554,7 +606,7 @@ export function RendezVousCalendar() {
                       </div>
                     )}
 
-                    {/* Message si aucun rendez-vous dans une catégorie */}
+                    {/* Message si aucun rendez-vous */}
                     {rdvAVenir.length === 0 && rdvPasses.length === 0 && (
                       <p className="text-gray-500">Aucun rendez-vous planifié.</p>
                     )}
