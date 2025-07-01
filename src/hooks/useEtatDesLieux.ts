@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
@@ -11,6 +10,22 @@ export const useEtatDesLieux = () => {
         .from('etat_des_lieux')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+};
+
+// Function to fetch all rendez-vous
+export const useRendezVous = () => {
+  return useQuery({
+    queryKey: ['rendez_vous'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('rendez_vous')
+        .select('*')
+        .order('date', { ascending: false });
 
       if (error) throw error;
       return data;

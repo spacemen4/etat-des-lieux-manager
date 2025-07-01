@@ -1,17 +1,22 @@
 
+
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, User, FileText, Loader2, Building2, Plus, LogIn, LogOut } from 'lucide-react';
-import { useEtatDesLieux } from '@/hooks/useEtatDesLieux';
+import { Calendar, MapPin, User, FileText, Loader2, Building2, Plus, LogIn, LogOut, Clock } from 'lucide-react';
+import { useEtatDesLieux, useRendezVous } from '@/hooks/useEtatDesLieux';
 import EtatDesLieuxViewer from './EtatDesLieuxViewer';
 
 const Dashboard = () => {
-  const { data: etatsDesLieux, isLoading, error } = useEtatDesLieux();
+  const { data: etatsDesLieux, isLoading: isLoadingEtats, error: errorEtats } = useEtatDesLieux();
+  const { data: rendezVous, isLoading: isLoadingRdv, error: errorRdv } = useRendezVous();
   const [selectedEtatId, setSelectedEtatId] = useState<string | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+
+  const isLoading = isLoadingEtats || isLoadingRdv;
+  const error = errorEtats || errorRdv;
 
   if (isLoading) {
     return (
@@ -31,6 +36,7 @@ const Dashboard = () => {
 
   const etatsEnCours = etatsDesLieux?.filter(e => !e.date_sortie) || [];
   const etatsTermines = etatsDesLieux?.filter(e => e.date_sortie) || [];
+  const rendezVousPlanifies = rendezVous?.filter(rv => rv.statut === 'planifie') || [];
 
   const getTypeBienLabel = (typeBien: string) => {
     const labels: Record<string, string> = {
@@ -41,7 +47,13 @@ const Dashboard = () => {
       'bureau': 'Bureau',
       'local_commercial': 'Local commercial',
       'garage_box': 'Garage / Box',
-      'pieces_supplementaires': 'Pièces supplémentaires'
+      'pieces_supplementaires': 'Pièces supplémentaires',
+      't2-t3': 'T2 - T3',
+      't4-t5': 'T4 - T5',
+      'mobilier': 'Inventaire mobilier',
+      'local': 'Local commercial',
+      'garage': 'Garage / Box',
+      'pieces-supplementaires': 'Pièces supplémentaires'
     };
     return labels[typeBien] || typeBien;
   };
@@ -78,7 +90,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total des biens</CardTitle>
@@ -117,7 +129,88 @@ const Dashboard = () => {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Rendez-vous</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{rendezVousPlanifies.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Rendez-vous planifiés
+            </p>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Section Rendez-vous planifiés */}
+      {rendezVousPlanifies.length > 0 && (
+        <div>
+          <h3 className="text-xl font-semibold text-slate-900 mb-6">
+            Rendez-vous planifiés
+          </h3>
+          <div className="grid gap-4">
+            {rendezVousPlanifies.map((rdv) => (
+              <Card key={rdv.id} className="hover:shadow-md transition-shadow border-orange-200">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-orange-500" />
+                        <h4 className="font-semibold text-slate-900">
+                          {rdv.description || 'Rendez-vous état des lieux'}
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-slate-500" />
+                        <span className="text-slate-600">
+                          {rdv.adresse} {rdv.code_postal && `, ${rdv.code_postal}`} {rdv.ville}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-slate-500" />
+                        <span className="text-slate-600">{rdv.nom_contact}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-slate-500" />
+                        <span className="text-slate-600">{getTypeBienLabel(rdv.type_bien)}</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-slate-500">
+                        <span>Date: {new Date(rdv.date).toLocaleDateString()}</span>
+                        <span>Heure: {rdv.heure}</span>
+                        {rdv.duree && <span>Durée: {rdv.duree}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-col">
+                      <div className="flex gap-2">
+                        <Badge variant="outline" className="border-orange-500 text-orange-700">
+                          {rdv.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}
+                        </Badge>
+                        <Badge variant="outline" className="border-orange-500 text-orange-700">
+                          Planifié
+                        </Badge>
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <Button 
+                          size="sm" 
+                          asChild
+                          className="bg-orange-600 hover:bg-orange-700"
+                        >
+                          <a href={`/new-etat-des-lieux?type=${rdv.type_etat_des_lieux}&rdv=${rdv.id}`} className="flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            Faire l'état des lieux
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <div className="flex justify-between items-center mb-6">
@@ -230,3 +323,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
