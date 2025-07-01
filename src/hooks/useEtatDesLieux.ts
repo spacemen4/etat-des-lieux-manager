@@ -724,7 +724,7 @@ export const useUpdateEquipementsEnergetiques = () => {
     onSuccess: (data) => {
       console.log('Mutation réussie:', data);
       // Invalidate and refetch related queries
-      queryClient.invalidateQueries(['equipements-energetiques']);
+      queryClient.invalidateQueries({ queryKey: ['equipements-energetiques'] });
     },
     onError: (error) => {
       console.error('Erreur dans la mutation:', error);
