@@ -12,7 +12,7 @@ import { toast } from '@/components/ui/use-toast';
 interface RendezVous {
   id?: string;
   date?: Date;
-  heure: string; // Obligatoire
+  heure: string;
   duree?: string;
   description?: string;
   adresse?: string;
@@ -24,10 +24,10 @@ interface RendezVous {
   telephone_contact?: string;
   email_contact?: string;
   note_personnelle?: string;
-  type_etat_des_lieux: string; // Obligatoire
-  type_bien: string; // Obligatoire
+  type_etat_des_lieux: string;
+  type_bien: string;
   created_at?: Date;
-  statut?: string; // planifie, realise, annule, reporte
+  statut?: string;
   etat_des_lieux_id?: string;
 }
 
@@ -35,9 +35,18 @@ interface ValidationErrors {
   type_etat_des_lieux: boolean;
   type_bien: boolean;
   heure: boolean;
+  date?: boolean;
+  adresse?: boolean;
+  code_postal?: boolean;
+  ville?: boolean;
+  nom_contact?: boolean;
+  telephone_contact?: boolean;
+  email_contact?: boolean;
 }
 
 export function RendezVousCalendar() {
+  console.log("[RENDEZVOUS] Initialisation du composant");
+  
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
   const [description, setDescription] = useState('');
@@ -56,54 +65,93 @@ export function RendezVousCalendar() {
   const [typeBien, setTypeBien] = useState<string>('');
   const [statut, setStatut] = useState<string>('planifie');
   
-  // État pour les erreurs de validation
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({
     type_etat_des_lieux: false,
     type_bien: false,
-    heure: false
+    heure: false,
+    date: false,
+    adresse: false,
+    code_postal: false,
+    ville: false,
+    nom_contact: false,
+    telephone_contact: false,
+    email_contact: false
   });
 
   const validateForm = (): boolean => {
+    console.log("[VALIDATION] Début de la validation du formulaire");
+    
     const errors: ValidationErrors = {
       type_etat_des_lieux: !typeEtatDesLieux.trim(),
       type_bien: !typeBien.trim(),
-      heure: !heure.trim()
+      heure: !heure.trim(),
+      date: !date,
+      adresse: !adresse.trim(),
+      code_postal: !code_postal.trim(),
+      ville: !ville.trim(),
+      nom_contact: !nom_contact.trim(),
+      telephone_contact: !telephone_contact.trim(),
+      email_contact: !email_contact.trim() || !email_contact.includes('@')
     };
+
+    console.group("[VALIDATION] Détails des champs");
+    console.log("typeEtatDesLieux:", typeEtatDesLieux, "| Erreur:", errors.type_etat_des_lieux);
+    console.log("typeBien:", typeBien, "| Erreur:", errors.type_bien);
+    console.log("heure:", heure, "| Erreur:", errors.heure);
+    console.log("date:", date, "| Erreur:", errors.date);
+    console.log("adresse:", adresse, "| Erreur:", errors.adresse);
+    console.log("code_postal:", code_postal, "| Erreur:", errors.code_postal);
+    console.log("ville:", ville, "| Erreur:", errors.ville);
+    console.log("nom_contact:", nom_contact, "| Erreur:", errors.nom_contact);
+    console.log("telephone_contact:", telephone_contact, "| Erreur:", errors.telephone_contact);
+    console.log("email_contact:", email_contact, "| Erreur:", errors.email_contact);
+    console.groupEnd();
 
     setValidationErrors(errors);
 
-    // Retourne true si aucune erreur
-    return !Object.values(errors).some(error => error);
+    const isValid = !Object.values(errors).some(error => error);
+    console.log("[VALIDATION] Formulaire valide ?", isValid);
+    
+    return isValid;
   };
 
   const handleAddRendezVous = () => {
-    // Validation des champs obligatoires
+    console.log("[ACTION] Bouton 'Ajouter un rendez-vous' cliqué");
+    console.log("[ETAT] Valeurs actuelles des champs:", {
+      date, heure, description, adresse, code_postal, ville,
+      nom_contact, telephone_contact, email_contact, duree,
+      typeEtatDesLieux, typeBien, statut
+    });
+    
     if (!validateForm()) {
+      console.error("[ERREUR] Validation échouée - champs obligatoires manquants");
       toast({
         title: "Champs obligatoires manquants",
-        description: "Veuillez remplir tous les champs obligatoires : Type d'état des lieux, Type de bien et Heure du rendez-vous.",
+        description: "Veuillez remplir tous les champs obligatoires.",
         variant: "destructive",
       });
       return;
     }
 
-    // Utilise la date du jour si aucune date n'est sélectionnée
+    console.log("[VALIDATION] Formulaire valide - création du rendez-vous");
+
     const finalDate = date || new Date();
+    console.log("[DATE] Date du rendez-vous:", finalDate);
 
     const newRendezVous: RendezVous = {
-      id: `rdv-${Date.now()}`, // Génération d'un ID temporaire
+      id: `rdv-${Date.now()}`,
       date: finalDate,
       heure: heure.trim(),
       duree: duree.trim() || undefined,
       description: description.trim() || undefined,
-      adresse: adresse.trim() || undefined,
-      code_postal: code_postal.trim() || undefined,
-      ville: ville.trim() || undefined,
+      adresse: adresse.trim(),
+      code_postal: code_postal.trim(),
+      ville: ville.trim(),
       latitude: latitude || undefined,
       longitude: longitude || undefined,
-      nom_contact: nom_contact.trim() || undefined,
-      telephone_contact: telephone_contact.trim() || undefined,
-      email_contact: email_contact.trim() || undefined,
+      nom_contact: nom_contact.trim(),
+      telephone_contact: telephone_contact.trim(),
+      email_contact: email_contact.trim(),
       note_personnelle: note_personnelle.trim() || undefined,
       type_etat_des_lieux: typeEtatDesLieux,
       type_bien: typeBien,
@@ -111,14 +159,20 @@ export function RendezVousCalendar() {
       statut: statut,
       etat_des_lieux_id: undefined
     };
-      
-          setRendezVous(prevRendezVous => [...prevRendezVous, newRendezVous].sort((a, b) => {
-      const dateA = a.date || new Date();
-      const dateB = b.date || new Date();
-      return dateA.getTime() - dateB.getTime();
-    }));
+    
+    console.log("[CREATION] Nouveau rendez-vous créé:", newRendezVous);
 
-    // Reset form fields
+    setRendezVous(prevRendezVous => {
+      const updatedRendezVous = [...prevRendezVous, newRendezVous].sort((a, b) => {
+        const dateA = a.date || new Date();
+        const dateB = b.date || new Date();
+        return dateA.getTime() - dateB.getTime();
+      });
+      console.log("[MISE A JOUR] Liste des rendez-vous après ajout:", updatedRendezVous);
+      return updatedRendezVous;
+    });
+
+    console.log("[REINITIALISATION] Réinitialisation des champs du formulaire");
     setDescription('');
     setAdresse('');
     setCode_postal('');
@@ -134,20 +188,23 @@ export function RendezVousCalendar() {
     setTypeEtatDesLieux('');
     setTypeBien('');
     setStatut('planifie');
-    setValidationErrors({ 
-      date: false, 
-      heure: false, 
-      adresse: false, 
-      code_postal: false, 
-      ville: false, 
-      nom_contact: false, 
-      telephone_contact: false, 
-      email_contact: false 
+    setValidationErrors({
+      type_etat_des_lieux: false,
+      type_bien: false,
+      heure: false,
+      date: false,
+      adresse: false,
+      code_postal: false,
+      ville: false,
+      nom_contact: false,
+      telephone_contact: false,
+      email_contact: false
     });
 
+    console.log("[NOTIFICATION] Affichage du toast de confirmation");
     toast({
       title: "Rendez-vous ajouté",
-      description: `Rendez-vous ${date!.toLocaleDateString()} à ${heure} enregistré avec succès.`,
+      description: `Rendez-vous ${finalDate.toLocaleDateString()} à ${heure} enregistré avec succès.`,
     });
   };
 
@@ -175,6 +232,7 @@ export function RendezVousCalendar() {
     </Label>
   );
 
+  console.log("[RENDER] Rendu du composant");
   return (
     <div className="container mx-auto p-4">
       <h2 className="text-2xl font-bold mb-4">Calendrier des États des Lieux</h2>
