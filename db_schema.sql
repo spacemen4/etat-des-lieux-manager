@@ -163,3 +163,17 @@ CREATE TABLE rendez_vous (
     type_bien TEXT, -- Type of property (e.g., "studio", "t2-t3", "local").
     created_at TIMESTAMPTZ DEFAULT now() -- Timestamp of when the appointment was created.
 );
+
+-- Migration pour ajouter la colonne commentaires aux tables equipements_energetiques et equipements_chauffage
+
+-- Ajouter la colonne commentaires à la table equipements_energetiques
+ALTER TABLE equipements_energetiques 
+ADD COLUMN commentaires TEXT;
+
+-- Ajouter la colonne commentaires à la table equipements_chauffage
+ALTER TABLE equipements_chauffage 
+ADD COLUMN commentaires TEXT;
+
+-- Optionnel : Ajouter des commentaires sur les colonnes pour la documentation
+COMMENT ON COLUMN equipements_energetiques.commentaires IS 'Commentaires et observations sur les équipements énergétiques';
+COMMENT ON COLUMN equipements_chauffage.commentaires IS 'Commentaires et observations sur les équipements de chauffage';
