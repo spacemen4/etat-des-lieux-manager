@@ -42,7 +42,7 @@ interface ValidationErrors {
   email_contact: boolean;
 }
 
-export default function RendezVousCalendar() {
+export function RendezVousCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
   const [description, setDescription] = useState('');
