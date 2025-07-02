@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/use-toast';
+import { createClient } from '@supabase/supabase-js';
+
+// Configuration Supabase - remplacez par vos vraies valeurs
+const supabaseUrl = 'YOUR_SUPABASE_URL';
+const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface RendezVous {
   id?: string;
@@ -44,11 +50,12 @@ interface ValidationErrors {
   email_contact?: boolean;
 }
 
-export function RendezVousCalendar() {
+export default function RendezVousCalendar() {
   console.log("[RENDEZVOUS] Initialisation du composant");
   
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
+  const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState('');
   const [adresse, setAdresse] = useState('');
   const [code_postal, setCode_postal] = useState('');
@@ -77,6 +84,49 @@ export function RendezVousCalendar() {
     telephone_contact: false,
     email_contact: false
   });
+
+  // Charger les rendez-vous depuis Supabase au montage du composant
+  useEffect(() => {
+    loadRendezVous();
+  }, []);
+
+  const loadRendezVous = async () => {
+    console.log("[SUPABASE] Chargement des rendez-vous depuis la base de données");
+    try {
+      const { data, error } = await supabase
+        .from('rendez_vous')
+        .select('*')
+        .order('date', { ascending: true })
+        .order('heure', { ascending: true });
+
+      if (error) {
+        console.error("[SUPABASE ERROR] Erreur lors du chargement:", error);
+        toast({
+          title: "Erreur de chargement",
+          description: "Impossible de charger les rendez-vous depuis la base de données.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Convertir les dates string en objets Date
+      const rendezVousWithDates = (data || []).map(rdv => ({
+        ...rdv,
+        date: new Date(rdv.date),
+        created_at: rdv.created_at ? new Date(rdv.created_at) : undefined
+      }));
+
+      console.log("[SUPABASE] Rendez-vous chargés:", rendezVousWithDates);
+      setRendezVous(rendezVousWithDates);
+    } catch (error) {
+      console.error("[SUPABASE ERROR] Erreur inattendue:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur inattendue s'est produite lors du chargement.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const validateForm = (): boolean => {
     console.log("[VALIDATION] Début de la validation du formulaire");
@@ -115,7 +165,7 @@ export function RendezVousCalendar() {
     return isValid;
   };
 
-  const handleAddRendezVous = () => {
+  const handleAddRendezVous = async () => {
     console.log("[ACTION] Bouton 'Ajouter un rendez-vous' cliqué");
     console.log("[ETAT] Valeurs actuelles des champs:", {
       date, heure, description, adresse, code_postal, ville,
@@ -134,78 +184,101 @@ export function RendezVousCalendar() {
     }
 
     console.log("[VALIDATION] Formulaire valide - création du rendez-vous");
+    setLoading(true);
 
     const finalDate = date || new Date();
     console.log("[DATE] Date du rendez-vous:", finalDate);
 
-    const newRendezVous: RendezVous = {
-      id: `rdv-${Date.now()}`,
-      date: finalDate,
+    // Préparer les données pour Supabase
+    const rendezVousData = {
+      date: finalDate.toISOString().split('T')[0], // Format YYYY-MM-DD pour PostgreSQL
       heure: heure.trim(),
-      duree: duree.trim() || undefined,
-      description: description.trim() || undefined,
+      duree: duree.trim() || null,
+      description: description.trim() || null,
       adresse: adresse.trim(),
       code_postal: code_postal.trim(),
       ville: ville.trim(),
-      latitude: latitude || undefined,
-      longitude: longitude || undefined,
+      latitude: latitude || null,
+      longitude: longitude || null,
       nom_contact: nom_contact.trim(),
       telephone_contact: telephone_contact.trim(),
       email_contact: email_contact.trim(),
-      note_personnelle: note_personnelle.trim() || undefined,
-      type_etat_des_lieux: typeEtatDesLieux,
-      type_bien: typeBien,
-      created_at: new Date(),
+      note_personnelle: note_personnelle.trim() || null,
+      type_etat_des_lieux: typeEtatDesLieux || null,
+      type_bien: typeBien || null,
       statut: statut,
-      etat_des_lieux_id: undefined
+      etat_des_lieux_id: null
     };
     
-    console.log("[CREATION] Nouveau rendez-vous créé:", newRendezVous);
+    console.log("[SUPABASE] Données à insérer:", rendezVousData);
 
-    setRendezVous(prevRendezVous => {
-      const updatedRendezVous = [...prevRendezVous, newRendezVous].sort((a, b) => {
-        const dateA = a.date || new Date();
-        const dateB = b.date || new Date();
-        return dateA.getTime() - dateB.getTime();
+    try {
+      const { data, error } = await supabase
+        .from('rendez_vous')
+        .insert([rendezVousData])
+        .select();
+
+      if (error) {
+        console.error("[SUPABASE ERROR] Erreur lors de l'insertion:", error);
+        toast({
+          title: "Erreur lors de la sauvegarde",
+          description: `Impossible d'enregistrer le rendez-vous: ${error.message}`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      console.log("[SUPABASE] Rendez-vous inséré avec succès:", data);
+
+      // Recharger la liste depuis la base de données
+      await loadRendezVous();
+
+      console.log("[REINITIALISATION] Réinitialisation des champs du formulaire");
+      setDescription('');
+      setAdresse('');
+      setCode_postal('');
+      setVille('');
+      setLatitude(undefined);
+      setLongitude(undefined);
+      setNom_contact('');
+      setTelephone_contact('');
+      setEmail_contact('');
+      setHeure('');
+      setDuree('');
+      setNote_personnelle('');
+      setTypeEtatDesLieux('');
+      setTypeBien('');
+      setStatut('planifie');
+      setValidationErrors({
+        type_etat_des_lieux: false,
+        type_bien: false,
+        heure: false,
+        date: false,
+        adresse: false,
+        code_postal: false,
+        ville: false,
+        nom_contact: false,
+        telephone_contact: false,
+        email_contact: false
       });
-      console.log("[MISE A JOUR] Liste des rendez-vous après ajout:", updatedRendezVous);
-      return updatedRendezVous;
-    });
 
-    console.log("[REINITIALISATION] Réinitialisation des champs du formulaire");
-    setDescription('');
-    setAdresse('');
-    setCode_postal('');
-    setVille('');
-    setLatitude(undefined);
-    setLongitude(undefined);
-    setNom_contact('');
-    setTelephone_contact('');
-    setEmail_contact('');
-    setHeure('');
-    setDuree('');
-    setNote_personnelle('');
-    setTypeEtatDesLieux('');
-    setTypeBien('');
-    setStatut('planifie');
-    setValidationErrors({
-      type_etat_des_lieux: false,
-      type_bien: false,
-      heure: false,
-      date: false,
-      adresse: false,
-      code_postal: false,
-      ville: false,
-      nom_contact: false,
-      telephone_contact: false,
-      email_contact: false
-    });
+      console.log("[NOTIFICATION] Affichage du toast de confirmation");
+      toast({
+        title: "Rendez-vous ajouté",
+        description: `Rendez-vous ${finalDate.toLocaleDateString()} à ${heure} enregistré avec succès dans la base de données.`,
+      });
 
-    console.log("[NOTIFICATION] Affichage du toast de confirmation");
-    toast({
-      title: "Rendez-vous ajouté",
-      description: `Rendez-vous ${finalDate.toLocaleDateString()} à ${heure} enregistré avec succès.`,
-    });
+    } catch (error) {
+      console.error("[SUPABASE ERROR] Erreur inattendue:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur inattendue s'est produite lors de la sauvegarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const RequiredLabel = ({ htmlFor, children, isRequired = false, hasError = false }: {
@@ -236,6 +309,15 @@ export function RendezVousCalendar() {
   return (
     <div className="container mx-auto p-4">
       <h2 className="text-2xl font-bold mb-4">Calendrier des États des Lieux</h2>
+      
+      {/* Indicateur de configuration Supabase */}
+      <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
+        <h3 className="font-semibold text-amber-800 mb-2">⚠️ Configuration Supabase requise</h3>
+        <p className="text-sm text-amber-700">
+          N'oubliez pas de remplacer <code className="bg-amber-100 px-1 rounded">YOUR_SUPABASE_URL</code> et <code className="bg-amber-100 px-1 rounded">YOUR_SUPABASE_ANON_KEY</code> par vos vraies valeurs Supabase dans le code.
+        </p>
+      </div>
+
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
         <h3 className="font-semibold text-blue-800 mb-2">Champs obligatoires dans la base de données :</h3>
         <ul className="text-sm text-blue-700 list-disc list-inside grid grid-cols-2 gap-1">
@@ -542,8 +624,12 @@ export function RendezVousCalendar() {
             />
           </div>
           
-          <Button onClick={handleAddRendezVous} className="mt-4 w-full">
-            Ajouter un rendez-vous
+          <Button 
+            onClick={handleAddRendezVous} 
+            className="mt-4 w-full" 
+            disabled={loading}
+          >
+            {loading ? "Enregistrement en cours..." : "Ajouter un rendez-vous"}
           </Button>
         </div>
         
@@ -591,7 +677,7 @@ export function RendezVousCalendar() {
                 };
 
                 const renderRendezVous = (rv: RendezVous, index: number, isPast: boolean = false) => (
-                  <li key={index} className={`p-3 border rounded-md ${isPast ? 'bg-gray-50 border-gray-300' : 'bg-white border-blue-200'}`}>
+                  <li key={rv.id || index} className={`p-3 border rounded-md ${isPast ? 'bg-gray-50 border-gray-300' : 'bg-white border-blue-200'}`}>
                     <div className="flex items-center justify-between mb-2">
                       <p className={`font-medium ${isPast ? 'text-gray-600' : 'text-black'}`}>
                         {rv.date.toLocaleDateString()}
