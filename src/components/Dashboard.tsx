@@ -268,12 +268,18 @@ const Dashboard = () => {
                           <span>Sortie: {new Date(etat.date_sortie).toLocaleDateString()}</span>
                         )}
                       </div>
-                      {etat.rendez_vous_id && rendezVous?.find(rdv => rdv.id === etat.rendez_vous_id) && (
-                        <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
-                          <Clock className="h-3 w-3" />
-                          <span>Lié au RDV du {new Date(rendezVous.find(rdv => rdv.id === etat.rendez_vous_id)!.date).toLocaleDateString()} à {rendezVous.find(rdv => rdv.id === etat.rendez_vous_id)!.heure}</span>
-                        </div>
-                      )}
+                      {etat.rendez_vous_id && (() => {
+                        const rdvAssocie = rendezVous?.find(rdv => rdv.id === etat.rendez_vous_id);
+                        if (rdvAssocie) {
+                          return (
+                            <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+                              <Clock className="h-3 w-3" />
+                              <span>Lié au RDV ({rdvAssocie.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}) du {new Date(rdvAssocie.date).toLocaleDateString()} à {rdvAssocie.heure}</span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                     <div className="flex items-center gap-2 flex-col">
                       <div className="flex gap-2">
