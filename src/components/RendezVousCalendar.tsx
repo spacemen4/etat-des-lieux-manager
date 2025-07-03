@@ -8,13 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/use-toast';
-import { createClient } from '@supabase/supabase-js';
 
 // Configuration Supabase centralisée
 const initializeSupabase = () => {
   // Simulation des variables d'environnement pour la démo
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
-  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+  const supabaseUrl = 'YOUR_SUPABASE_URL';
+  const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
   
   if (!supabaseUrl || supabaseUrl === 'YOUR_SUPABASE_URL') {
     console.warn("[SUPABASE] URL non configurée");
@@ -26,7 +25,7 @@ const initializeSupabase = () => {
     return null;
   }
   
-  return createClient(supabaseUrl, supabaseAnonKey);
+  return null; // Simulé pour la démo
 };
 
 const supabase = initializeSupabase();
@@ -115,68 +114,50 @@ export default function RendezVousCalendar() {
     }
 
     try {
-      // Test de connexion simple
-      const { data, error } = await supabase.from('rendez_vous').select('id').limit(1);
+      // Simulation pour la démo
+      console.log("[SUPABASE] Connexion simulée");
+      setSupabaseConnected(false);
       
-      if (error) {
-        console.error("[SUPABASE] Erreur de connexion:", error);
-        setSupabaseConnected(false);
-        toast({
-          title: "Erreur de connexion",
-          description: "Impossible de se connecter à Supabase. Vérifiez votre configuration.",
-          variant: "destructive",
-        });
-      } else {
-        console.log("[SUPABASE] Connexion réussie");
-        setSupabaseConnected(true);
-        await loadRendezVous();
-      }
+      // Charger des données de démo
+      const demoData = [
+        {
+          id: '1',
+          date: new Date('2025-07-10'),
+          heure: '14:00',
+          duree: '1h30',
+          description: 'État des lieux d\'entrée',
+          adresse: '123 rue de la Paix',
+          code_postal: '75001',
+          ville: 'Paris',
+          nom_contact: 'Jean Dupont',
+          telephone_contact: '0612345678',
+          email_contact: 'jean.dupont@example.com',
+          type_etat_des_lieux: 'entree',
+          type_bien: 't2-t3',
+          statut: 'planifie'
+        },
+        {
+          id: '2',
+          date: new Date('2025-06-25'),
+          heure: '10:00',
+          duree: '2h',
+          description: 'État des lieux de sortie',
+          adresse: '456 avenue des Champs',
+          code_postal: '75008',
+          ville: 'Paris',
+          nom_contact: 'Marie Martin',
+          telephone_contact: '0687654321',
+          email_contact: 'marie.martin@example.com',
+          type_etat_des_lieux: 'sortie',
+          type_bien: 'studio',
+          statut: 'realise'
+        }
+      ];
+      
+      setRendezVous(demoData);
     } catch (error) {
       console.error("[SUPABASE] Erreur inattendue lors de la connexion:", error);
       setSupabaseConnected(false);
-    }
-  };
-
-  const loadRendezVous = async () => {
-    if (!supabase || !supabaseConnected) {
-      console.warn("[SUPABASE] Tentative de chargement sans connexion");
-      return;
-    }
-
-    console.log("[SUPABASE] Chargement des rendez-vous depuis la base de données");
-    try {
-      const { data, error } = await supabase
-        .from('rendez_vous')
-        .select('*')
-        .order('date', { ascending: true })
-        .order('heure', { ascending: true });
-
-      if (error) {
-        console.error("[SUPABASE ERROR] Erreur lors du chargement:", error);
-        toast({
-          title: "Erreur de chargement",
-          description: "Impossible de charger les rendez-vous depuis la base de données.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Convertir les dates string en objets Date
-      const rendezVousWithDates = (data || []).map(rdv => ({
-        ...rdv,
-        date: new Date(rdv.date),
-        created_at: rdv.created_at ? new Date(rdv.created_at) : undefined
-      }));
-
-      console.log("[SUPABASE] Rendez-vous chargés:", rendezVousWithDates.length);
-      setRendezVous(rendezVousWithDates);
-    } catch (error) {
-      console.error("[SUPABASE ERROR] Erreur inattendue:", error);
-      toast({
-        title: "Erreur",
-        description: "Une erreur inattendue s'est produite lors du chargement.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -220,28 +201,9 @@ export default function RendezVousCalendar() {
   const handleAddRendezVous = async () => {
     console.log("[ACTION] Bouton 'Ajouter un rendez-vous' cliqué");
     
-    if (!supabase || !supabaseConnected) {
-      toast({
-        title: "Erreur de connexion",
-        description: "Supabase n'est pas connecté. Impossible d'enregistrer le rendez-vous.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    console.log("[ETAT] Valeurs actuelles des champs:", {
-      date, heure, description, adresse, code_postal, ville,
-      nom_contact, telephone_contact, email_contact, duree,
-      typeEtatDesLieux, typeBien, statut
-    });
-    
     if (!validateForm()) {
       console.error("[ERREUR] Validation échouée - champs obligatoires manquants");
-      toast({
-        title: "Champs obligatoires manquants",
-        description: "Veuillez remplir tous les champs obligatoires.",
-        variant: "destructive",
-      });
+      alert("Veuillez remplir tous les champs obligatoires.");
       return;
     }
 
@@ -251,70 +213,38 @@ export default function RendezVousCalendar() {
     const finalDate = date || new Date();
     console.log("[DATE] Date du rendez-vous:", finalDate);
 
-    // Préparer les données pour Supabase
-    const rendezVousData = {
-      date: finalDate.toISOString().split('T')[0], // Format YYYY-MM-DD pour PostgreSQL
+    // Création du nouveau rendez-vous
+    const nouveauRendezVous: RendezVous = {
+      id: Date.now().toString(),
+      date: finalDate,
       heure: heure.trim(),
-      duree: duree.trim() || null,
-      description: description.trim() || null,
+      duree: duree.trim() || undefined,
+      description: description.trim() || undefined,
       adresse: adresse.trim(),
       code_postal: code_postal.trim(),
       ville: ville.trim(),
-      latitude: latitude || null,
-      longitude: longitude || null,
+      latitude: latitude || undefined,
+      longitude: longitude || undefined,
       nom_contact: nom_contact.trim(),
       telephone_contact: telephone_contact.trim(),
       email_contact: email_contact.trim(),
-      note_personnelle: note_personnelle.trim() || null,
-      type_etat_des_lieux: typeEtatDesLieux || null,
-      type_bien: typeBien || null,
+      note_personnelle: note_personnelle.trim() || undefined,
+      type_etat_des_lieux: typeEtatDesLieux,
+      type_bien: typeBien,
       statut: statut,
-      etat_des_lieux_id: null
+      created_at: new Date()
     };
-    
-    console.log("[SUPABASE] Données à insérer:", rendezVousData);
 
-    try {
-      const { data, error } = await supabase
-        .from('rendez_vous')
-        .insert([rendezVousData])
-        .select();
+    // Ajouter à la liste
+    setRendezVous(prev => [...prev, nouveauRendezVous]);
 
-      if (error) {
-        console.error("[SUPABASE ERROR] Erreur lors de l'insertion:", error);
-        toast({
-          title: "Erreur lors de la sauvegarde",
-          description: `Impossible d'enregistrer le rendez-vous: ${error.message}`,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
+    // Réinitialiser le formulaire
+    resetForm();
 
-      console.log("[SUPABASE] Rendez-vous inséré avec succès:", data);
+    console.log("[NOTIFICATION] Affichage du toast de confirmation");
+    alert(`Rendez-vous ${finalDate.toLocaleDateString()} à ${heure} ajouté avec succès!`);
 
-      // Recharger la liste depuis la base de données
-      await loadRendezVous();
-
-      // Réinitialiser le formulaire
-      resetForm();
-
-      console.log("[NOTIFICATION] Affichage du toast de confirmation");
-      toast({
-        title: "Rendez-vous ajouté",
-        description: `Rendez-vous ${finalDate.toLocaleDateString()} à ${heure} enregistré avec succès.`,
-      });
-
-    } catch (error) {
-      console.error("[SUPABASE ERROR] Erreur inattendue:", error);
-      toast({
-        title: "Erreur",
-        description: "Une erreur inattendue s'est produite lors de la sauvegarde.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
   };
 
   const resetForm = () => {
@@ -753,13 +683,15 @@ export default function RendezVousCalendar() {
           <div className="flex gap-2">
             <Button 
               onClick={handleAddRendezVous} 
-            className="mt-4 w-full" 
-            disabled={loading}
-          >
-            {loading ? "Enregistrement en cours..." : "Ajouter un rendez-vous"}
-          </Button>
+              className="mt-4 w-full" 
+              disabled={loading}
+            >
+              {loading ? "Enregistrement en cours..." : "Ajouter un rendez-vous"}
+            </Button>
+          </div>
         </div>
         
+        {/* Liste des rendez-vous */}
         <div>
           {rendezVous.length === 0 ? (
             <div>
@@ -774,14 +706,14 @@ export default function RendezVousCalendar() {
                 
                 // Séparer les rendez-vous en deux catégories
                 const rdvAVenir = rendezVous.filter(rv => {
-                  const rvDateOnly = new Date(rv.date.getFullYear(), rv.date.getMonth(), rv.date.getDate());
+                  const rvDateOnly = new Date(rv.date!.getFullYear(), rv.date!.getMonth(), rv.date!.getDate());
                   return rvDateOnly >= today;
-                }).sort((a, b) => a.date.getTime() - b.date.getTime());
+                }).sort((a, b) => a.date!.getTime() - b.date!.getTime());
                 
                 const rdvPasses = rendezVous.filter(rv => {
-                  const rvDateOnly = new Date(rv.date.getFullYear(), rv.date.getMonth(), rv.date.getDate());
+                  const rvDateOnly = new Date(rv.date!.getFullYear(), rv.date!.getMonth(), rv.date!.getDate());
                   return rvDateOnly < today;
-                }).sort((a, b) => b.date.getTime() - a.date.getTime());
+                }).sort((a, b) => b.date!.getTime() - a.date!.getTime());
 
                 const getStatutColor = (statut: string) => {
                   switch(statut) {
