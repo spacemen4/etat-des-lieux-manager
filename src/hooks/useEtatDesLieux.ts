@@ -8,7 +8,7 @@ export const useEtatDesLieux = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('etat_des_lieux')
-        .select('*')
+        .select('*, rendez_vous_id') // Assurez-vous que rendez_vous_id est sélectionné
         .order('created_at', { ascending: false });
 
       if (error) throw error;
