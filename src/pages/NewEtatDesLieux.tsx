@@ -5,10 +5,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Calendar, MapPin, User, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import EtatDesLieuxTypeSelector from '@/components/EtatDesLieuxTypeSelector';
+
+interface RendezVous {
+  id: string;
+  date: string;
+  heure: string;
+  duree?: string;
+  description?: string;
+  adresse: string;
+  code_postal: string;
+  ville: string;
+  nom_contact: string;
+  telephone_contact: string;
+  email_contact: string;
+  type_etat_des_lieux: 'entree' | 'sortie';
+  type_bien: string;
+  statut: string;
+}
 
 const NewEtatDesLieux = () => {
   const navigate = useNavigate();
@@ -16,6 +34,7 @@ const NewEtatDesLieux = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [typeEtatDesLieux, setTypeEtatDesLieux] = useState<'entree' | 'sortie'>('entree');
   const [typeBien, setTypeBien] = useState<'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires'>('studio');
+  const [selectedRendezVous, setSelectedRendezVous] = useState<RendezVous | null>(null);
   const [formData, setFormData] = useState({
     date_entree: '',
     adresse_bien: '',
@@ -28,10 +47,47 @@ const NewEtatDesLieux = () => {
   // Pré-sélectionner le type d'état des lieux basé sur le paramètre URL
   useEffect(() => {
     const typeParam = searchParams.get('type');
+    const rdvParam = searchParams.get('rdv');
+    
     if (typeParam === 'entree' || typeParam === 'sortie') {
       setTypeEtatDesLieux(typeParam);
     }
+
+    // Si un rendez-vous est spécifié, le charger et pré-remplir les données
+    if (rdvParam) {
+      loadRendezVous(rdvParam);
+    }
   }, [searchParams]);
+
+  const loadRendezVous = async (rdvId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('rendez_vous')
+        .select('*')
+        .eq('id', rdvId)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setSelectedRendezVous(data);
+        setTypeEtatDesLieux(data.type_etat_des_lieux);
+        setTypeBien(data.type_bien);
+        
+        // Pré-remplir les données du formulaire avec les informations du rendez-vous
+        setFormData(prev => ({
+          ...prev,
+          date_entree: new Date().toISOString().split('T')[0], // Date du jour par défaut
+          adresse_bien: `${data.adresse}, ${data.code_postal} ${data.ville}`,
+          locataire_nom: data.nom_contact,
+          // On laisse les autres champs vides pour que l'utilisateur les remplisse
+        }));
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement du rendez-vous:', error);
+      toast.error('Erreur lors du chargement du rendez-vous');
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -52,23 +108,43 @@ const NewEtatDesLieux = () => {
     setIsLoading(true);
 
     try {
+      // Créer l'état des lieux
+      const etatDesLieuxData = {
+        type_etat_des_lieux: typeEtatDesLieux,
+        type_bien: typeBien,
+        date_entree: formData.date_entree || null,
+        adresse_bien: formData.adresse_bien,
+        bailleur_nom: formData.bailleur_nom || null,
+        bailleur_adresse: formData.bailleur_adresse || null,
+        locataire_nom: formData.locataire_nom || null,
+        locataire_adresse: formData.locataire_adresse || null,
+        statut: 'en_cours',
+        rendez_vous_id: selectedRendezVous?.id || null // Lier au rendez-vous si applicable
+      };
+
       const { data, error } = await supabase
         .from('etat_des_lieux')
-        .insert([{
-          type_etat_des_lieux: typeEtatDesLieux,
-          type_bien: typeBien,
-          date_entree: formData.date_entree || null,
-          adresse_bien: formData.adresse_bien,
-          bailleur_nom: formData.bailleur_nom || null,
-          bailleur_adresse: formData.bailleur_adresse || null,
-          locataire_nom: formData.locataire_nom || null,
-          locataire_adresse: formData.locataire_adresse || null,
-          statut: 'en_cours'
-        }])
+        .insert([etatDesLieuxData])
         .select()
         .single();
 
       if (error) throw error;
+
+      // Si c'est lié à un rendez-vous, mettre à jour le statut du rendez-vous
+      if (selectedRendezVous) {
+        const { error: rdvError } = await supabase
+          .from('rendez_vous')
+          .update({ 
+            statut: 'realise',
+            etat_des_lieux_id: data.id
+          })
+          .eq('id', selectedRendezVous.id);
+
+        if (rdvError) {
+          console.error('Erreur lors de la mise à jour du rendez-vous:', rdvError);
+          // On continue même si la mise à jour du rendez-vous échoue
+        }
+      }
 
       toast.success('État des lieux créé avec succès');
       
@@ -84,6 +160,26 @@ const NewEtatDesLieux = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const getTypeBienLabel = (typeBien: string) => {
+    const labels: Record<string, string> = {
+      'studio': 'Studio',
+      't2_t3': 'T2 - T3',
+      't4_t5': 'T4 - T5',
+      'inventaire_mobilier': 'Inventaire mobilier',
+      'bureau': 'Bureau',
+      'local_commercial': 'Local commercial',
+      'garage_box': 'Garage / Box',
+      'pieces_supplementaires': 'Pièces supplémentaires',
+      't2-t3': 'T2 - T3',
+      't4-t5': 'T4 - T5',
+      'mobilier': 'Inventaire mobilier',
+      'local': 'Local commercial',
+      'garage': 'Garage / Box',
+      'pieces-supplementaires': 'Pièces supplémentaires'
+    };
+    return labels[typeBien] || typeBien;
   };
 
   return (
@@ -102,16 +198,71 @@ const NewEtatDesLieux = () => {
             Nouvel état des lieux
           </h2>
           <p className="text-slate-600">
-            Sélectionnez le type d'état des lieux et de bien
+            {selectedRendezVous ? 'Basé sur le rendez-vous planifié' : 'Sélectionnez le type d\'état des lieux et de bien'}
           </p>
         </div>
       </div>
+
+      {/* Afficher les informations du rendez-vous si applicable */}
+      {selectedRendezVous && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-800">
+              <Calendar className="h-5 w-5" />
+              Rendez-vous lié
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium">
+                    {new Date(selectedRendezVous.date).toLocaleDateString()} à {selectedRendezVous.heure}
+                  </span>
+                  {selectedRendezVous.duree && (
+                    <Badge variant="outline" className="ml-2">
+                      {selectedRendezVous.duree}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm">
+                    {selectedRendezVous.adresse}, {selectedRendezVous.code_postal} {selectedRendezVous.ville}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm">
+                    {selectedRendezVous.nom_contact} - {selectedRendezVous.telephone_contact}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Badge variant="outline" className="w-fit">
+                  {selectedRendezVous.type_etat_des_lieux === 'entree' ? 'État d\'entrée' : 'État de sortie'}
+                </Badge>
+                <Badge variant="outline" className="w-fit ml-2">
+                  {getTypeBienLabel(selectedRendezVous.type_bien)}
+                </Badge>
+                {selectedRendezVous.description && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    {selectedRendezVous.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <EtatDesLieuxTypeSelector
         typeEtatDesLieux={typeEtatDesLieux}
         typeBien={typeBien}
         onTypeEtatDesLieuxChange={setTypeEtatDesLieux}
         onTypeBienChange={setTypeBien}
+        disabled={!!selectedRendezVous} // Désactiver si lié à un rendez-vous
       />
 
       <Card>

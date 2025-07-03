@@ -1,11 +1,9 @@
-
-
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, User, FileText, Loader2, Building2, Plus, LogIn, LogOut, Clock } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, Loader2, Building2, Plus, LogIn, LogOut, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { useEtatDesLieux, useRendezVous } from '@/hooks/useEtatDesLieux';
 import EtatDesLieuxViewer from './EtatDesLieuxViewer';
 
@@ -61,6 +59,11 @@ const Dashboard = () => {
   const handleViewEtat = (etatId: string) => {
     setSelectedEtatId(etatId);
     setIsViewerOpen(true);
+  };
+
+  // Fonction pour vérifier si un rendez-vous a déjà un état des lieux associé
+  const hasAssociatedEtatDesLieux = (rdvId: string) => {
+    return etatsDesLieux?.some(etat => etat.rendez_vous_id === rdvId) || false;
   };
 
   return (
@@ -240,7 +243,7 @@ const Dashboard = () => {
           <div className="grid gap-4">
             {etatsDesLieux?.map((etat) => (
               <Card key={etat.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleViewEtat(etat.id)}>
-                <CardContent className="p-6">
+                  <CardContent className="p-6">
                   <div className="flex justify-between items-start">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
