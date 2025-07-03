@@ -28,6 +28,45 @@ interface RendezVous {
   statut: string;
 }
 
+// Helper function to map rendez_vous type_bien to form type_bien
+const mapRdvTypeBienToFormTypeBien = (rdvTypeBien: string): 'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires' => {
+  switch (rdvTypeBien) {
+    case 'studio':
+      return 'studio';
+    case 't2-t3': // from RendezVousCalendar
+      return 't2_t3';
+    case 't4-t5': // from RendezVousCalendar
+      return 't4_t5';
+    case 'mobilier': // from RendezVousCalendar
+      return 'inventaire_mobilier';
+    case 'bureau':
+      return 'bureau';
+    case 'local': // from RendezVousCalendar
+      return 'local_commercial';
+    case 'garage': // from RendezVousCalendar
+      return 'garage_box';
+    case 'pieces-supplementaires': // from RendezVousCalendar
+      return 'pieces_supplementaires';
+    // Add fallbacks for existing underscore versions if they might still appear
+    case 't2_t3':
+      return 't2_t3';
+    case 't4_t5':
+      return 't4_t5';
+    case 'inventaire_mobilier':
+      return 'inventaire_mobilier';
+    case 'local_commercial':
+      return 'local_commercial';
+    case 'garage_box':
+      return 'garage_box';
+    case 'pieces_supplementaires':
+      return 'pieces_supplementaires';
+    default:
+      // Default to 'studio' or handle as an error/log
+      console.warn(`Unknown type_bien from rendez_vous: ${rdvTypeBien}, defaulting to 'studio'.`);
+      return 'studio'; 
+  }
+};
+
 const NewEtatDesLieux = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -72,7 +111,7 @@ const NewEtatDesLieux = () => {
       if (data) {
         setSelectedRendezVous(data);
         setTypeEtatDesLieux(data.type_etat_des_lieux);
-        setTypeBien(data.type_bien);
+        setTypeBien(mapRdvTypeBienToFormTypeBien(data.type_bien));
         
         // Pré-remplir les données du formulaire avec les informations du rendez-vous
         setFormData(prev => ({
