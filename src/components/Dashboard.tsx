@@ -299,8 +299,8 @@ const Dashboard = () => {
                             onClick={(e) => e.stopPropagation()}
                           >
                             <a href={`/sortie/${etat.id}`} className="flex items-center gap-1">
-                              <LogOut className="h-3 w-3" />
-                              État de sortie
+                              {etat.type_etat_des_lieux === 'entree' ? <LogIn className="h-3 w-3" /> : <LogOut className="h-3 w-3" />}
+                              {etat.type_etat_des_lieux === 'entree' ? "État d'entrée" : "État de sortie"}
                             </a>
                           </Button>
                           
@@ -328,4 +328,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
