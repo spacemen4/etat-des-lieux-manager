@@ -303,17 +303,7 @@ const Dashboard = () => {
                               État de sortie
                             </a>
                           </Button>
-                          <Button 
-                            size="sm" 
-                            asChild
-                            variant="outline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <a href={`/new-etat-des-lieux?type=entree`} className="flex items-center gap-1">
-                              <LogIn className="h-3 w-3" />
-                              État d'entrée
-                            </a>
-                          </Button>
+                          
                         </div>
                       )}
                     </div>
