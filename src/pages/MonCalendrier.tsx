@@ -1,5 +1,5 @@
 import React from 'react';
-import { RendezVousCalendar } from '@/components/RendezVousCalendar';
+import RendezVousCalendar from '@/components/RendezVousCalendar';
 
 function MonCalendrierPage() {
   return (
