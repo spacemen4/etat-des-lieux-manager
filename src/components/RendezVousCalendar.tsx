@@ -10,10 +10,26 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from '@/components/ui/use-toast';
 import { createClient } from '@supabase/supabase-js';
 
-// Configuration Supabase - remplacez par vos vraies valeurs
-const supabaseUrl = 'YOUR_SUPABASE_URL';
-const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Configuration Supabase centralisée
+const initializeSupabase = () => {
+  // Simulation des variables d'environnement pour la démo
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
+  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+  
+  if (!supabaseUrl || supabaseUrl === 'YOUR_SUPABASE_URL') {
+    console.warn("[SUPABASE] URL non configurée");
+    return null;
+  }
+  
+  if (!supabaseAnonKey || supabaseAnonKey === 'YOUR_SUPABASE_ANON_KEY') {
+    console.warn("[SUPABASE] Clé anonyme non configurée");
+    return null;
+  }
+  
+  return createClient(supabaseUrl, supabaseAnonKey);
+};
+
+const supabase = initializeSupabase();
 
 interface RendezVous {
   id?: string;
@@ -56,6 +72,7 @@ export default function RendezVousCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
   const [loading, setLoading] = useState(false);
+  const [supabaseConnected, setSupabaseConnected] = useState(false);
   const [description, setDescription] = useState('');
   const [adresse, setAdresse] = useState('');
   const [code_postal, setCode_postal] = useState('');
@@ -85,12 +102,47 @@ export default function RendezVousCalendar() {
     email_contact: false
   });
 
-  // Charger les rendez-vous depuis Supabase au montage du composant
+  // Vérifier la connexion Supabase au montage
   useEffect(() => {
-    loadRendezVous();
+    checkSupabaseConnection();
   }, []);
 
+  const checkSupabaseConnection = async () => {
+    if (!supabase) {
+      console.error("[SUPABASE] Client non initialisé");
+      setSupabaseConnected(false);
+      return;
+    }
+
+    try {
+      // Test de connexion simple
+      const { data, error } = await supabase.from('rendez_vous').select('id').limit(1);
+      
+      if (error) {
+        console.error("[SUPABASE] Erreur de connexion:", error);
+        setSupabaseConnected(false);
+        toast({
+          title: "Erreur de connexion",
+          description: "Impossible de se connecter à Supabase. Vérifiez votre configuration.",
+          variant: "destructive",
+        });
+      } else {
+        console.log("[SUPABASE] Connexion réussie");
+        setSupabaseConnected(true);
+        await loadRendezVous();
+      }
+    } catch (error) {
+      console.error("[SUPABASE] Erreur inattendue lors de la connexion:", error);
+      setSupabaseConnected(false);
+    }
+  };
+
   const loadRendezVous = async () => {
+    if (!supabase || !supabaseConnected) {
+      console.warn("[SUPABASE] Tentative de chargement sans connexion");
+      return;
+    }
+
     console.log("[SUPABASE] Chargement des rendez-vous depuis la base de données");
     try {
       const { data, error } = await supabase
@@ -116,7 +168,7 @@ export default function RendezVousCalendar() {
         created_at: rdv.created_at ? new Date(rdv.created_at) : undefined
       }));
 
-      console.log("[SUPABASE] Rendez-vous chargés:", rendezVousWithDates);
+      console.log("[SUPABASE] Rendez-vous chargés:", rendezVousWithDates.length);
       setRendezVous(rendezVousWithDates);
     } catch (error) {
       console.error("[SUPABASE ERROR] Erreur inattendue:", error);
@@ -167,6 +219,16 @@ export default function RendezVousCalendar() {
 
   const handleAddRendezVous = async () => {
     console.log("[ACTION] Bouton 'Ajouter un rendez-vous' cliqué");
+    
+    if (!supabase || !supabaseConnected) {
+      toast({
+        title: "Erreur de connexion",
+        description: "Supabase n'est pas connecté. Impossible d'enregistrer le rendez-vous.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     console.log("[ETAT] Valeurs actuelles des champs:", {
       date, heure, description, adresse, code_postal, ville,
       nom_contact, telephone_contact, email_contact, duree,
@@ -234,39 +296,13 @@ export default function RendezVousCalendar() {
       // Recharger la liste depuis la base de données
       await loadRendezVous();
 
-      console.log("[REINITIALISATION] Réinitialisation des champs du formulaire");
-      setDescription('');
-      setAdresse('');
-      setCode_postal('');
-      setVille('');
-      setLatitude(undefined);
-      setLongitude(undefined);
-      setNom_contact('');
-      setTelephone_contact('');
-      setEmail_contact('');
-      setHeure('');
-      setDuree('');
-      setNote_personnelle('');
-      setTypeEtatDesLieux('');
-      setTypeBien('');
-      setStatut('planifie');
-      setValidationErrors({
-        type_etat_des_lieux: false,
-        type_bien: false,
-        heure: false,
-        date: false,
-        adresse: false,
-        code_postal: false,
-        ville: false,
-        nom_contact: false,
-        telephone_contact: false,
-        email_contact: false
-      });
+      // Réinitialiser le formulaire
+      resetForm();
 
       console.log("[NOTIFICATION] Affichage du toast de confirmation");
       toast({
         title: "Rendez-vous ajouté",
-        description: `Rendez-vous ${finalDate.toLocaleDateString()} à ${heure} enregistré avec succès dans la base de données.`,
+        description: `Rendez-vous ${finalDate.toLocaleDateString()} à ${heure} enregistré avec succès.`,
       });
 
     } catch (error) {
@@ -279,6 +315,37 @@ export default function RendezVousCalendar() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    console.log("[REINITIALISATION] Réinitialisation des champs du formulaire");
+    setDescription('');
+    setAdresse('');
+    setCode_postal('');
+    setVille('');
+    setLatitude(undefined);
+    setLongitude(undefined);
+    setNom_contact('');
+    setTelephone_contact('');
+    setEmail_contact('');
+    setHeure('');
+    setDuree('');
+    setNote_personnelle('');
+    setTypeEtatDesLieux('');
+    setTypeBien('');
+    setStatut('planifie');
+    setValidationErrors({
+      type_etat_des_lieux: false,
+      type_bien: false,
+      heure: false,
+      date: false,
+      adresse: false,
+      code_postal: false,
+      ville: false,
+      nom_contact: false,
+      telephone_contact: false,
+      email_contact: false
+    });
   };
 
   const RequiredLabel = ({ htmlFor, children, isRequired = false, hasError = false }: {
@@ -307,77 +374,110 @@ export default function RendezVousCalendar() {
 
   console.log("[RENDER] Rendu du composant");
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4 max-w-6xl">
       <h2 className="text-2xl font-bold mb-4">Calendrier des États des Lieux</h2>
       
-      {/* Indicateur de configuration Supabase */}
-      <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-md">
-        <h3 className="font-semibold text-amber-800 mb-2">⚠️ Configuration Supabase requise</h3>
-        <p className="text-sm text-amber-700">
-          N'oubliez pas de remplacer <code className="bg-amber-100 px-1 rounded">YOUR_SUPABASE_URL</code> et <code className="bg-amber-100 px-1 rounded">YOUR_SUPABASE_ANON_KEY</code> par vos vraies valeurs Supabase dans le code.
-        </p>
+      {/* Indicateur de statut Supabase */}
+      <div className={`mb-4 p-4 rounded-md ${supabaseConnected ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+        <div className="flex items-center">
+          <div className={`w-3 h-3 rounded-full mr-2 ${supabaseConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <h3 className={`font-semibold ${supabaseConnected ? 'text-green-800' : 'text-red-800'}`}>
+            {supabaseConnected ? '✅ Supabase connecté' : '❌ Supabase non connecté'}
+          </h3>
+        </div>
+        {!supabaseConnected && (
+          <div className="mt-2">
+            <p className="text-sm text-red-700 mb-2">
+              Configuration Supabase requise pour sauvegarder les données.
+            </p>
+            <p className="text-sm text-red-700">
+              Configurez les variables d'environnement <code className="bg-red-100 px-1 rounded">VITE_SUPABASE_URL</code> et <code className="bg-red-100 px-1 rounded">VITE_SUPABASE_ANON_KEY</code>.
+            </p>
+            <Button 
+              onClick={checkSupabaseConnection} 
+              className="mt-2 bg-red-600 hover:bg-red-700"
+              size="sm"
+            >
+              Réessayer la connexion
+            </Button>
+          </div>
+        )}
       </div>
 
+      {/* Informations sur les champs obligatoires */}
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-        <h3 className="font-semibold text-blue-800 mb-2">Champs obligatoires dans la base de données :</h3>
-        <ul className="text-sm text-blue-700 list-disc list-inside grid grid-cols-2 gap-1">
-          <li>Date du rendez-vous</li>
-          <li>Heure du rendez-vous</li>
-          <li>Adresse complète</li>
-          <li>Code postal</li>
-          <li>Ville</li>
-          <li>Nom du contact</li>
-          <li>Téléphone du contact</li>
-          <li>Email du contact</li>
-        </ul>
+        <h3 className="font-semibold text-blue-800 mb-2">Champs obligatoires :</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-blue-700">
+          <div>• Date et heure</div>
+          <div>• Adresse complète</div>
+          <div>• Code postal et ville</div>
+          <div>• Nom du contact</div>
+          <div>• Téléphone et email</div>
+          <div>• Type d'état des lieux</div>
+        </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <div className="mb-4">
-            <RequiredLabel 
-              htmlFor="date" 
-              isRequired={true} 
-              hasError={validationErrors.date}
-            >
-              Date du rendez-vous
-            </RequiredLabel>
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={(newDate) => {
-                setDate(newDate);
-                if (validationErrors.date && newDate) {
-                  setValidationErrors(prev => ({ ...prev, date: false }));
-                }
-              }}
-              className={`rounded-md border mt-1 ${validationErrors.date ? 'border-red-500' : ''}`}
-            />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Formulaire */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <RequiredLabel 
+                htmlFor="date" 
+                isRequired={true} 
+                hasError={validationErrors.date}
+              >
+                Date du rendez-vous
+              </RequiredLabel>
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={(newDate) => {
+                  setDate(newDate);
+                  if (validationErrors.date && newDate) {
+                    setValidationErrors(prev => ({ ...prev, date: false }));
+                  }
+                }}
+                className={`rounded-md border mt-1 ${validationErrors.date ? 'border-red-500' : ''}`}
+              />
+            </div>
+            
+            <div>
+              <RequiredLabel 
+                htmlFor="heure" 
+                isRequired={true} 
+                hasError={validationErrors.heure}
+              >
+                Heure du rendez-vous
+              </RequiredLabel>
+              <Input
+                id="heure"
+                type="time"
+                value={heure}
+                onChange={(e) => {
+                  setHeure(e.target.value);
+                  if (validationErrors.heure && e.target.value) {
+                    setValidationErrors(prev => ({ ...prev, heure: false }));
+                  }
+                }}
+                className={`mt-1 ${validationErrors.heure ? 'border-red-500 focus:border-red-500' : ''}`}
+              />
+              
+              <div className="mt-2">
+                <Label htmlFor="duree">Durée prévue (optionnel)</Label>
+                <Input
+                  id="duree"
+                  type="text"
+                  value={duree}
+                  onChange={(e) => setDuree(e.target.value)}
+                  placeholder="Ex: 1h30"
+                  className="mt-1"
+                />
+              </div>
+            </div>
           </div>
-          
-          <div className="mt-4">
-            <RequiredLabel 
-              htmlFor="heure" 
-              isRequired={true} 
-              hasError={validationErrors.heure}
-            >
-              Heure du rendez-vous
-            </RequiredLabel>
-            <Input
-              id="heure"
-              type="time"
-              value={heure}
-              onChange={(e) => {
-                setHeure(e.target.value);
-                if (validationErrors.heure && e.target.value) {
-                  setValidationErrors(prev => ({ ...prev, heure: false }));
-                }
-              }}
-              className={`mt-1 ${validationErrors.heure ? 'border-red-500 focus:border-red-500' : ''}`}
-            />
-          </div>
-          
-          <div className="mt-4">
+
+          <div>
             <Label htmlFor="description">Description du rendez-vous (optionnel)</Label>
             <Input
               id="description"
@@ -388,54 +488,57 @@ export default function RendezVousCalendar() {
               className="mt-1"
             />
           </div>
-          
-          <div className="mt-4">
-            <RequiredLabel 
-              htmlFor="adresse" 
-              isRequired={true} 
-              hasError={validationErrors.adresse}
-            >
-              Adresse du bien
-            </RequiredLabel>
-            <Input
-              id="adresse"
-              type="text"
-              value={adresse}
-              onChange={(e) => {
-                setAdresse(e.target.value);
-                if (validationErrors.adresse && e.target.value.trim()) {
-                  setValidationErrors(prev => ({ ...prev, adresse: false }));
-                }
-              }}
-              placeholder="123 rue de la Paix"
-              className={`mt-1 ${validationErrors.adresse ? 'border-red-500 focus:border-red-500' : ''}`}
-            />
+
+          {/* Adresse */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <RequiredLabel 
+                htmlFor="adresse" 
+                isRequired={true} 
+                hasError={validationErrors.adresse}
+              >
+                Adresse du bien
+              </RequiredLabel>
+              <Input
+                id="adresse"
+                type="text"
+                value={adresse}
+                onChange={(e) => {
+                  setAdresse(e.target.value);
+                  if (validationErrors.adresse && e.target.value.trim()) {
+                    setValidationErrors(prev => ({ ...prev, adresse: false }));
+                  }
+                }}
+                placeholder="123 rue de la Paix"
+                className={`mt-1 ${validationErrors.adresse ? 'border-red-500 focus:border-red-500' : ''}`}
+              />
+            </div>
+            
+            <div>
+              <RequiredLabel 
+                htmlFor="code_postal" 
+                isRequired={true} 
+                hasError={validationErrors.code_postal}
+              >
+                Code Postal
+              </RequiredLabel>
+              <Input
+                id="code_postal"
+                type="text"
+                value={code_postal}
+                onChange={(e) => {
+                  setCode_postal(e.target.value);
+                  if (validationErrors.code_postal && e.target.value.trim()) {
+                    setValidationErrors(prev => ({ ...prev, code_postal: false }));
+                  }
+                }}
+                placeholder="75000"
+                className={`mt-1 ${validationErrors.code_postal ? 'border-red-500 focus:border-red-500' : ''}`}
+              />
+            </div>
           </div>
-          
-          <div className="mt-4">
-            <RequiredLabel 
-              htmlFor="code_postal" 
-              isRequired={true} 
-              hasError={validationErrors.code_postal}
-            >
-              Code Postal
-            </RequiredLabel>
-            <Input
-              id="code_postal"
-              type="text"
-              value={code_postal}
-              onChange={(e) => {
-                setCode_postal(e.target.value);
-                if (validationErrors.code_postal && e.target.value.trim()) {
-                  setValidationErrors(prev => ({ ...prev, code_postal: false }));
-                }
-              }}
-              placeholder="75000"
-              className={`mt-1 ${validationErrors.code_postal ? 'border-red-500 focus:border-red-500' : ''}`}
-            />
-          </div>
-          
-          <div className="mt-4">
+
+          <div>
             <RequiredLabel 
               htmlFor="ville" 
               isRequired={true} 
@@ -457,89 +560,9 @@ export default function RendezVousCalendar() {
               className={`mt-1 ${validationErrors.ville ? 'border-red-500 focus:border-red-500' : ''}`}
             />
           </div>
-          
-          <div className="mt-4">
-            <RequiredLabel 
-              htmlFor="nom_contact" 
-              isRequired={true} 
-              hasError={validationErrors.nom_contact}
-            >
-              Personne à contacter
-            </RequiredLabel>
-            <Input
-              id="nom_contact"
-              type="text"
-              value={nom_contact}
-              onChange={(e) => {
-                setNom_contact(e.target.value);
-                if (validationErrors.nom_contact && e.target.value.trim()) {
-                  setValidationErrors(prev => ({ ...prev, nom_contact: false }));
-                }
-              }}
-              placeholder="Jean Dupont"
-              className={`mt-1 ${validationErrors.nom_contact ? 'border-red-500 focus:border-red-500' : ''}`}
-            />
-          </div>
-          
-          <div className="mt-4">
-            <RequiredLabel 
-              htmlFor="telephone_contact" 
-              isRequired={true} 
-              hasError={validationErrors.telephone_contact}
-            >
-              Téléphone du contact
-            </RequiredLabel>
-            <Input
-              id="telephone_contact"
-              type="tel"
-              value={telephone_contact}
-              onChange={(e) => {
-                setTelephone_contact(e.target.value);
-                if (validationErrors.telephone_contact && e.target.value.trim()) {
-                  setValidationErrors(prev => ({ ...prev, telephone_contact: false }));
-                }
-              }}
-              placeholder="0612345678"
-              className={`mt-1 ${validationErrors.telephone_contact ? 'border-red-500 focus:border-red-500' : ''}`}
-            />
-          </div>
-          
-          <div className="mt-4">
-            <RequiredLabel 
-              htmlFor="email_contact" 
-              isRequired={true} 
-              hasError={validationErrors.email_contact}
-            >
-              Email du contact
-            </RequiredLabel>
-            <Input
-              id="email_contact"
-              type="email"
-              value={email_contact}
-              onChange={(e) => {
-                setEmail_contact(e.target.value);
-                if (validationErrors.email_contact && e.target.value.trim() && e.target.value.includes('@')) {
-                  setValidationErrors(prev => ({ ...prev, email_contact: false }));
-                }
-              }}
-              placeholder="jean.dupont@example.com"
-              className={`mt-1 ${validationErrors.email_contact ? 'border-red-500 focus:border-red-500' : ''}`}
-            />
-          </div>
-          
-          <div className="mt-4">
-            <Label htmlFor="duree">Durée prévue (optionnel)</Label>
-            <Input
-              id="duree"
-              type="text"
-              value={duree}
-              onChange={(e) => setDuree(e.target.value)}
-              placeholder="Ex: 1h30"
-              className="mt-1"
-            />
-          </div>
-          
-          <div className="mt-4 grid grid-cols-2 gap-4">
+
+          {/* Coordonnées GPS */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="latitude">Latitude (optionnel)</Label>
               <Input
@@ -565,40 +588,143 @@ export default function RendezVousCalendar() {
               />
             </div>
           </div>
-          
-          <div className="mt-4">
-            <Label htmlFor="typeEtatDesLieux">Type d'état des lieux (optionnel)</Label>
-            <Select value={typeEtatDesLieux} onValueChange={setTypeEtatDesLieux}>
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Sélectionner un type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="entree">État des lieux d'entrée</SelectItem>
-                <SelectItem value="sortie">État des lieux de sortie</SelectItem>
-              </SelectContent>
-            </Select>
+
+          {/* Contact */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <RequiredLabel 
+                htmlFor="nom_contact" 
+                isRequired={true} 
+                hasError={validationErrors.nom_contact}
+              >
+                Nom du contact
+              </RequiredLabel>
+              <Input
+                id="nom_contact"
+                type="text"
+                value={nom_contact}
+                onChange={(e) => {
+                  setNom_contact(e.target.value);
+                  if (validationErrors.nom_contact && e.target.value.trim()) {
+                    setValidationErrors(prev => ({ ...prev, nom_contact: false }));
+                  }
+                }}
+                placeholder="Jean Dupont"
+                className={`mt-1 ${validationErrors.nom_contact ? 'border-red-500 focus:border-red-500' : ''}`}
+              />
+            </div>
+            
+            <div>
+              <RequiredLabel 
+                htmlFor="telephone_contact" 
+                isRequired={true} 
+                hasError={validationErrors.telephone_contact}
+              >
+                Téléphone
+              </RequiredLabel>
+              <Input
+                id="telephone_contact"
+                type="tel"
+                value={telephone_contact}
+                onChange={(e) => {
+                  setTelephone_contact(e.target.value);
+                  if (validationErrors.telephone_contact && e.target.value.trim()) {
+                    setValidationErrors(prev => ({ ...prev, telephone_contact: false }));
+                  }
+                }}
+                placeholder="0612345678"
+                className={`mt-1 ${validationErrors.telephone_contact ? 'border-red-500 focus:border-red-500' : ''}`}
+              />
+            </div>
           </div>
-          
-          <div className="mt-4">
-            <Label htmlFor="typeBien">Type de bien (optionnel)</Label>
-            <Select value={typeBien} onValueChange={setTypeBien}>
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Sélectionner un type de bien" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="studio">Studio</SelectItem>
-                <SelectItem value="t2-t3">T2 – T3</SelectItem>
-                <SelectItem value="t4-t5">T4 – T5</SelectItem>
-                <SelectItem value="mobilier">Inventaire du mobilier</SelectItem>
-                <SelectItem value="bureau">Bureau</SelectItem>
-                <SelectItem value="local">Local commercial</SelectItem>
-                <SelectItem value="garage">Garage / Box</SelectItem>
-                <SelectItem value="pieces-supplementaires">Pièces supplémentaires</SelectItem>
-              </SelectContent>
-            </Select>
+
+          <div>
+            <RequiredLabel 
+              htmlFor="email_contact" 
+              isRequired={true} 
+              hasError={validationErrors.email_contact}
+            >
+              Email du contact
+            </RequiredLabel>
+            <Input
+              id="email_contact"
+              type="email"
+              value={email_contact}
+              onChange={(e) => {
+                setEmail_contact(e.target.value);
+                if (validationErrors.email_contact && e.target.value.trim() && e.target.value.includes('@')) {
+                  setValidationErrors(prev => ({ ...prev, email_contact: false }));
+                }
+              }}
+              placeholder="jean.dupont@example.com"
+              className={`mt-1 ${validationErrors.email_contact ? 'border-red-500 focus:border-red-500' : ''}`}
+            />
           </div>
-          
-          <div className="mt-4">
+
+          {/* Types et statut */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <RequiredLabel 
+                htmlFor="typeEtatDesLieux" 
+                isRequired={true} 
+                hasError={validationErrors.type_etat_des_lieux}
+              >
+                Type d'état des lieux
+              </RequiredLabel>
+              <Select 
+                value={typeEtatDesLieux} 
+                onValueChange={(value) => {
+                  setTypeEtatDesLieux(value);
+                  if (validationErrors.type_etat_des_lieux && value) {
+                    setValidationErrors(prev => ({ ...prev, type_etat_des_lieux: false }));
+                  }
+                }}
+              >
+                <SelectTrigger className={`mt-1 ${validationErrors.type_etat_des_lieux ? 'border-red-500' : ''}`}>
+                  <SelectValue placeholder="Sélectionner un type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="entree">État des lieux d'entrée</SelectItem>
+                  <SelectItem value="sortie">État des lieux de sortie</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <RequiredLabel 
+                htmlFor="typeBien" 
+                isRequired={true} 
+                hasError={validationErrors.type_bien}
+              >
+                Type de bien
+              </RequiredLabel>
+              <Select 
+                value={typeBien} 
+                onValueChange={(value) => {
+                  setTypeBien(value);
+                  if (validationErrors.type_bien && value) {
+                    setValidationErrors(prev => ({ ...prev, type_bien: false }));
+                  }
+                }}
+              >
+                <SelectTrigger className={`mt-1 ${validationErrors.type_bien ? 'border-red-500' : ''}`}>
+                  <SelectValue placeholder="Sélectionner un type de bien" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="studio">Studio</SelectItem>
+                  <SelectItem value="t2-t3">T2 – T3</SelectItem>
+                  <SelectItem value="t4-t5">T4 – T5</SelectItem>
+                  <SelectItem value="mobilier">Inventaire du mobilier</SelectItem>
+                  <SelectItem value="bureau">Bureau</SelectItem>
+                  <SelectItem value="local">Local commercial</SelectItem>
+                  <SelectItem value="garage">Garage / Box</SelectItem>
+                  <SelectItem value="pieces-supplementaires">Pièces supplémentaires</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
             <Label htmlFor="statut">Statut du rendez-vous</Label>
             <Select value={statut} onValueChange={setStatut}>
               <SelectTrigger className="mt-1">
@@ -613,7 +739,7 @@ export default function RendezVousCalendar() {
             </Select>
           </div>
           
-          <div className="mt-4">
+          <div>
             <Label htmlFor="note_personnelle">Note personnelle (optionnel)</Label>
             <Textarea
               id="note_personnelle"
@@ -624,8 +750,9 @@ export default function RendezVousCalendar() {
             />
           </div>
           
-          <Button 
-            onClick={handleAddRendezVous} 
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleAddRendezVous} 
             className="mt-4 w-full" 
             disabled={loading}
           >
