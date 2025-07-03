@@ -9,6 +9,7 @@ export interface EtatDesLieux {
   bailleur_adresse?: string | null;
   locataire_nom?: string | null;
   locataire_adresse?: string | null;
+  rendez_vous_id?: string | null; // Ajout du champ pour lier à un rendez-vous
 }
 
 export interface ReleveCompteurs {
