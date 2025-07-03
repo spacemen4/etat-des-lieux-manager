@@ -8,27 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/use-toast';
-
-// Configuration Supabase centralisée
-const initializeSupabase = () => {
-  // Simulation des variables d'environnement pour la démo
-  const supabaseUrl = 'YOUR_SUPABASE_URL';
-  const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
-  
-  if (!supabaseUrl || supabaseUrl === 'YOUR_SUPABASE_URL') {
-    console.warn("[SUPABASE] URL non configurée");
-    return null;
-  }
-  
-  if (!supabaseAnonKey || supabaseAnonKey === 'YOUR_SUPABASE_ANON_KEY') {
-    console.warn("[SUPABASE] Clé anonyme non configurée");
-    return null;
-  }
-  
-  return null; // Simulé pour la démo
-};
-
-const supabase = initializeSupabase();
+import { supabase } from '@/lib/supabase';
 
 interface RendezVous {
   id?: string;
@@ -101,69 +81,61 @@ export default function RendezVousCalendar() {
     email_contact: false
   });
 
-  // Vérifier la connexion Supabase au montage
   useEffect(() => {
     checkSupabaseConnection();
+    fetchRendezVous();
   }, []);
 
   const checkSupabaseConnection = async () => {
-    if (!supabase) {
-      console.error("[SUPABASE] Client non initialisé");
-      setSupabaseConnected(false);
-      return;
-    }
-
     try {
-      // Simulation pour la démo
-      console.log("[SUPABASE] Connexion simulée");
-      setSupabaseConnected(false);
-      
-      // Charger des données de démo
-      const demoData = [
-        {
-          id: '1',
-          date: new Date('2025-07-10'),
-          heure: '14:00',
-          duree: '1h30',
-          description: 'État des lieux d\'entrée',
-          adresse: '123 rue de la Paix',
-          code_postal: '75001',
-          ville: 'Paris',
-          nom_contact: 'Jean Dupont',
-          telephone_contact: '0612345678',
-          email_contact: 'jean.dupont@example.com',
-          type_etat_des_lieux: 'entree',
-          type_bien: 't2-t3',
-          statut: 'planifie'
-        },
-        {
-          id: '2',
-          date: new Date('2025-06-25'),
-          heure: '10:00',
-          duree: '2h',
-          description: 'État des lieux de sortie',
-          adresse: '456 avenue des Champs',
-          code_postal: '75008',
-          ville: 'Paris',
-          nom_contact: 'Marie Martin',
-          telephone_contact: '0687654321',
-          email_contact: 'marie.martin@example.com',
-          type_etat_des_lieux: 'sortie',
-          type_bien: 'studio',
-          statut: 'realise'
-        }
-      ];
-      
-      setRendezVous(demoData);
+      const { data, error } = await supabase
+        .from('rendez_vous')
+        .select('*')
+        .limit(1);
+
+      if (error) {
+        console.error("[SUPABASE] Connection error:", error);
+        setSupabaseConnected(false);
+        return;
+      }
+
+      console.log("[SUPABASE] Connected successfully");
+      setSupabaseConnected(true);
     } catch (error) {
-      console.error("[SUPABASE] Erreur inattendue lors de la connexion:", error);
+      console.error("[SUPABASE] Unexpected error:", error);
       setSupabaseConnected(false);
     }
   };
 
+  const fetchRendezVous = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('rendez_vous')
+        .select('*')
+        .order('date', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      const formattedData = data?.map(rv => ({
+        ...rv,
+        date: new Date(rv.date),
+        created_at: new Date(rv.created_at)
+      })) || [];
+
+      setRendezVous(formattedData);
+    } catch (error) {
+      console.error("[ERREUR] Erreur lors du chargement des rendez-vous:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les rendez-vous",
+        variant: "destructive",
+      });
+    }
+  };
+
   const validateForm = (): boolean => {
-    console.log("[VALIDATION] Début de la validation du formulaire");
-    
     const errors: ValidationErrors = {
       type_etat_des_lieux: !typeEtatDesLieux.trim(),
       type_bien: !typeBien.trim(),
@@ -177,45 +149,24 @@ export default function RendezVousCalendar() {
       email_contact: !email_contact.trim() || !email_contact.includes('@')
     };
 
-    console.group("[VALIDATION] Détails des champs");
-    console.log("typeEtatDesLieux:", typeEtatDesLieux, "| Erreur:", errors.type_etat_des_lieux);
-    console.log("typeBien:", typeBien, "| Erreur:", errors.type_bien);
-    console.log("heure:", heure, "| Erreur:", errors.heure);
-    console.log("date:", date, "| Erreur:", errors.date);
-    console.log("adresse:", adresse, "| Erreur:", errors.adresse);
-    console.log("code_postal:", code_postal, "| Erreur:", errors.code_postal);
-    console.log("ville:", ville, "| Erreur:", errors.ville);
-    console.log("nom_contact:", nom_contact, "| Erreur:", errors.nom_contact);
-    console.log("telephone_contact:", telephone_contact, "| Erreur:", errors.telephone_contact);
-    console.log("email_contact:", email_contact, "| Erreur:", errors.email_contact);
-    console.groupEnd();
-
     setValidationErrors(errors);
-
-    const isValid = !Object.values(errors).some(error => error);
-    console.log("[VALIDATION] Formulaire valide ?", isValid);
-    
-    return isValid;
+    return !Object.values(errors).some(error => error);
   };
 
   const handleAddRendezVous = async () => {
-    console.log("[ACTION] Bouton 'Ajouter un rendez-vous' cliqué");
-    
     if (!validateForm()) {
-      console.error("[ERREUR] Validation échouée - champs obligatoires manquants");
-      alert("Veuillez remplir tous les champs obligatoires.");
+      toast({
+        title: "Erreur de validation",
+        description: "Veuillez remplir tous les champs obligatoires",
+        variant: "destructive",
+      });
       return;
     }
 
-    console.log("[VALIDATION] Formulaire valide - création du rendez-vous");
     setLoading(true);
-
     const finalDate = date || new Date();
-    console.log("[DATE] Date du rendez-vous:", finalDate);
 
-    // Création du nouveau rendez-vous
     const nouveauRendezVous: RendezVous = {
-      id: Date.now().toString(),
       date: finalDate,
       heure: heure.trim(),
       duree: duree.trim() || undefined,
@@ -232,23 +183,37 @@ export default function RendezVousCalendar() {
       type_etat_des_lieux: typeEtatDesLieux,
       type_bien: typeBien,
       statut: statut,
-      created_at: new Date()
     };
 
-    // Ajouter à la liste
-    setRendezVous(prev => [...prev, nouveauRendezVous]);
+    try {
+      const { data, error } = await supabase
+        .from('rendez_vous')
+        .insert([nouveauRendezVous])
+        .select();
 
-    // Réinitialiser le formulaire
-    resetForm();
+      if (error) throw error;
 
-    console.log("[NOTIFICATION] Affichage du toast de confirmation");
-    alert(`Rendez-vous ${finalDate.toLocaleDateString()} à ${heure} ajouté avec succès!`);
-
-    setLoading(false);
+      if (data) {
+        setRendezVous(prev => [...prev, { ...nouveauRendezVous, id: data[0].id }]);
+        resetForm();
+        toast({
+          title: "Succès",
+          description: `Rendez-vous du ${finalDate.toLocaleDateString()} à ${heure} ajouté avec succès!`,
+        });
+      }
+    } catch (error) {
+      console.error("[ERREUR] Erreur lors de l'ajout du rendez-vous:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de l'ajout du rendez-vous",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetForm = () => {
-    console.log("[REINITIALISATION] Réinitialisation des champs du formulaire");
     setDescription('');
     setAdresse('');
     setCode_postal('');
@@ -302,7 +267,40 @@ export default function RendezVousCalendar() {
     </Label>
   );
 
-  console.log("[RENDER] Rendu du composant");
+  const getStatutColor = (statut: string) => {
+    switch(statut) {
+      case 'planifie': return 'bg-blue-100 text-blue-700';
+      case 'realise': return 'bg-green-100 text-green-700';
+      case 'annule': return 'bg-red-100 text-red-700';
+      case 'reporte': return 'bg-yellow-100 text-yellow-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getStatutLabel = (statut: string) => {
+    switch(statut) {
+      case 'planifie': return 'Planifié';
+      case 'realise': return 'Réalisé';
+      case 'annule': return 'Annulé';
+      case 'reporte': return 'Reporté';
+      default: return statut;
+    }
+  };
+
+  // Séparer les rendez-vous en deux catégories
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  const rdvAVenir = rendezVous.filter(rv => {
+    const rvDate = rv.date ? new Date(rv.date) : null;
+    return rvDate && rvDate >= today;
+  }).sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0));
+  
+  const rdvPasses = rendezVous.filter(rv => {
+    const rvDate = rv.date ? new Date(rv.date) : null;
+    return rvDate && rvDate < today;
+  }).sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+
   return (
     <div className="container mx-auto p-4 max-w-6xl">
       <h2 className="text-2xl font-bold mb-4">Calendrier des États des Lieux</h2>
@@ -318,10 +316,7 @@ export default function RendezVousCalendar() {
         {!supabaseConnected && (
           <div className="mt-2">
             <p className="text-sm text-red-700 mb-2">
-              Configuration Supabase requise pour sauvegarder les données.
-            </p>
-            <p className="text-sm text-red-700">
-              Configurez les variables d'environnement <code className="bg-red-100 px-1 rounded">VITE_SUPABASE_URL</code> et <code className="bg-red-100 px-1 rounded">VITE_SUPABASE_ANON_KEY</code>.
+              Erreur de connexion à la base de données.
             </p>
             <Button 
               onClick={checkSupabaseConnection} 
@@ -334,19 +329,6 @@ export default function RendezVousCalendar() {
         )}
       </div>
 
-      {/* Informations sur les champs obligatoires */}
-      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-        <h3 className="font-semibold text-blue-800 mb-2">Champs obligatoires :</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-blue-700">
-          <div>• Date et heure</div>
-          <div>• Adresse complète</div>
-          <div>• Code postal et ville</div>
-          <div>• Nom du contact</div>
-          <div>• Téléphone et email</div>
-          <div>• Type d'état des lieux</div>
-        </div>
-      </div>
-      
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Formulaire */}
         <div className="space-y-4">
@@ -700,112 +682,99 @@ export default function RendezVousCalendar() {
             </div>
           ) : (
             <div>
-              {(() => {
-                const now = new Date();
-                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                
-                // Séparer les rendez-vous en deux catégories
-                const rdvAVenir = rendezVous.filter(rv => {
-                  const rvDateOnly = new Date(rv.date!.getFullYear(), rv.date!.getMonth(), rv.date!.getDate());
-                  return rvDateOnly >= today;
-                }).sort((a, b) => a.date!.getTime() - b.date!.getTime());
-                
-                const rdvPasses = rendezVous.filter(rv => {
-                  const rvDateOnly = new Date(rv.date!.getFullYear(), rv.date!.getMonth(), rv.date!.getDate());
-                  return rvDateOnly < today;
-                }).sort((a, b) => b.date!.getTime() - a.date!.getTime());
+              {/* Rendez-vous à venir */}
+              {rdvAVenir.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-xl font-semibold mb-3 text-blue-700 flex items-center">
+                    <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                    Rendez-vous à venir ({rdvAVenir.length})
+                  </h3>
+                  <ul className="space-y-3">
+                    {rdvAVenir.map((rv, index) => (
+                      <li key={rv.id || index} className="p-3 border rounded-md bg-white border-blue-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="font-medium text-black">
+                            {rv.date?.toLocaleDateString()}
+                            {rv.heure && ` à ${rv.heure}`}
+                            {rv.duree && ` (Durée: ${rv.duree})`}
+                          </p>
+                          <div className="flex items-center space-x-2">
+                            <span className={`text-xs px-2 py-1 rounded ${getStatutColor(rv.statut || 'planifie')}`}>
+                              {getStatutLabel(rv.statut || 'planifie')}
+                            </span>
+                          </div>
+                        </div>
+                        {rv.description && <p className="text-sm text-gray-600">{rv.description}</p>}
+                        {rv.type_etat_des_lieux && <p className="text-sm text-gray-600">Type d'EDL: {rv.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}</p>}
+                        {rv.type_bien && <p className="text-sm text-gray-600">Type de bien: {rv.type_bien}</p>}
+                        <p className="text-sm text-gray-600">
+                          Adresse: {rv.adresse}, {rv.code_postal} {rv.ville}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Contact: {rv.nom_contact} - {rv.telephone_contact} - {rv.email_contact}
+                        </p>
+                        {(rv.latitude && rv.longitude) && (
+                          <p className="text-sm text-gray-600">
+                            Coordonnées: {rv.latitude}, {rv.longitude}
+                          </p>
+                        )}
+                        {rv.note_personnelle && (
+                          <p className="text-sm text-gray-500 mt-1 italic">
+                            Note: {rv.note_personnelle}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-                const getStatutColor = (statut: string) => {
-                  switch(statut) {
-                    case 'planifie': return 'bg-blue-100 text-blue-700';
-                    case 'realise': return 'bg-green-100 text-green-700';
-                    case 'annule': return 'bg-red-100 text-red-700';
-                    case 'reporte': return 'bg-yellow-100 text-yellow-700';
-                    default: return 'bg-gray-100 text-gray-700';
-                  }
-                };
-
-                const getStatutLabel = (statut: string) => {
-                  switch(statut) {
-                    case 'planifie': return 'Planifié';
-                    case 'realise': return 'Réalisé';
-                    case 'annule': return 'Annulé';
-                    case 'reporte': return 'Reporté';
-                    default: return statut;
-                  }
-                };
-
-                const renderRendezVous = (rv: RendezVous, index: number, isPast: boolean = false) => (
-                  <li key={rv.id || index} className={`p-3 border rounded-md ${isPast ? 'bg-gray-50 border-gray-300' : 'bg-white border-blue-200'}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className={`font-medium ${isPast ? 'text-gray-600' : 'text-black'}`}>
-                        {rv.date.toLocaleDateString()}
-                        {rv.heure && ` à ${rv.heure}`}
-                        {rv.duree && ` (Durée: ${rv.duree})`}
-                      </p>
-                      <div className="flex items-center space-x-2">
-                        <span className={`text-xs px-2 py-1 rounded ${getStatutColor(rv.statut || 'planifie')}`}>
-                          {getStatutLabel(rv.statut || 'planifie')}
-                        </span>
-                      </div>
-                    </div>
-                    {rv.description && <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>{rv.description}</p>}
-                    {rv.type_etat_des_lieux && <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>Type d'EDL: {rv.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}</p>}
-                    {rv.type_bien && <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>Type de bien: {rv.type_bien}</p>}
-                    <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>
-                      Adresse: {rv.adresse}, {rv.code_postal} {rv.ville}
-                    </p>
-                    <p className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>
-                      Contact: {rv.nom_contact} - {rv.telephone_contact} - {rv.email_contact}
-                    </p>
-                    {(rv.latitude && rv.longitude) && (
-                      <p className={`text-sm ${isPast ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Coordonnées: {rv.latitude}, {rv.longitude}
-                      </p>
-                    )}
-                    {rv.note_personnelle && (
-                      <p className={`text-sm ${isPast ? 'text-gray-400' : 'text-gray-500'} mt-1 italic`}>
-                        Note: {rv.note_personnelle}
-                      </p>
-                    )}
-                  </li>
-                );
-
-                return (
-                  <div>
-                    {/* Rendez-vous à venir */}
-                    {rdvAVenir.length > 0 && (
-                      <div className="mb-6">
-                        <h3 className="text-xl font-semibold mb-3 text-blue-700 flex items-center">
-                          <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
-                          Rendez-vous à venir ({rdvAVenir.length})
-                        </h3>
-                        <ul className="space-y-3">
-                          {rdvAVenir.map((rv, index) => renderRendezVous(rv, index, false))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Rendez-vous passés */}
-                    {rdvPasses.length > 0 && (
-                      <div>
-                        <h3 className="text-xl font-semibold mb-3 text-gray-600 flex items-center">
-                          <span className="w-3 h-3 bg-gray-400 rounded-full mr-2"></span>
-                          Rendez-vous terminés ({rdvPasses.length})
-                        </h3>
-                        <ul className="space-y-3">
-                          {rdvPasses.map((rv, index) => renderRendezVous(rv, index + rdvAVenir.length, true))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Message si aucun rendez-vous */}
-                    {rdvAVenir.length === 0 && rdvPasses.length === 0 && (
-                      <p className="text-gray-500">Aucun rendez-vous planifié.</p>
-                    )}
-                  </div>
-                );
-              })()}
+              {/* Rendez-vous passés */}
+              {rdvPasses.length > 0 && (
+                <div>
+                  <h3 className="text-xl font-semibold mb-3 text-gray-600 flex items-center">
+                    <span className="w-3 h-3 bg-gray-400 rounded-full mr-2"></span>
+                    Rendez-vous terminés ({rdvPasses.length})
+                  </h3>
+                  <ul className="space-y-3">
+                    {rdvPasses.map((rv, index) => (
+                      <li key={rv.id || index} className="p-3 border rounded-md bg-gray-50 border-gray-300">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="font-medium text-gray-600">
+                            {rv.date?.toLocaleDateString()}
+                            {rv.heure && ` à ${rv.heure}`}
+                            {rv.duree && ` (Durée: ${rv.duree})`}
+                          </p>
+                          <div className="flex items-center space-x-2">
+                            <span className={`text-xs px-2 py-1 rounded ${getStatutColor(rv.statut || 'planifie')}`}>
+                              {getStatutLabel(rv.statut || 'planifie')}
+                            </span>
+                          </div>
+                        </div>
+                        {rv.description && <p className="text-sm text-gray-500">{rv.description}</p>}
+                        {rv.type_etat_des_lieux && <p className="text-sm text-gray-500">Type d'EDL: {rv.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}</p>}
+                        {rv.type_bien && <p className="text-sm text-gray-500">Type de bien: {rv.type_bien}</p>}
+                        <p className="text-sm text-gray-500">
+                          Adresse: {rv.adresse}, {rv.code_postal} {rv.ville}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Contact: {rv.nom_contact} - {rv.telephone_contact} - {rv.email_contact}
+                        </p>
+                        {(rv.latitude && rv.longitude) && (
+                          <p className="text-sm text-gray-400">
+                            Coordonnées: {rv.latitude}, {rv.longitude}
+                          </p>
+                        )}
+                        {rv.note_personnelle && (
+                          <p className="text-sm text-gray-400 mt-1 italic">
+                            Note: {rv.note_personnelle}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </div>
