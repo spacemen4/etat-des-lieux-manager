@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
+import { MapPin, Search } from 'lucide-react';
 
 interface RendezVous {
   id?: string;
@@ -45,6 +46,158 @@ interface ValidationErrors {
   email_contact?: boolean;
 }
 
+// Composant de carte interactive
+const MapSelector = ({ 
+  latitude, 
+  longitude, 
+  onLocationSelect, 
+  address 
+}: {
+  latitude?: number;
+  longitude?: number;
+  onLocationSelect: (lat: number, lng: number) => void;
+  address?: string;
+}) => {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<any>(null);
+  const [marker, setMarker] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Charger Leaflet dynamiquement
+    const loadLeaflet = async () => {
+      try {
+        // Charger CSS
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+
+        // Charger JS
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        
+        return new Promise((resolve, reject) => {
+          script.onload = () => resolve(window.L);
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      } catch (error) {
+        console.error('Erreur lors du chargement de Leaflet:', error);
+        return null;
+      }
+    };
+
+    loadLeaflet().then((L) => {
+      if (!L || !mapRef.current) return;
+
+      // Initialiser la carte
+      const initialLat = latitude || 48.8566; // Paris par défaut
+      const initialLng = longitude || 2.3522;
+      
+      const mapInstance = L.map(mapRef.current).setView([initialLat, initialLng], 13);
+      
+      // Ajouter les tuiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(mapInstance);
+
+      // Ajouter le marqueur
+      const markerInstance = L.marker([initialLat, initialLng], {
+        draggable: true
+      }).addTo(mapInstance);
+
+      // Événement de glissement du marqueur
+      markerInstance.on('dragend', (e) => {
+        const position = e.target.getLatLng();
+        onLocationSelect(position.lat, position.lng);
+      });
+
+      // Clic sur la carte
+      mapInstance.on('click', (e) => {
+        const { lat, lng } = e.latlng;
+        markerInstance.setLatLng([lat, lng]);
+        onLocationSelect(lat, lng);
+      });
+
+      setMap(mapInstance);
+      setMarker(markerInstance);
+    });
+
+    return () => {
+      if (map) {
+        map.remove();
+      }
+    };
+  }, []);
+
+  // Mettre à jour la position du marqueur quand les coordonnées changent
+  useEffect(() => {
+    if (map && marker && latitude && longitude) {
+      marker.setLatLng([latitude, longitude]);
+      map.setView([latitude, longitude], 13);
+    }
+  }, [latitude, longitude, map, marker]);
+
+  // Géocoder l'adresse
+  const geocodeAddress = async () => {
+    if (!address) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
+      );
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        const latitude = parseFloat(lat);
+        const longitude = parseFloat(lon);
+        
+        onLocationSelect(latitude, longitude);
+        
+        if (map && marker) {
+          marker.setLatLng([latitude, longitude]);
+          map.setView([latitude, longitude], 15);
+        }
+      }
+    } catch (error) {
+      console.error('Erreur de géocodage:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center space-x-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={geocodeAddress}
+          disabled={!address || isLoading}
+          className="flex items-center space-x-1"
+        >
+          <Search className="w-4 h-4" />
+          <span>{isLoading ? 'Recherche...' : 'Localiser l\'adresse'}</span>
+        </Button>
+      </div>
+      <div 
+        ref={mapRef} 
+        className="w-full h-64 border rounded-md"
+        style={{ minHeight: '250px' }}
+      />
+      <p className="text-xs text-gray-500">
+        Cliquez sur la carte ou glissez le marqueur pour sélectionner une position
+      </p>
+    </div>
+  );
+};
+
 export default function RendezVousCalendar() {
   console.log("[RENDEZVOUS] Initialisation du composant");
   
@@ -67,6 +220,7 @@ export default function RendezVousCalendar() {
   const [typeEtatDesLieux, setTypeEtatDesLieux] = useState<string>('');
   const [typeBien, setTypeBien] = useState<string>('');
   const [statut, setStatut] = useState<string>('planifie');
+  const [showMap, setShowMap] = useState(false);
   
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({
     type_etat_des_lieux: false,
@@ -167,6 +321,7 @@ export default function RendezVousCalendar() {
     const finalDate = date || new Date();
 
     const nouveauRendezVous: RendezVous = {
+      id: Date.now().toString(),
       date: finalDate,
       heure: heure.trim(),
       duree: duree.trim() || undefined,
@@ -183,6 +338,7 @@ export default function RendezVousCalendar() {
       type_etat_des_lieux: typeEtatDesLieux,
       type_bien: typeBien,
       statut: statut,
+      created_at: new Date()
     };
 
     try {
@@ -195,11 +351,11 @@ export default function RendezVousCalendar() {
 
       if (data) {
         setRendezVous(prev => [...prev, { ...nouveauRendezVous, id: data[0].id }]);
-        resetForm();
-        toast({
-          title: "Succès",
-          description: `Rendez-vous du ${finalDate.toLocaleDateString()} à ${heure} ajouté avec succès!`,
-        });
+      resetForm();
+      toast({
+        title: "Succès",
+        description: `Rendez-vous du ${finalDate.toLocaleDateString()} à ${heure} ajouté avec succès!`,
+      });
       }
     } catch (error) {
       console.error("[ERREUR] Erreur lors de l'ajout du rendez-vous:", error);
@@ -229,6 +385,7 @@ export default function RendezVousCalendar() {
     setTypeEtatDesLieux('');
     setTypeBien('');
     setStatut('planifie');
+    setShowMap(false);
     setValidationErrors({
       type_etat_des_lieux: false,
       type_bien: false,
@@ -241,6 +398,11 @@ export default function RendezVousCalendar() {
       telephone_contact: false,
       email_contact: false
     });
+  };
+
+  const handleLocationSelect = (lat: number, lng: number) => {
+    setLatitude(lat);
+    setLongitude(lng);
   };
 
   const RequiredLabel = ({ htmlFor, children, isRequired = false, hasError = false }: {
@@ -300,6 +462,8 @@ export default function RendezVousCalendar() {
     const rvDate = rv.date ? new Date(rv.date) : null;
     return rvDate && rvDate < today;
   }).sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+
+  const fullAddress = `${adresse}, ${code_postal} ${ville}`.trim();
 
   return (
     <div className="container mx-auto p-4 max-w-6xl">
@@ -473,31 +637,56 @@ export default function RendezVousCalendar() {
             />
           </div>
 
-          {/* Coordonnées GPS */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="latitude">Latitude (optionnel)</Label>
-              <Input
-                id="latitude"
-                type="number"
-                step="any"
-                value={latitude || ''}
-                onChange={(e) => setLatitude(e.target.value ? parseFloat(e.target.value) : undefined)}
-                placeholder="48.8566"
-                className="mt-1"
-              />
+          {/* Coordonnées GPS avec carte */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Localisation GPS (optionnel)</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMap(!showMap)}
+                className="flex items-center space-x-1"
+              >
+                <MapPin className="w-4 h-4" />
+                <span>{showMap ? 'Masquer la carte' : 'Afficher la carte'}</span>
+              </Button>
             </div>
-            <div>
-              <Label htmlFor="longitude">Longitude (optionnel)</Label>
-              <Input
-                id="longitude"
-                type="number"
-                step="any"
-                value={longitude || ''}
-                onChange={(e) => setLongitude(e.target.value ? parseFloat(e.target.value) : undefined)}
-                placeholder="2.3522"
-                className="mt-1"
+            
+            {showMap && (
+              <MapSelector
+                latitude={latitude}
+                longitude={longitude}
+                onLocationSelect={handleLocationSelect}
+                address={fullAddress}
               />
+            )}
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+              <Label htmlFor="latitude">Latitude (optionnel)</Label>
+                <Input
+                  id="latitude"
+                  type="number"
+                  step="any"
+                  value={latitude || ''}
+                  onChange={(e) => setLatitude(e.target.value ? parseFloat(e.target.value) : undefined)}
+                  placeholder="48.8566"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+              <Label htmlFor="longitude">Longitude (optionnel)</Label>
+                <Input
+                  id="longitude"
+                  type="number"
+                  step="any"
+                  value={longitude || ''}
+                  onChange={(e) => setLongitude(e.target.value ? parseFloat(e.target.value) : undefined)}
+                  placeholder="2.3522"
+                  className="mt-1"
+                />
+              </div>
             </div>
           </div>
 
