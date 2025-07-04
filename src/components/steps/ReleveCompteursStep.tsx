@@ -167,10 +167,24 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
   };
 
 const uploadPhotos = async (): Promise<{electricite: Photo[], gaz: Photo[], eau: Photo[]}> => {
+  console.log('🚀 Début de l\'upload des photos');
+  
   const allPhotos = [...photos.electricite, ...photos.gaz, ...photos.eau];
   const photosToUpload = allPhotos.filter(photo => photo.file);
   
-  if (photosToUpload.length === 0) return photos;
+  console.log('📊 Statistiques des photos:');
+  console.log('- Total photos:', allPhotos.length);
+  console.log('- Photos à uploader:', photosToUpload.length);
+  console.log('- Photos par catégorie:', {
+    electricite: photos.electricite.length,
+    gaz: photos.gaz.length,
+    eau: photos.eau.length
+  });
+  
+  if (photosToUpload.length === 0) {
+    console.log('✅ Aucune photo à uploader, retour des photos existantes');
+    return photos;
+  }
 
   setUploadingPhotos(true);
   const uploadedPhotos: {electricite: Photo[], gaz: Photo[], eau: Photo[]} = {
@@ -185,36 +199,84 @@ const uploadPhotos = async (): Promise<{electricite: Photo[], gaz: Photo[], eau:
     uploadedPhotos.gaz = photos.gaz.filter(photo => !photo.file);
     uploadedPhotos.eau = photos.eau.filter(photo => !photo.file);
 
-    for (const photo of photosToUpload) {
-      if (!photo.file) continue;
+    console.log('📥 Photos existantes conservées:', {
+      electricite: uploadedPhotos.electricite.length,
+      gaz: uploadedPhotos.gaz.length,
+      eau: uploadedPhotos.eau.length
+    });
+
+    let uploadSuccessCount = 0;
+    let uploadErrorCount = 0;
+
+    for (let i = 0; i < photosToUpload.length; i++) {
+      const photo = photosToUpload[i];
+      
+      console.log(`\n📤 Upload photo ${i + 1}/${photosToUpload.length}:`);
+      console.log('- Nom:', photo.name);
+      console.log('- Taille:', photo.size, 'bytes');
+      console.log('- Type:', photo.type);
+      console.log('- Catégorie:', photo.category);
+      console.log('- Description:', photo.description || 'Aucune');
+      console.log('- File object:', photo.file);
+
+      if (!photo.file) {
+        console.log('❌ Pas de fichier pour cette photo, skip');
+        continue;
+      }
 
       const formData = new FormData();
       formData.append('file', photo.file);
       formData.append('description', photo.description || '');
       formData.append('category', photo.category);
 
+      console.log('📦 FormData créé:', {
+        file: photo.file.name,
+        description: photo.description || '',
+        category: photo.category
+      });
+
       try {
+        console.log('🌐 Envoi de la requête vers /api/upload-photo');
+        const startTime = Date.now();
+        
         const response = await fetch('/api/upload-photo', {
           method: 'POST',
           body: formData,
         });
 
+        const endTime = Date.now();
+        console.log(`⏱️ Temps de réponse: ${endTime - startTime}ms`);
+        console.log('📡 Réponse reçue:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+
         // Vérifier d'abord si la réponse est OK
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Erreur HTTP:', response.status, errorText);
+          console.error('❌ Erreur HTTP détaillée:');
+          console.error('- Status:', response.status);
+          console.error('- Status Text:', response.statusText);
+          console.error('- Response Text:', errorText);
+          console.error('- Headers:', Object.fromEntries(response.headers.entries()));
+          
           throw new Error(`Erreur HTTP ${response.status}: ${errorText.substring(0, 100)}`);
         }
 
         // Vérifier le type de contenu
         const contentType = response.headers.get('content-type');
+        console.log('📄 Content-Type:', contentType);
+        
         if (!contentType || !contentType.includes('application/json')) {
           const responseText = await response.text();
-          console.error('Réponse non-JSON:', responseText);
+          console.error('❌ Réponse non-JSON:', responseText);
           throw new Error('Le serveur a retourné une réponse non-JSON');
         }
 
         const uploadResult = await response.json();
+        console.log('✅ Upload réussi, résultat:', uploadResult);
         
         const uploadedPhoto: Photo = {
           id: uploadResult.id,
@@ -227,20 +289,42 @@ const uploadPhotos = async (): Promise<{electricite: Photo[], gaz: Photo[], eau:
         };
 
         uploadedPhotos[photo.category].push(uploadedPhoto);
+        uploadSuccessCount++;
+        
+        console.log(`✅ Photo ${photo.name} uploadée avec succès dans la catégorie ${photo.category}`);
         
       } catch (photoError) {
-        console.error(`Erreur lors de l'upload de ${photo.name}:`, photoError);
+        uploadErrorCount++;
+        console.error(`❌ Erreur lors de l'upload de ${photo.name}:`, photoError);
+        console.error('- Type d\'erreur:', photoError.constructor.name);
+        console.error('- Message:', photoError.message);
+        console.error('- Stack:', photoError.stack);
+        
         toast.error(`Erreur lors de l'upload de ${photo.name}`);
         // Continuer avec les autres photos
       }
     }
 
+    console.log('\n📊 Résumé de l\'upload:');
+    console.log('- Succès:', uploadSuccessCount);
+    console.log('- Erreurs:', uploadErrorCount);
+    console.log('- Total traité:', uploadSuccessCount + uploadErrorCount);
+    
+    if (uploadErrorCount > 0 && uploadSuccessCount === 0) {
+      console.log('❌ Aucune photo uploadée avec succès');
+      throw new Error(`Échec de l'upload de toutes les photos (${uploadErrorCount} erreurs)`);
+    }
+
     return uploadedPhotos;
   } catch (error) {
-    console.error('Erreur lors de l\'upload des photos:', error);
+    console.error('💥 Erreur générale lors de l\'upload des photos:', error);
+    console.error('- Type d\'erreur:', error.constructor.name);
+    console.error('- Message:', error.message);
+    console.error('- Stack:', error.stack);
     throw error;
   } finally {
     setUploadingPhotos(false);
+    console.log('🏁 Fin de l\'upload des photos');
   }
 };
 
