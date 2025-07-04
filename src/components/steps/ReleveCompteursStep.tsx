@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,7 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useReleveCompteursByEtatId, useUpdateReleveCompteurs } from '@/hooks/useEtatDesLieux';
 import { toast } from 'sonner';
-import { Zap, Flame, Droplets, User } from 'lucide-react';
+import { Zap, Flame, Droplets, User, Camera, X, Upload, Image as ImageIcon } from 'lucide-react';
+
+interface Photo {
+  id?: string;
+  file?: File;
+  url?: string;
+  name: string;
+  size: number;
+  type: string;
+  description?: string;
+  category: 'electricite' | 'gaz' | 'eau';
+}
 
 interface ReleveCompteursStepProps {
   etatId: string;
@@ -15,6 +26,7 @@ interface ReleveCompteursStepProps {
 const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => {
   const { data: releveCompteurs, refetch, isLoading } = useReleveCompteursByEtatId(etatId);
   const updateReleveCompteursMutation = useUpdateReleveCompteurs();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     nom_ancien_occupant: '',
@@ -27,7 +39,17 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     eau_froide_m3: '',
   });
 
+  const [photos, setPhotos] = useState<{
+    electricite: Photo[];
+    gaz: Photo[];
+    eau: Photo[];
+  }>({
+    electricite: [],
+    gaz: [],
+    eau: []
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
   useEffect(() => {
     if (releveCompteurs) {
@@ -40,13 +62,27 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
         gaz_naturel_releve: releveCompteurs.gaz_naturel_releve || '',
         eau_chaude_m3: releveCompteurs.eau_chaude_m3 || '',
         eau_froide_m3: releveCompteurs.eau_froide_m3 || '',
-      };
+      const hasErrors = Object.values(errors).some(error => error !== '');
       setFormData(newFormData);
+
+      // Charger les photos existantes si elles existent
+      if (releveCompteurs.photos) {
+        const photosData = typeof releveCompteurs.photos === 'string' 
+          ? JSON.parse(releveCompteurs.photos) 
+          : releveCompteurs.photos;
+        
+        if (photosData) {
+          setPhotos({
+            electricite: photosData.electricite || [],
+            gaz: photosData.gaz || [],
+            eau: photosData.eau || []
+          });
+        }
+      }
     }
   }, [releveCompteurs]);
 
   const validateNumericField = (field: string, value: string): string => {
-    // Pour les champs de relevé (pas les numéros de compteur)
     const numericFields = ['electricite_h_pleines', 'electricite_h_creuses', 'gaz_naturel_releve', 'eau_chaude_m3', 'eau_froide_m3'];
     
     if (numericFields.includes(field) && value) {
@@ -63,9 +99,130 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
-    // Validation en temps réel
     const error = validateNumericField(field, value);
     setErrors(prev => ({ ...prev, [field]: error }));
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, category: 'electricite' | 'gaz' | 'eau') => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const newPhotos: Photo[] = [];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    Array.from(files).forEach(file => {
+      if (file.size > maxSize) {
+        toast.error(`Le fichier ${file.name} est trop volumineux (max 5MB)`);
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        toast.error(`Le fichier ${file.name} n'est pas une image`);
+        return;
+      }
+
+      const photo: Photo = {
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: URL.createObjectURL(file),
+        category,
+      };
+
+      newPhotos.push(photo);
+    });
+
+    setPhotos(prev => ({
+      ...prev,
+      [category]: [...prev[category], ...newPhotos]
+    }));
+  };
+
+  const handleRemovePhoto = (category: 'electricite' | 'gaz' | 'eau', index: number) => {
+    setPhotos(prev => {
+      const categoryPhotos = [...prev[category]];
+      // Nettoyer l'URL si c'est un nouveau fichier
+      if (categoryPhotos[index].url && categoryPhotos[index].file) {
+        URL.revokeObjectURL(categoryPhotos[index].url!);
+      }
+      categoryPhotos.splice(index, 1);
+      return {
+        ...prev,
+        [category]: categoryPhotos
+      };
+    });
+  };
+
+  const handlePhotoDescriptionChange = (category: 'electricite' | 'gaz' | 'eau', index: number, description: string) => {
+    setPhotos(prev => {
+      const categoryPhotos = [...prev[category]];
+      categoryPhotos[index] = { ...categoryPhotos[index], description };
+      return {
+        ...prev,
+        [category]: categoryPhotos
+      };
+    });
+  };
+
+  const uploadPhotos = async (): Promise<{electricite: Photo[], gaz: Photo[], eau: Photo[]}> => {
+    const allPhotos = [...photos.electricite, ...photos.gaz, ...photos.eau];
+    const photosToUpload = allPhotos.filter(photo => photo.file);
+    
+    if (photosToUpload.length === 0) return photos;
+
+    setUploadingPhotos(true);
+    const uploadedPhotos: {electricite: Photo[], gaz: Photo[], eau: Photo[]} = {
+      electricite: [],
+      gaz: [],
+      eau: []
+    };
+
+    try {
+      // Initialiser avec les photos existantes
+      uploadedPhotos.electricite = photos.electricite.filter(photo => !photo.file);
+      uploadedPhotos.gaz = photos.gaz.filter(photo => !photo.file);
+      uploadedPhotos.eau = photos.eau.filter(photo => !photo.file);
+
+      for (const photo of photosToUpload) {
+        if (!photo.file) continue;
+
+        const formData = new FormData();
+        formData.append('file', photo.file);
+        formData.append('description', photo.description || '');
+        formData.append('category', photo.category);
+
+        // Remplacez par votre endpoint d'upload
+        const response = await fetch('/api/upload-photo', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Erreur lors de l'upload de ${photo.name}`);
+        }
+
+        const uploadResult = await response.json();
+        const uploadedPhoto: Photo = {
+          id: uploadResult.id,
+          name: photo.name,
+          size: photo.size,
+          type: photo.type,
+          url: uploadResult.url,
+          description: photo.description,
+          category: photo.category,
+        };
+
+        uploadedPhotos[photo.category].push(uploadedPhoto);
+      }
+
+      return uploadedPhotos;
+    } catch (error) {
+      console.error('Erreur lors de l\'upload des photos:', error);
+      throw error;
+    } finally {
+      setUploadingPhotos(false);
+    }
   };
 
   const validateForm = (): boolean => {
@@ -91,8 +248,10 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     }
 
     try {
+      // Upload des photos d'abord
+      const finalPhotos = await uploadPhotos();
+
       const payload = {
-        // Include the id if updating existing record
         ...(releveCompteurs?.id && { id: releveCompteurs.id }),
         etat_des_lieux_id: etatId,
         nom_ancien_occupant: formData.nom_ancien_occupant || null,
@@ -103,6 +262,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
         gaz_naturel_releve: formData.gaz_naturel_releve || null,
         eau_chaude_m3: formData.eau_chaude_m3 || null,
         eau_froide_m3: formData.eau_froide_m3 || null,
+        photos: finalPhotos,
       };
 
       await updateReleveCompteursMutation.mutateAsync(payload);
@@ -114,7 +274,109 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     }
   };
 
-  const hasErrors = Object.values(errors).some(error => error !== '');
+  const PhotoUploadSection = ({ 
+    category, 
+    title, 
+    icon, 
+    description 
+  }: { 
+    category: 'electricite' | 'gaz' | 'eau'; 
+    title: string; 
+    icon: React.ReactNode; 
+    description: string;
+  }) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const categoryPhotos = photos[category];
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 pb-2">
+          {icon}
+          <h4 className="font-medium">{title}</h4>
+          <Badge variant="outline" className="text-xs">
+            {categoryPhotos.length} photo{categoryPhotos.length !== 1 ? 's' : ''}
+          </Badge>
+        </div>
+        
+        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => handleFileSelect(e, category)}
+            className="hidden"
+          />
+          
+          <div className="space-y-3">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+              <div className="space-y-2">
+                <Upload className="h-6 w-6 mx-auto text-gray-400" />
+                <div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Ajouter photos
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {description}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {categoryPhotos.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {categoryPhotos.map((photo, index) => (
+                  <div key={index} className="relative border rounded-lg overflow-hidden bg-white">
+                    <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                      {photo.url ? (
+                        <img
+                          src={photo.url}
+                          alt={photo.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon className="h-8 w-8 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="p-2 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium truncate">{photo.name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemovePhoto(category, index)}
+                          className="text-red-500 hover:text-red-700 h-5 w-5 p-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {(photo.size / 1024).toFixed(1)} KB
+                      </p>
+                      <Input
+                        type="text"
+                        placeholder="Description"
+                        value={photo.description || ''}
+                        onChange={(e) => handlePhotoDescriptionChange(category, index, e.target.value)}
+                        className="text-xs h-7"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -225,6 +487,22 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
               )}
             </div>
           </div>
+
+          {/* Photos Eau */}
+          <PhotoUploadSection
+            category="eau"
+            title="Photos des compteurs d'eau"
+            icon={<Camera className="h-4 w-4 text-blue-500" />}
+            description="Compteurs eau chaude et froide, index affichés"
+          />
+
+          {/* Photos Électricité */}
+          <PhotoUploadSection
+            category="electricite"
+            title="Photos du compteur électrique"
+            icon={<Camera className="h-4 w-4 text-yellow-500" />}
+            description="Compteur, numéro de série, index affichés"
+          />
         </div>
 
         {/* Section Gaz */}
@@ -267,6 +545,14 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
               <p className="text-sm text-red-500 mt-1">{errors.gaz_naturel_releve}</p>
             )}
           </div>
+
+          {/* Photos Gaz */}
+          <PhotoUploadSection
+            category="gaz"
+            title="Photos du compteur gaz"
+            icon={<Camera className="h-4 w-4 text-orange-500" />}
+            description="Compteur, numéro de série, index affiché"
+          />
         </div>
 
         {/* Section Eau */}
@@ -313,15 +599,51 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
           </div>
         </div>
 
+        {/* Section Photos */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 pb-2 border-b">
+            <Camera className="h-5 w-5 text-purple-500" />
+            <h3 className="font-semibold">Photos des compteurs</h3>
+            <Badge variant="outline" className="text-xs">
+              {photos.electricite.length + photos.gaz.length + photos.eau.length} photo{(photos.electricite.length + photos.gaz.length + photos.eau.length) !== 1 ? 's' : ''} au total
+            </Badge>
+          </div>
+          
+          <div className="space-y-6">
+            <PhotoUploadSection
+              category="electricite"
+              title="Compteur électrique"
+              icon={<Zap className="h-4 w-4 text-yellow-500" />}
+              description="Photos du compteur, numéro de série, index heures pleines/creuses"
+            />
+            
+            <PhotoUploadSection
+              category="gaz"
+              title="Compteur gaz"
+              icon={<Flame className="h-4 w-4 text-orange-500" />}
+              description="Photos du compteur, numéro de série, index affiché"
+            />
+            
+            <PhotoUploadSection
+              category="eau"
+              title="Compteurs d'eau"
+              icon={<Droplets className="h-4 w-4 text-blue-500" />}
+              description="Photos des compteurs eau chaude et froide, index affichés"
+            />
+          </div>
+        </div>
+
         {/* Bouton de sauvegarde */}
         <div className="pt-4">
           <Button 
             onClick={handleSave} 
-            disabled={updateReleveCompteursMutation.isPending || hasErrors}
+            disabled={updateReleveCompteursMutation.isPending || hasErrors || uploadingPhotos}
             className="w-full"
             size="lg"
           >
-            {updateReleveCompteursMutation.isPending ? 'Sauvegarde en cours...' : 'Sauvegarder le relevé'}
+            {uploadingPhotos ? 'Upload des photos...' : 
+             updateReleveCompteursMutation.isPending ? 'Sauvegarde en cours...' : 
+             'Sauvegarder le relevé'}
           </Button>
           {hasErrors && (
             <p className="text-sm text-red-500 mt-2 text-center">
@@ -337,7 +659,9 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
             <li>• Relevez les index au plus près de la date d'entrée/sortie</li>
             <li>• Notez les numéros de compteur pour faciliter les démarches</li>
             <li>• Vérifiez que les compteurs fonctionnent correctement</li>
-            <li>• Prenez des photos des compteurs si possible</li>
+            <li>• Prenez des photos spécifiques pour chaque type de compteur</li>
+            <li>• Photographiez les numéros de série et les index clairement</li>
+            <li>• Organisez vos photos par catégorie (électricité, gaz, eau)</li>
             <li>• Les champs vides seront ignorés lors de la sauvegarde</li>
           </ul>
         </div>
@@ -348,6 +672,8 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
           <ul className="text-sm text-amber-800 space-y-1">
             <li>• Le nom de l'ancien occupant est nécessaire pour le transfert des compteurs</li>
             <li>• Les numéros de compteur sont requis pour identifier les installations</li>
+            <li>• Les photos sont organisées par type de compteur pour faciliter les démarches</li>
+            <li>• Chaque photo peut être accompagnée d'une description</li>
             <li>• Conservez une copie de ce relevé pour vos démarches administratives</li>
           </ul>
         </div>
