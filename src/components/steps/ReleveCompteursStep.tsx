@@ -182,137 +182,164 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     });
   };
 
-  const uploadPhotos = async (): Promise<{electricite: Photo[], gaz: Photo[], eau: Photo[]}> => {
-    console.log('🚀 Début de l\'upload des photos');
-    
-    const allPhotos = [...photos.electricite, ...photos.gaz, ...photos.eau];
-    const photosToUpload = allPhotos.filter(photo => photo.file);
-    
-    console.log('📊 Statistiques des photos:');
-    console.log('- Total photos:', allPhotos.length);
-    console.log('- Photos à uploader:', photosToUpload.length);
-    console.log('- Photos par catégorie:', {
-      electricite: photos.electricite.length,
-      gaz: photos.gaz.length,
-      eau: photos.eau.length
+const uploadPhotos = async (): Promise<{electricite: Photo[], gaz: Photo[], eau: Photo[]}> => {
+  console.log('🚀 Début de l\'upload des photos vers Supabase');
+  
+  const allPhotos = [...photos.electricite, ...photos.gaz, ...photos.eau];
+  const photosToUpload = allPhotos.filter(photo => photo.file);
+  
+  console.log('📊 Statistiques des photos:');
+  console.log('- Total photos:', allPhotos.length);
+  console.log('- Photos à uploader:', photosToUpload.length);
+  console.log('- Photos par catégorie:', {
+    electricite: photos.electricite.length,
+    gaz: photos.gaz.length,
+    eau: photos.eau.length
+  });
+  
+  if (photosToUpload.length === 0) {
+    console.log('✅ Aucune photo à uploader, retour des photos existantes');
+    return photos;
+  }
+
+  setUploadingPhotos(true);
+  const uploadedPhotos: {electricite: Photo[], gaz: Photo[], eau: Photo[]} = {
+    electricite: [],
+    gaz: [],
+    eau: []
+  };
+
+  try {
+    // Initialiser avec les photos existantes
+    uploadedPhotos.electricite = photos.electricite.filter(photo => !photo.file);
+    uploadedPhotos.gaz = photos.gaz.filter(photo => !photo.file);
+    uploadedPhotos.eau = photos.eau.filter(photo => !photo.file);
+
+    console.log('📥 Photos existantes conservées:', {
+      electricite: uploadedPhotos.electricite.length,
+      gaz: uploadedPhotos.gaz.length,
+      eau: uploadedPhotos.eau.length
     });
-    
-    if (photosToUpload.length === 0) {
-      console.log('✅ Aucune photo à uploader, retour des photos existantes');
-      return photos;
-    }
 
-    setUploadingPhotos(true);
-    const uploadedPhotos: {electricite: Photo[], gaz: Photo[], eau: Photo[]} = {
-      electricite: [],
-      gaz: [],
-      eau: []
-    };
+    let uploadSuccessCount = 0;
+    let uploadErrorCount = 0;
 
-    try {
-      // Initialiser avec les photos existantes
-      uploadedPhotos.electricite = photos.electricite.filter(photo => !photo.file);
-      uploadedPhotos.gaz = photos.gaz.filter(photo => !photo.file);
-      uploadedPhotos.eau = photos.eau.filter(photo => !photo.file);
+    for (let i = 0; i < photosToUpload.length; i++) {
+      const photo = photosToUpload[i];
+      
+      console.log(`\n📤 Upload photo ${i + 1}/${photosToUpload.length}:`);
+      console.log('- Nom:', photo.name);
+      console.log('- Taille:', photo.size, 'bytes');
+      console.log('- Type:', photo.type);
+      console.log('- Catégorie:', photo.category);
+      console.log('- Description:', photo.description || 'Aucune');
 
-      console.log('📥 Photos existantes conservées:', {
-        electricite: uploadedPhotos.electricite.length,
-        gaz: uploadedPhotos.gaz.length,
-        eau: uploadedPhotos.eau.length
-      });
+      if (!photo.file) {
+        console.log('❌ Pas de fichier pour cette photo, skip');
+        continue;
+      }
 
-      let uploadSuccessCount = 0;
-      let uploadErrorCount = 0;
-
-      for (let i = 0; i < photosToUpload.length; i++) {
-        const photo = photosToUpload[i];
+      try {
+        console.log('🌐 Upload vers Supabase Storage');
+        const startTime = Date.now();
         
-        console.log(`\n📤 Upload photo ${i + 1}/${photosToUpload.length}:`);
-        console.log('- Nom:', photo.name);
-        console.log('- Taille:', photo.size, 'bytes');
-        console.log('- Type:', photo.type);
-        console.log('- Catégorie:', photo.category);
-        console.log('- Description:', photo.description || 'Aucune');
+        // Générer un nom de fichier unique
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(2, 15);
+        const fileExtension = photo.name.split('.').pop();
+        const fileName = `${etatId}/${photo.category}/${timestamp}_${randomId}.${fileExtension}`;
+        
+        console.log('📁 Nom du fichier:', fileName);
 
-        if (!photo.file) {
-          console.log('❌ Pas de fichier pour cette photo, skip');
-          continue;
-        }
-
-        const formData = new FormData();
-        formData.append('file', photo.file);
-        formData.append('description', photo.description || '');
-        formData.append('category', photo.category);
-
-        try {
-          console.log('🌐 Envoi de la requête vers /api/upload-photo');
-          const startTime = Date.now();
-          
-          const response = await fetch('/api/upload-photo', {
-            method: 'POST',
-            body: formData,
+        // Upload vers Supabase Storage
+        const { data, error } = await supabase.storage
+          .from('etat-des-lieux-photos')
+          .upload(fileName, photo.file, {
+            cacheControl: '3600',
+            upsert: false
           });
 
-          const endTime = Date.now();
-          console.log(`⏱️ Temps de réponse: ${endTime - startTime}ms`);
+        const endTime = Date.now();
+        console.log(`⏱️ Temps de réponse: ${endTime - startTime}ms`);
 
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Erreur HTTP:', response.status, errorText);
-            throw new Error(`Erreur HTTP ${response.status}: ${errorText.substring(0, 100)}`);
-          }
-
-          const contentType = response.headers.get('content-type');
-          if (!contentType || !contentType.includes('application/json')) {
-            const responseText = await response.text();
-            console.error('❌ Réponse non-JSON:', responseText);
-            throw new Error('Le serveur a retourné une réponse non-JSON');
-          }
-
-          const uploadResult = await response.json();
-          console.log('✅ Upload réussi, résultat:', uploadResult);
-          
-          const uploadedPhoto: Photo = {
-            id: uploadResult.id,
-            name: photo.name,
-            size: photo.size,
-            type: photo.type,
-            url: uploadResult.url,
-            description: photo.description,
-            category: photo.category,
-          };
-
-          uploadedPhotos[photo.category].push(uploadedPhoto);
-          uploadSuccessCount++;
-          
-          console.log(`✅ Photo ${photo.name} uploadée avec succès dans la catégorie ${photo.category}`);
-          
-        } catch (photoError) {
-          uploadErrorCount++;
-          console.error(`❌ Erreur lors de l'upload de ${photo.name}:`, photoError);
-          toast.error(`Erreur lors de l'upload de ${photo.name}`);
-          // Continuer avec les autres photos
+        if (error) {
+          console.error('❌ Erreur Supabase:', error);
+          throw new Error(`Erreur Supabase: ${error.message}`);
         }
-      }
 
-      console.log('\n📊 Résumé de l\'upload:');
-      console.log('- Succès:', uploadSuccessCount);
-      console.log('- Erreurs:', uploadErrorCount);
-      
-      if (uploadErrorCount > 0 && uploadSuccessCount === 0) {
-        console.log('❌ Aucune photo uploadée avec succès');
-        throw new Error(`Échec de l'upload de toutes les photos (${uploadErrorCount} erreurs)`);
-      }
+        console.log('✅ Upload Supabase réussi:', data);
 
-      return uploadedPhotos;
-    } catch (error) {
-      console.error('💥 Erreur générale lors de l\'upload des photos:', error);
-      throw error;
-    } finally {
-      setUploadingPhotos(false);
-      console.log('🏁 Fin de l\'upload des photos');
+        // Obtenir l'URL publique du fichier
+        const { data: publicUrlData } = supabase.storage
+          .from('etat-des-lieux-photos')
+          .getPublicUrl(fileName);
+
+        if (!publicUrlData.publicUrl) {
+          throw new Error('Impossible d\'obtenir l\'URL publique');
+        }
+
+        console.log('🔗 URL publique:', publicUrlData.publicUrl);
+        
+        const uploadedPhoto: Photo = {
+          id: data.path, // Utiliser le path comme ID
+          name: photo.name,
+          size: photo.size,
+          type: photo.type,
+          url: publicUrlData.publicUrl,
+          description: photo.description,
+          category: photo.category,
+        };
+
+        uploadedPhotos[photo.category].push(uploadedPhoto);
+        uploadSuccessCount++;
+        
+        console.log(`✅ Photo ${photo.name} uploadée avec succès dans la catégorie ${photo.category}`);
+        
+        // Nettoyer l'URL temporaire
+        if (photo.url) {
+          URL.revokeObjectURL(photo.url);
+        }
+        
+      } catch (photoError) {
+        uploadErrorCount++;
+        console.error(`❌ Erreur lors de l'upload de ${photo.name}:`, photoError);
+        
+        // Messages d'erreur plus spécifiques
+        if (photoError.message.includes('Bucket not found')) {
+          toast.error(`Bucket 'etat-des-lieux-photos' introuvable`);
+        } else if (photoError.message.includes('Invalid JWT')) {
+          toast.error(`Erreur d'authentification Supabase`);
+        } else if (photoError.message.includes('File size')) {
+          toast.error(`Fichier ${photo.name} trop volumineux`);
+        } else {
+          toast.error(`Erreur lors de l'upload de ${photo.name}`);
+        }
+        
+        // Continuer avec les autres photos
+      }
     }
-  };
+
+    console.log('\n📊 Résumé de l\'upload:');
+    console.log('- Succès:', uploadSuccessCount);
+    console.log('- Erreurs:', uploadErrorCount);
+    
+    if (uploadErrorCount > 0 && uploadSuccessCount === 0) {
+      console.log('❌ Aucune photo uploadée avec succès');
+      throw new Error(`Échec de l'upload de toutes les photos (${uploadErrorCount} erreurs)`);
+    }
+
+    // Mettre à jour l'état local avec les nouvelles photos
+    setPhotos(uploadedPhotos);
+
+    return uploadedPhotos;
+  } catch (error) {
+    console.error('💥 Erreur générale lors de l\'upload des photos:', error);
+    throw error;
+  } finally {
+    setUploadingPhotos(false);
+    console.log('🏁 Fin de l\'upload des photos');
+  }
+};
 
 const handleSave = async () => {
   if (!validateForm()) {
