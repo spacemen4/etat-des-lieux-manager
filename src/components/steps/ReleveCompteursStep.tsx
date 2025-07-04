@@ -97,6 +97,22 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     return '';
   };
 
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    // Validate numeric fields
+    Object.keys(formData).forEach(field => {
+      const value = formData[field as keyof typeof formData];
+      const error = validateNumericField(field, value);
+      if (error) {
+        newErrors[field] = error;
+      }
+    });
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
@@ -166,405 +182,184 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     });
   };
 
-const uploadPhotos = async (): Promise<{electricite: Photo[], gaz: Photo[], eau: Photo[]}> => {
-  console.log('🚀 Début de l\'upload des photos');
-  
-  const allPhotos = [...photos.electricite, ...photos.gaz, ...photos.eau];
-  const photosToUpload = allPhotos.filter(photo => photo.file);
-  
-  console.log('📊 Statistiques des photos:');
-  console.log('- Total photos:', allPhotos.length);
-  console.log('- Photos à uploader:', photosToUpload.length);
-  console.log('- Photos par catégorie:', {
-    electricite: photos.electricite.length,
-    gaz: photos.gaz.length,
-    eau: photos.eau.length
-  });
-  
-  if (photosToUpload.length === 0) {
-    console.log('✅ Aucune photo à uploader, retour des photos existantes');
-    return photos;
-  }
-
-  setUploadingPhotos(true);
-  const uploadedPhotos: {electricite: Photo[], gaz: Photo[], eau: Photo[]} = {
-    electricite: [],
-    gaz: [],
-    eau: []
-  };
-
-  try {
-    // Initialiser avec les photos existantes
-    uploadedPhotos.electricite = photos.electricite.filter(photo => !photo.file);
-    uploadedPhotos.gaz = photos.gaz.filter(photo => !photo.file);
-    uploadedPhotos.eau = photos.eau.filter(photo => !photo.file);
-
-    console.log('📥 Photos existantes conservées:', {
-      electricite: uploadedPhotos.electricite.length,
-      gaz: uploadedPhotos.gaz.length,
-      eau: uploadedPhotos.eau.length
+  const uploadPhotos = async (): Promise<{electricite: Photo[], gaz: Photo[], eau: Photo[]}> => {
+    console.log('🚀 Début de l\'upload des photos');
+    
+    const allPhotos = [...photos.electricite, ...photos.gaz, ...photos.eau];
+    const photosToUpload = allPhotos.filter(photo => photo.file);
+    
+    console.log('📊 Statistiques des photos:');
+    console.log('- Total photos:', allPhotos.length);
+    console.log('- Photos à uploader:', photosToUpload.length);
+    console.log('- Photos par catégorie:', {
+      electricite: photos.electricite.length,
+      gaz: photos.gaz.length,
+      eau: photos.eau.length
     });
+    
+    if (photosToUpload.length === 0) {
+      console.log('✅ Aucune photo à uploader, retour des photos existantes');
+      return photos;
+    }
 
-    let uploadSuccessCount = 0;
-    let uploadErrorCount = 0;
+    setUploadingPhotos(true);
+    const uploadedPhotos: {electricite: Photo[], gaz: Photo[], eau: Photo[]} = {
+      electricite: [],
+      gaz: [],
+      eau: []
+    };
 
-    for (let i = 0; i < photosToUpload.length; i++) {
-      const photo = photosToUpload[i];
-      
-      console.log(`\n📤 Upload photo ${i + 1}/${photosToUpload.length}:`);
-      console.log('- Nom:', photo.name);
-      console.log('- Taille:', photo.size, 'bytes');
-      console.log('- Type:', photo.type);
-      console.log('- Catégorie:', photo.category);
-      console.log('- Description:', photo.description || 'Aucune');
-      console.log('- File object:', photo.file);
+    try {
+      // Initialiser avec les photos existantes
+      uploadedPhotos.electricite = photos.electricite.filter(photo => !photo.file);
+      uploadedPhotos.gaz = photos.gaz.filter(photo => !photo.file);
+      uploadedPhotos.eau = photos.eau.filter(photo => !photo.file);
 
-      if (!photo.file) {
-        console.log('❌ Pas de fichier pour cette photo, skip');
-        continue;
-      }
-
-      const formData = new FormData();
-      formData.append('file', photo.file);
-      formData.append('description', photo.description || '');
-      formData.append('category', photo.category);
-
-      console.log('📦 FormData créé:', {
-        file: photo.file.name,
-        description: photo.description || '',
-        category: photo.category
+      console.log('📥 Photos existantes conservées:', {
+        electricite: uploadedPhotos.electricite.length,
+        gaz: uploadedPhotos.gaz.length,
+        eau: uploadedPhotos.eau.length
       });
 
-      try {
-        console.log('🌐 Envoi de la requête vers /api/upload-photo');
-        const startTime = Date.now();
+      let uploadSuccessCount = 0;
+      let uploadErrorCount = 0;
+
+      for (let i = 0; i < photosToUpload.length; i++) {
+        const photo = photosToUpload[i];
         
-        const response = await fetch('/api/upload-photo', {
-          method: 'POST',
-          body: formData,
-        });
+        console.log(`\n📤 Upload photo ${i + 1}/${photosToUpload.length}:`);
+        console.log('- Nom:', photo.name);
+        console.log('- Taille:', photo.size, 'bytes');
+        console.log('- Type:', photo.type);
+        console.log('- Catégorie:', photo.category);
+        console.log('- Description:', photo.description || 'Aucune');
 
-        const endTime = Date.now();
-        console.log(`⏱️ Temps de réponse: ${endTime - startTime}ms`);
-        console.log('📡 Réponse reçue:', {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok,
-          headers: Object.fromEntries(response.headers.entries())
-        });
-
-        // Vérifier d'abord si la réponse est OK
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ Erreur HTTP détaillée:');
-          console.error('- Status:', response.status);
-          console.error('- Status Text:', response.statusText);
-          console.error('- Response Text:', errorText);
-          console.error('- Headers:', Object.fromEntries(response.headers.entries()));
-          
-          throw new Error(`Erreur HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+        if (!photo.file) {
+          console.log('❌ Pas de fichier pour cette photo, skip');
+          continue;
         }
 
-        // Vérifier le type de contenu
-        const contentType = response.headers.get('content-type');
-        console.log('📄 Content-Type:', contentType);
-        
-        if (!contentType || !contentType.includes('application/json')) {
-          const responseText = await response.text();
-          console.error('❌ Réponse non-JSON:', responseText);
-          throw new Error('Le serveur a retourné une réponse non-JSON');
-        }
-
-        const uploadResult = await response.json();
-        console.log('✅ Upload réussi, résultat:', uploadResult);
-        
-        const uploadedPhoto: Photo = {
-          id: uploadResult.id,
-          name: photo.name,
-          size: photo.size,
-          type: photo.type,
-          url: uploadResult.url,
-          description: photo.description,
-          category: photo.category,
-        };
-
-        uploadedPhotos[photo.category].push(uploadedPhoto);
-        uploadSuccessCount++;
-        
-        console.log(`✅ Photo ${photo.name} uploadée avec succès dans la catégorie ${photo.category}`);
-        
-      } catch (photoError) {
-        uploadErrorCount++;
-        console.error(`❌ Erreur lors de l'upload de ${photo.name}:`, photoError);
-        console.error('- Type d\'erreur:', photoError.constructor.name);
-        console.error('- Message:', photoError.message);
-        console.error('- Stack:', photoError.stack);
-        
-        toast.error(`Erreur lors de l'upload de ${photo.name}`);
-        // Continuer avec les autres photos
-      }
-    }
-
-    console.log('\n📊 Résumé de l\'upload:');
-    console.log('- Succès:', uploadSuccessCount);
-    console.log('- Erreurs:', uploadErrorCount);
-    console.log('- Total traité:', uploadSuccessCount + uploadErrorCount);
-    
-    if (uploadErrorCount > 0 && uploadSuccessCount === 0) {
-      console.log('❌ Aucune photo uploadée avec succès');
-      throw new Error(`Échec de l'upload de toutes les photos (${uploadErrorCount} erreurs)`);
-    }
-
-    return uploadedPhotos;
-  } catch (error) {
-    console.error('💥 Erreur générale lors de l\'upload des photos:', error);
-    console.error('- Type d\'erreur:', error.constructor.name);
-    console.error('- Message:', error.message);
-    console.error('- Stack:', error.stack);
-    throw error;
-  } finally {
-    setUploadingPhotos(false);
-    console.log('🏁 Fin de l\'upload des photos');
-  }
-};
-
-// 2. VERSION AVEC SIMULATION D'UPLOAD (pour tester sans serveur)
-const uploadPhotosSimulation = async (): Promise<{electricite: Photo[], gaz: Photo[], eau: Photo[]}> => {
-  const allPhotos = [...photos.electricite, ...photos.gaz, ...photos.eau];
-  const photosToUpload = allPhotos.filter(photo => photo.file);
-  
-  if (photosToUpload.length === 0) return photos;
-
-  setUploadingPhotos(true);
-  const uploadedPhotos: {electricite: Photo[], gaz: Photo[], eau: Photo[]} = {
-    electricite: [],
-    gaz: [],
-    eau: []
-  };
-
-  try {
-    // Initialiser avec les photos existantes
-    uploadedPhotos.electricite = photos.electricite.filter(photo => !photo.file);
-    uploadedPhotos.gaz = photos.gaz.filter(photo => !photo.file);
-    uploadedPhotos.eau = photos.eau.filter(photo => !photo.file);
-
-    // Simuler l'upload
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    for (const photo of photosToUpload) {
-      if (!photo.file) continue;
-
-      // Simuler une réponse d'upload réussie
-      const uploadedPhoto: Photo = {
-        id: `uploaded_${Date.now()}_${Math.random()}`,
-        name: photo.name,
-        size: photo.size,
-        type: photo.type,
-        url: photo.url, // Garder l'URL locale pour l'instant
-        description: photo.description,
-        category: photo.category,
-      };
-
-      uploadedPhotos[photo.category].push(uploadedPhoto);
-    }
-
-    toast.success('Photos uploadées avec succès (simulation)');
-    return uploadedPhotos;
-  } catch (error) {
-    console.error('Erreur lors de l\'upload des photos:', error);
-    throw error;
-  } finally {
-    setUploadingPhotos(false);
-  }
-};
-
-// 3. VERSION AVEC FALLBACK LOCAL
-const uploadPhotosWithFallback = async (): Promise<{electricite: Photo[], gaz: Photo[], eau: Photo[]}> => {
-  const allPhotos = [...photos.electricite, ...photos.gaz, ...photos.eau];
-  const photosToUpload = allPhotos.filter(photo => photo.file);
-  
-  if (photosToUpload.length === 0) return photos;
-
-  setUploadingPhotos(true);
-  const uploadedPhotos: {electricite: Photo[], gaz: Photo[], eau: Photo[]} = {
-    electricite: [],
-    gaz: [],
-    eau: []
-  };
-
-  try {
-    // Initialiser avec les photos existantes
-    uploadedPhotos.electricite = photos.electricite.filter(photo => !photo.file);
-    uploadedPhotos.gaz = photos.gaz.filter(photo => !photo.file);
-    uploadedPhotos.eau = photos.eau.filter(photo => !photo.file);
-
-    for (const photo of photosToUpload) {
-      if (!photo.file) continue;
-
-      try {
-        // Tenter l'upload réel
         const formData = new FormData();
         formData.append('file', photo.file);
         formData.append('description', photo.description || '');
         formData.append('category', photo.category);
 
-        const response = await fetch('/api/upload-photo', {
-          method: 'POST',
-          body: formData,
-        });
+        try {
+          console.log('🌐 Envoi de la requête vers /api/upload-photo');
+          const startTime = Date.now();
+          
+          const response = await fetch('/api/upload-photo', {
+            method: 'POST',
+            body: formData,
+          });
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          const endTime = Date.now();
+          console.log(`⏱️ Temps de réponse: ${endTime - startTime}ms`);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Erreur HTTP:', response.status, errorText);
+            throw new Error(`Erreur HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+          }
+
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const responseText = await response.text();
+            console.error('❌ Réponse non-JSON:', responseText);
+            throw new Error('Le serveur a retourné une réponse non-JSON');
+          }
+
+          const uploadResult = await response.json();
+          console.log('✅ Upload réussi, résultat:', uploadResult);
+          
+          const uploadedPhoto: Photo = {
+            id: uploadResult.id,
+            name: photo.name,
+            size: photo.size,
+            type: photo.type,
+            url: uploadResult.url,
+            description: photo.description,
+            category: photo.category,
+          };
+
+          uploadedPhotos[photo.category].push(uploadedPhoto);
+          uploadSuccessCount++;
+          
+          console.log(`✅ Photo ${photo.name} uploadée avec succès dans la catégorie ${photo.category}`);
+          
+        } catch (photoError) {
+          uploadErrorCount++;
+          console.error(`❌ Erreur lors de l'upload de ${photo.name}:`, photoError);
+          toast.error(`Erreur lors de l'upload de ${photo.name}`);
+          // Continuer avec les autres photos
         }
-
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Réponse non-JSON');
-        }
-
-        const uploadResult = await response.json();
-        
-        const uploadedPhoto: Photo = {
-          id: uploadResult.id,
-          name: photo.name,
-          size: photo.size,
-          type: photo.type,
-          url: uploadResult.url,
-          description: photo.description,
-          category: photo.category,
-        };
-
-        uploadedPhotos[photo.category].push(uploadedPhoto);
-        
-      } catch (uploadError) {
-        console.warn(`Upload échoué pour ${photo.name}, sauvegarde en local:`, uploadError);
-        
-        // Fallback: sauvegarder la photo en local
-        const localPhoto: Photo = {
-          id: `local_${Date.now()}_${Math.random()}`,
-          name: photo.name,
-          size: photo.size,
-          type: photo.type,
-          url: photo.url,
-          description: photo.description,
-          category: photo.category,
-        };
-
-        uploadedPhotos[photo.category].push(localPhoto);
       }
-    }
 
-    return uploadedPhotos;
-  } catch (error) {
-    console.error('Erreur lors de l\'upload des photos:', error);
-    throw error;
-  } finally {
-    setUploadingPhotos(false);
-  }
-};
-
-// 4. ENDPOINT API EXEMPLE (Next.js)
-// pages/api/upload-photo.ts ou app/api/upload-photo/route.ts
-import { NextApiRequest, NextApiResponse } from 'next';
-import formidable from 'formidable';
-import fs from 'fs';
-import path from 'path';
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  try {
-    const form = formidable({
-      uploadDir: './uploads',
-      keepExtensions: true,
-      maxFileSize: 5 * 1024 * 1024, // 5MB
-    });
-
-    const [fields, files] = await form.parse(req);
-    
-    const file = Array.isArray(files.file) ? files.file[0] : files.file;
-    
-    if (!file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    // Générer un nom de fichier unique
-    const fileExtension = path.extname(file.originalFilename || '');
-    const fileName = `${Date.now()}_${Math.random()}${fileExtension}`;
-    const filePath = path.join('./uploads', fileName);
-
-    // Déplacer le fichier
-    fs.renameSync(file.filepath, filePath);
-
-    // Retourner la réponse JSON
-    res.status(200).json({
-      id: fileName,
-      url: `/uploads/${fileName}`,
-      name: file.originalFilename,
-      size: file.size,
-      type: file.mimetype,
-    });
-  } catch (error) {
-    console.error('Erreur upload:', error);
-    res.status(500).json({ error: 'Upload failed' });
-  }
-}
-
-// 5. VERSION MODIFIÉE DU COMPOSANT AVEC GESTION D'ERREUR
-const handleSave = async () => {
-  if (!validateForm()) {
-    toast.error('Veuillez corriger les erreurs avant de sauvegarder');
-    return;
-  }
-
-  try {
-    let finalPhotos;
-    
-    // Choisir la méthode d'upload selon votre configuration
-    try {
-      finalPhotos = await uploadPhotos(); // Version avec serveur
-    } catch (uploadError) {
-      console.warn('Upload échoué, sauvegarde sans photos:', uploadError);
-      toast.warning('Les photos n\'ont pas pu être uploadées mais les données ont été sauvegardées');
+      console.log('\n📊 Résumé de l\'upload:');
+      console.log('- Succès:', uploadSuccessCount);
+      console.log('- Erreurs:', uploadErrorCount);
       
-      // Sauvegarder sans upload des photos
-      finalPhotos = {
-        electricite: photos.electricite.filter(photo => !photo.file),
-        gaz: photos.gaz.filter(photo => !photo.file),
-        eau: photos.eau.filter(photo => !photo.file)
-      };
+      if (uploadErrorCount > 0 && uploadSuccessCount === 0) {
+        console.log('❌ Aucune photo uploadée avec succès');
+        throw new Error(`Échec de l'upload de toutes les photos (${uploadErrorCount} erreurs)`);
+      }
+
+      return uploadedPhotos;
+    } catch (error) {
+      console.error('💥 Erreur générale lors de l\'upload des photos:', error);
+      throw error;
+    } finally {
+      setUploadingPhotos(false);
+      console.log('🏁 Fin de l\'upload des photos');
+    }
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) {
+      toast.error('Veuillez corriger les erreurs avant de sauvegarder');
+      return;
     }
 
-    const payload = {
-      ...(releveCompteurs?.id && { id: releveCompteurs.id }),
-      etat_des_lieux_id: etatId,
-      nom_ancien_occupant: formData.nom_ancien_occupant || null,
-      electricite_n_compteur: formData.electricite_n_compteur || null,
-      electricite_h_pleines: formData.electricite_h_pleines || null,
-      electricite_h_creuses: formData.electricite_h_creuses || null,
-      gaz_naturel_n_compteur: formData.gaz_naturel_n_compteur || null,
-      gaz_naturel_releve: formData.gaz_naturel_releve || null,
-      eau_chaude_m3: formData.eau_chaude_m3 || null,
-      eau_froide_m3: formData.eau_froide_m3 || null,
-      photos: finalPhotos,
-    };
+    try {
+      let finalPhotos;
+      
+      // Tenter l'upload des photos
+      try {
+        finalPhotos = await uploadPhotos();
+      } catch (uploadError) {
+        console.warn('Upload échoué, sauvegarde sans photos:', uploadError);
+        toast.warning('Les photos n\'ont pas pu être uploadées mais les données ont été sauvegardées');
+        
+        // Sauvegarder sans upload des photos
+        finalPhotos = {
+          electricite: photos.electricite.filter(photo => !photo.file),
+          gaz: photos.gaz.filter(photo => !photo.file),
+          eau: photos.eau.filter(photo => !photo.file)
+        };
+      }
 
-    await updateReleveCompteursMutation.mutateAsync(payload);
-    toast.success('Relevé des compteurs sauvegardé');
-    refetch();
-  } catch (error) {
-    console.error('Erreur lors de la sauvegarde:', error);
-    toast.error('Erreur lors de la sauvegarde');
-  }
-};
+      const payload = {
+        ...(releveCompteurs?.id && { id: releveCompteurs.id }),
+        etat_des_lieux_id: etatId,
+        nom_ancien_occupant: formData.nom_ancien_occupant || null,
+        electricite_n_compteur: formData.electricite_n_compteur || null,
+        electricite_h_pleines: formData.electricite_h_pleines || null,
+        electricite_h_creuses: formData.electricite_h_creuses || null,
+        gaz_naturel_n_compteur: formData.gaz_naturel_n_compteur || null,
+        gaz_naturel_releve: formData.gaz_naturel_releve || null,
+        eau_chaude_m3: formData.eau_chaude_m3 || null,
+        eau_froide_m3: formData.eau_froide_m3 || null,
+        photos: finalPhotos,
+      };
+
+      await updateReleveCompteursMutation.mutateAsync(payload);
+      toast.success('Relevé des compteurs sauvegardé');
+      refetch();
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      toast.error('Erreur lors de la sauvegarde');
+    }
+  };
 
   const PhotoUploadSection = ({ 
     category, 
