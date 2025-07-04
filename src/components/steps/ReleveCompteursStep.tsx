@@ -62,7 +62,8 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
         gaz_naturel_releve: releveCompteurs.gaz_naturel_releve || '',
         eau_chaude_m3: releveCompteurs.eau_chaude_m3 || '',
         eau_froide_m3: releveCompteurs.eau_froide_m3 || '',
-      const hasErrors = Object.values(errors).some(error => error !== '');
+      };
+      
       setFormData(newFormData);
 
       // Charger les photos existantes si elles existent
@@ -378,6 +379,9 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     );
   };
 
+  // Calculer hasErrors ici, en dehors du JSX
+  const hasErrors = Object.values(errors).some(error => error !== '');
+
   if (isLoading) {
     return (
       <Card>
@@ -488,14 +492,6 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
             </div>
           </div>
 
-          {/* Photos Eau */}
-          <PhotoUploadSection
-            category="eau"
-            title="Photos des compteurs d'eau"
-            icon={<Camera className="h-4 w-4 text-blue-500" />}
-            description="Compteurs eau chaude et froide, index affichés"
-          />
-
           {/* Photos Électricité */}
           <PhotoUploadSection
             category="electricite"
@@ -597,40 +593,14 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
               )}
             </div>
           </div>
-        </div>
 
-        {/* Section Photos */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 pb-2 border-b">
-            <Camera className="h-5 w-5 text-purple-500" />
-            <h3 className="font-semibold">Photos des compteurs</h3>
-            <Badge variant="outline" className="text-xs">
-              {photos.electricite.length + photos.gaz.length + photos.eau.length} photo{(photos.electricite.length + photos.gaz.length + photos.eau.length) !== 1 ? 's' : ''} au total
-            </Badge>
-          </div>
-          
-          <div className="space-y-6">
-            <PhotoUploadSection
-              category="electricite"
-              title="Compteur électrique"
-              icon={<Zap className="h-4 w-4 text-yellow-500" />}
-              description="Photos du compteur, numéro de série, index heures pleines/creuses"
-            />
-            
-            <PhotoUploadSection
-              category="gaz"
-              title="Compteur gaz"
-              icon={<Flame className="h-4 w-4 text-orange-500" />}
-              description="Photos du compteur, numéro de série, index affiché"
-            />
-            
-            <PhotoUploadSection
-              category="eau"
-              title="Compteurs d'eau"
-              icon={<Droplets className="h-4 w-4 text-blue-500" />}
-              description="Photos des compteurs eau chaude et froide, index affichés"
-            />
-          </div>
+          {/* Photos Eau */}
+          <PhotoUploadSection
+            category="eau"
+            title="Photos des compteurs d'eau"
+            icon={<Camera className="h-4 w-4 text-blue-500" />}
+            description="Compteurs eau chaude et froide, index affichés"
+          />
         </div>
 
         {/* Bouton de sauvegarde */}
