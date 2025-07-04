@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useReleveCompteursByEtatId, useUpdateReleveCompteurs } from '@/hooks/useEtatDesLieux';
 import { toast } from 'sonner';
 import { Zap, Flame, Droplets, User, Camera, X, Upload, Image as ImageIcon } from 'lucide-react';
+import { supabase } from '@/lib/supabase'; // Assurez-vous d'importer votre client Supabase
 
 interface Photo {
   id?: string;
@@ -17,6 +18,18 @@ interface Photo {
   type: string;
   description?: string;
   category: 'electricite' | 'gaz' | 'eau';
+  file_path?: string;
+}
+
+interface PhotoRecord {
+  id: string;
+  releve_compteurs_id: string;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  mime_type: string;
+  uploaded_at: string;
+  description: string | null;
 }
 
 interface ReleveCompteursStepProps {
@@ -51,6 +64,65 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
+  // Fonction pour charger les photos existantes depuis la base
+  const loadExistingPhotos = async (releveId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('releve_compteurs_photos')
+        .select('*')
+        .eq('releve_compteurs_id', releveId);
+
+      if (error) {
+        console.error('Erreur lors du chargement des photos:', error);
+        return;
+      }
+
+      if (data) {
+        const categorizedPhotos: {
+          electricite: Photo[];
+          gaz: Photo[];
+          eau: Photo[];
+        } = {
+          electricite: [],
+          gaz: [],
+          eau: []
+        };
+
+        data.forEach((photoRecord: PhotoRecord) => {
+          // Déterminer la catégorie depuis le chemin du fichier
+          let category: 'electricite' | 'gaz' | 'eau' = 'electricite';
+          if (photoRecord.file_path.includes('/gaz/')) {
+            category = 'gaz';
+          } else if (photoRecord.file_path.includes('/eau/')) {
+            category = 'eau';
+          }
+
+          // Obtenir l'URL publique
+          const { data: publicUrlData } = supabase.storage
+            .from('etat-des-lieux-photos')
+            .getPublicUrl(photoRecord.file_path);
+
+          const photo: Photo = {
+            id: photoRecord.id,
+            name: photoRecord.file_name,
+            size: photoRecord.file_size,
+            type: photoRecord.mime_type,
+            url: publicUrlData.publicUrl,
+            description: photoRecord.description || '',
+            category,
+            file_path: photoRecord.file_path
+          };
+
+          categorizedPhotos[category].push(photo);
+        });
+
+        setPhotos(categorizedPhotos);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des photos:', error);
+    }
+  };
+
   useEffect(() => {
     if (releveCompteurs) {
       const newFormData = {
@@ -66,19 +138,9 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
       
       setFormData(newFormData);
 
-      // Charger les photos existantes si elles existent
-      if (releveCompteurs.photos) {
-        const photosData = typeof releveCompteurs.photos === 'string' 
-          ? JSON.parse(releveCompteurs.photos) 
-          : releveCompteurs.photos;
-        
-        if (photosData) {
-          setPhotos({
-            electricite: photosData.electricite || [],
-            gaz: photosData.gaz || [],
-            eau: photosData.eau || []
-          });
-        }
+      // Charger les photos existantes depuis la table releve_compteurs_photos
+      if (releveCompteurs.id) {
+        loadExistingPhotos(releveCompteurs.id);
       }
     }
   }, [releveCompteurs]);
@@ -156,7 +218,42 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     }));
   };
 
-  const handleRemovePhoto = (category: 'electricite' | 'gaz' | 'eau', index: number) => {
+  const handleRemovePhoto = async (category: 'electricite' | 'gaz' | 'eau', index: number) => {
+    const photo = photos[category][index];
+    
+    // Si c'est une photo existante (avec ID), la supprimer de Supabase
+    if (photo.id && photo.file_path) {
+      try {
+        // Supprimer le fichier du storage
+        const { error: storageError } = await supabase.storage
+          .from('etat-des-lieux-photos')
+          .remove([photo.file_path]);
+
+        if (storageError) {
+          console.error('Erreur lors de la suppression du fichier:', storageError);
+        }
+
+        // Supprimer l'enregistrement de la base de données
+        const { error: dbError } = await supabase
+          .from('releve_compteurs_photos')
+          .delete()
+          .eq('id', photo.id);
+
+        if (dbError) {
+          console.error('Erreur lors de la suppression de l\'enregistrement:', dbError);
+          toast.error('Erreur lors de la suppression de la photo');
+          return;
+        }
+
+        toast.success('Photo supprimée avec succès');
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        toast.error('Erreur lors de la suppression de la photo');
+        return;
+      }
+    }
+
+    // Mettre à jour l'état local
     setPhotos(prev => {
       const categoryPhotos = [...prev[category]];
       // Nettoyer l'URL si c'est un nouveau fichier
@@ -182,209 +279,229 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     });
   };
 
-const uploadPhotos = async (): Promise<{electricite: Photo[], gaz: Photo[], eau: Photo[]}> => {
-  console.log('🚀 Début de l\'upload des photos vers Supabase');
-  
-  const allPhotos = [...photos.electricite, ...photos.gaz, ...photos.eau];
-  const photosToUpload = allPhotos.filter(photo => photo.file);
-  
-  console.log('📊 Statistiques des photos:');
-  console.log('- Total photos:', allPhotos.length);
-  console.log('- Photos à uploader:', photosToUpload.length);
-  console.log('- Photos par catégorie:', {
-    electricite: photos.electricite.length,
-    gaz: photos.gaz.length,
-    eau: photos.eau.length
-  });
-  
-  if (photosToUpload.length === 0) {
-    console.log('✅ Aucune photo à uploader, retour des photos existantes');
-    return photos;
-  }
+  const uploadPhotos = async (releveId: string): Promise<void> => {
+    console.log('🚀 Début de l\'upload des photos vers Supabase');
+    
+    const allPhotos = [...photos.electricite, ...photos.gaz, ...photos.eau];
+    const photosToUpload = allPhotos.filter(photo => photo.file);
+    
+    console.log('📊 Statistiques des photos:');
+    console.log('- Total photos:', allPhotos.length);
+    console.log('- Photos à uploader:', photosToUpload.length);
+    console.log('- Photos par catégorie:', {
+      electricite: photos.electricite.length,
+      gaz: photos.gaz.length,
+      eau: photos.eau.length
+    });
+    
+    if (photosToUpload.length === 0) {
+      console.log('✅ Aucune photo à uploader');
+      return;
+    }
 
-  setUploadingPhotos(true);
-  const uploadedPhotos: {electricite: Photo[], gaz: Photo[], eau: Photo[]} = {
-    electricite: [],
-    gaz: [],
-    eau: []
+    setUploadingPhotos(true);
+
+    try {
+      let uploadSuccessCount = 0;
+      let uploadErrorCount = 0;
+
+      for (let i = 0; i < photosToUpload.length; i++) {
+        const photo = photosToUpload[i];
+        
+        console.log(`\n📤 Upload photo ${i + 1}/${photosToUpload.length}:`);
+        console.log('- Nom:', photo.name);
+        console.log('- Taille:', photo.size, 'bytes');
+        console.log('- Type:', photo.type);
+        console.log('- Catégorie:', photo.category);
+        console.log('- Description:', photo.description || 'Aucune');
+
+        if (!photo.file) {
+          console.log('❌ Pas de fichier pour cette photo, skip');
+          continue;
+        }
+
+        try {
+          console.log('🌐 Upload vers Supabase Storage');
+          const startTime = Date.now();
+          
+          // Générer un nom de fichier unique
+          const timestamp = Date.now();
+          const randomId = Math.random().toString(36).substring(2, 15);
+          const fileExtension = photo.name.split('.').pop();
+          const fileName = `${etatId}/${photo.category}/${timestamp}_${randomId}.${fileExtension}`;
+          
+          console.log('📁 Nom du fichier:', fileName);
+
+          // Upload vers Supabase Storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('etat-des-lieux-photos')
+            .upload(fileName, photo.file, {
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          const endTime = Date.now();
+          console.log(`⏱️ Temps de réponse: ${endTime - startTime}ms`);
+
+          if (uploadError) {
+            console.error('❌ Erreur Supabase Storage:', uploadError);
+            throw new Error(`Erreur Supabase Storage: ${uploadError.message}`);
+          }
+
+          console.log('✅ Upload Supabase Storage réussi:', uploadData);
+
+          // Obtenir l'URL publique du fichier
+          const { data: publicUrlData } = supabase.storage
+            .from('etat-des-lieux-photos')
+            .getPublicUrl(fileName);
+
+          if (!publicUrlData.publicUrl) {
+            throw new Error('Impossible d\'obtenir l\'URL publique');
+          }
+
+          console.log('🔗 URL publique:', publicUrlData.publicUrl);
+          
+          // Insérer l'enregistrement dans la table releve_compteurs_photos
+          const { data: dbData, error: dbError } = await supabase
+            .from('releve_compteurs_photos')
+            .insert({
+              releve_compteurs_id: releveId,
+              file_name: photo.name,
+              file_path: fileName,
+              file_size: photo.size,
+              mime_type: photo.type,
+              description: photo.description || null,
+            })
+            .select()
+            .single();
+
+          if (dbError) {
+            console.error('❌ Erreur insertion base de données:', dbError);
+            // Supprimer le fichier uploadé si l'insertion échoue
+            await supabase.storage
+              .from('etat-des-lieux-photos')
+              .remove([fileName]);
+            throw new Error(`Erreur base de données: ${dbError.message}`);
+          }
+
+          console.log('✅ Enregistrement base de données réussi:', dbData);
+          
+          uploadSuccessCount++;
+          
+          console.log(`✅ Photo ${photo.name} uploadée avec succès dans la catégorie ${photo.category}`);
+          
+          // Nettoyer l'URL temporaire
+          if (photo.url) {
+            URL.revokeObjectURL(photo.url);
+          }
+          
+        } catch (photoError) {
+          uploadErrorCount++;
+          console.error(`❌ Erreur lors de l'upload de ${photo.name}:`, photoError);
+          
+          // Messages d'erreur plus spécifiques
+          if (photoError.message.includes('Bucket not found')) {
+            toast.error(`Bucket 'etat-des-lieux-photos' introuvable`);
+          } else if (photoError.message.includes('Invalid JWT')) {
+            toast.error(`Erreur d'authentification Supabase`);
+          } else if (photoError.message.includes('File size')) {
+            toast.error(`Fichier ${photo.name} trop volumineux`);
+          } else {
+            toast.error(`Erreur lors de l'upload de ${photo.name}`);
+          }
+        }
+      }
+
+      console.log('\n📊 Résumé de l\'upload:');
+      console.log('- Succès:', uploadSuccessCount);
+      console.log('- Erreurs:', uploadErrorCount);
+      
+      if (uploadErrorCount > 0 && uploadSuccessCount === 0) {
+        console.log('❌ Aucune photo uploadée avec succès');
+        throw new Error(`Échec de l'upload de toutes les photos (${uploadErrorCount} erreurs)`);
+      }
+
+      if (uploadSuccessCount > 0) {
+        toast.success(`${uploadSuccessCount} photo(s) uploadée(s) avec succès`);
+      }
+
+    } catch (error) {
+      console.error('💥 Erreur générale lors de l\'upload des photos:', error);
+      toast.error('Erreur lors de l\'upload des photos');
+      throw error;
+    } finally {
+      setUploadingPhotos(false);
+      console.log('🏁 Fin de l\'upload des photos');
+    }
   };
 
-  try {
-    // Initialiser avec les photos existantes
-    uploadedPhotos.electricite = photos.electricite.filter(photo => !photo.file);
-    uploadedPhotos.gaz = photos.gaz.filter(photo => !photo.file);
-    uploadedPhotos.eau = photos.eau.filter(photo => !photo.file);
+  const handleSave = async () => {
+    if (!validateForm()) {
+      toast.error('Veuillez corriger les erreurs avant de sauvegarder');
+      return;
+    }
 
-    console.log('📥 Photos existantes conservées:', {
-      electricite: uploadedPhotos.electricite.length,
-      gaz: uploadedPhotos.gaz.length,
-      eau: uploadedPhotos.eau.length
-    });
+    try {
+      // Préparer les données du formulaire
+      const payload = {
+        ...(releveCompteurs?.id && { id: releveCompteurs.id }),
+        etat_des_lieux_id: etatId,
+        nom_ancien_occupant: formData.nom_ancien_occupant || null,
+        electricite_n_compteur: formData.electricite_n_compteur || null,
+        electricite_h_pleines: formData.electricite_h_pleines || null,
+        electricite_h_creuses: formData.electricite_h_creuses || null,
+        gaz_naturel_n_compteur: formData.gaz_naturel_n_compteur || null,
+        gaz_naturel_releve: formData.gaz_naturel_releve || null,
+        eau_chaude_m3: formData.eau_chaude_m3 || null,
+        eau_froide_m3: formData.eau_froide_m3 || null,
+        photos: {}, // On ne stocke plus les photos dans ce champ JSON
+      };
 
-    let uploadSuccessCount = 0;
-    let uploadErrorCount = 0;
-
-    for (let i = 0; i < photosToUpload.length; i++) {
-      const photo = photosToUpload[i];
+      // Sauvegarder les données du formulaire
+      const result = await updateReleveCompteursMutation.mutateAsync(payload);
       
-      console.log(`\n📤 Upload photo ${i + 1}/${photosToUpload.length}:`);
-      console.log('- Nom:', photo.name);
-      console.log('- Taille:', photo.size, 'bytes');
-      console.log('- Type:', photo.type);
-      console.log('- Catégorie:', photo.category);
-      console.log('- Description:', photo.description || 'Aucune');
-
-      if (!photo.file) {
-        console.log('❌ Pas de fichier pour cette photo, skip');
-        continue;
+      // Obtenir l'ID du relevé (soit existant, soit nouveau)
+      const releveId = result?.id || releveCompteurs?.id;
+      
+      if (!releveId) {
+        throw new Error('Impossible de récupérer l\'ID du relevé');
       }
 
-      try {
-        console.log('🌐 Upload vers Supabase Storage');
-        const startTime = Date.now();
-        
-        // Générer un nom de fichier unique
-        const timestamp = Date.now();
-        const randomId = Math.random().toString(36).substring(2, 15);
-        const fileExtension = photo.name.split('.').pop();
-        const fileName = `${etatId}/${photo.category}/${timestamp}_${randomId}.${fileExtension}`;
-        
-        console.log('📁 Nom du fichier:', fileName);
+      // Upload des nouvelles photos
+      await uploadPhotos(releveId);
 
-        // Upload vers Supabase Storage
-        const { data, error } = await supabase.storage
-          .from('etat-des-lieux-photos')
-          .upload(fileName, photo.file, {
-            cacheControl: '3600',
-            upsert: false
-          });
+      // Mettre à jour les descriptions des photos existantes
+      const existingPhotos = [...photos.electricite, ...photos.gaz, ...photos.eau]
+        .filter(photo => photo.id && !photo.file);
 
-        const endTime = Date.now();
-        console.log(`⏱️ Temps de réponse: ${endTime - startTime}ms`);
+      for (const photo of existingPhotos) {
+        if (photo.id) {
+          const { error } = await supabase
+            .from('releve_compteurs_photos')
+            .update({ description: photo.description || null })
+            .eq('id', photo.id);
 
-        if (error) {
-          console.error('❌ Erreur Supabase:', error);
-          throw new Error(`Erreur Supabase: ${error.message}`);
+          if (error) {
+            console.error('Erreur lors de la mise à jour de la description:', error);
+          }
         }
-
-        console.log('✅ Upload Supabase réussi:', data);
-
-        // Obtenir l'URL publique du fichier
-        const { data: publicUrlData } = supabase.storage
-          .from('etat-des-lieux-photos')
-          .getPublicUrl(fileName);
-
-        if (!publicUrlData.publicUrl) {
-          throw new Error('Impossible d\'obtenir l\'URL publique');
-        }
-
-        console.log('🔗 URL publique:', publicUrlData.publicUrl);
-        
-        const uploadedPhoto: Photo = {
-          id: data.path, // Utiliser le path comme ID
-          name: photo.name,
-          size: photo.size,
-          type: photo.type,
-          url: publicUrlData.publicUrl,
-          description: photo.description,
-          category: photo.category,
-        };
-
-        uploadedPhotos[photo.category].push(uploadedPhoto);
-        uploadSuccessCount++;
-        
-        console.log(`✅ Photo ${photo.name} uploadée avec succès dans la catégorie ${photo.category}`);
-        
-        // Nettoyer l'URL temporaire
-        if (photo.url) {
-          URL.revokeObjectURL(photo.url);
-        }
-        
-      } catch (photoError) {
-        uploadErrorCount++;
-        console.error(`❌ Erreur lors de l'upload de ${photo.name}:`, photoError);
-        
-        // Messages d'erreur plus spécifiques
-        if (photoError.message.includes('Bucket not found')) {
-          toast.error(`Bucket 'etat-des-lieux-photos' introuvable`);
-        } else if (photoError.message.includes('Invalid JWT')) {
-          toast.error(`Erreur d'authentification Supabase`);
-        } else if (photoError.message.includes('File size')) {
-          toast.error(`Fichier ${photo.name} trop volumineux`);
-        } else {
-          toast.error(`Erreur lors de l'upload de ${photo.name}`);
-        }
-        
-        // Continuer avec les autres photos
       }
+
+      toast.success('Relevé des compteurs sauvegardé avec succès');
+      
+      // Recharger les données pour mettre à jour l'affichage
+      refetch();
+      
+      // Recharger les photos pour afficher les nouvelles photos uploadées
+      if (releveId) {
+        await loadExistingPhotos(releveId);
+      }
+      
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      toast.error('Erreur lors de la sauvegarde');
     }
-
-    console.log('\n📊 Résumé de l\'upload:');
-    console.log('- Succès:', uploadSuccessCount);
-    console.log('- Erreurs:', uploadErrorCount);
-    
-    if (uploadErrorCount > 0 && uploadSuccessCount === 0) {
-      console.log('❌ Aucune photo uploadée avec succès');
-      throw new Error(`Échec de l'upload de toutes les photos (${uploadErrorCount} erreurs)`);
-    }
-
-    // Mettre à jour l'état local avec les nouvelles photos
-    setPhotos(uploadedPhotos);
-
-    return uploadedPhotos;
-  } catch (error) {
-    console.error('💥 Erreur générale lors de l\'upload des photos:', error);
-    throw error;
-  } finally {
-    setUploadingPhotos(false);
-    console.log('🏁 Fin de l\'upload des photos');
-  }
-};
-
-const handleSave = async () => {
-  if (!validateForm()) {
-    toast.error('Veuillez corriger les erreurs avant de sauvegarder');
-    return;
-  }
-
-  try {
-    // TEMPORARY: Skip photo upload and save only existing photos
-    const finalPhotos = {
-      electricite: photos.electricite.filter(photo => !photo.file && photo.url),
-      gaz: photos.gaz.filter(photo => !photo.file && photo.url),
-      eau: photos.eau.filter(photo => !photo.file && photo.url)
-    };
-
-    // Warn user about skipped photos
-    const newPhotosCount = [...photos.electricite, ...photos.gaz, ...photos.eau]
-      .filter(photo => photo.file).length;
-    
-    if (newPhotosCount > 0) {
-      toast.warning(`${newPhotosCount} nouvelle(s) photo(s) ne seront pas uploadées (endpoint non configuré)`);
-    }
-
-    const payload = {
-      ...(releveCompteurs?.id && { id: releveCompteurs.id }),
-      etat_des_lieux_id: etatId,
-      nom_ancien_occupant: formData.nom_ancien_occupant || null,
-      electricite_n_compteur: formData.electricite_n_compteur || null,
-      electricite_h_pleines: formData.electricite_h_pleines || null,
-      electricite_h_creuses: formData.electricite_h_creuses || null,
-      gaz_naturel_n_compteur: formData.gaz_naturel_n_compteur || null,
-      gaz_naturel_releve: formData.gaz_naturel_releve || null,
-      eau_chaude_m3: formData.eau_chaude_m3 || null,
-      eau_froide_m3: formData.eau_froide_m3 || null,
-      photos: finalPhotos,
-    };
-
-    await updateReleveCompteursMutation.mutateAsync(payload);
-    toast.success('Relevé des compteurs sauvegardé (sans nouvelles photos)');
-    refetch();
-  } catch (error) {
-    console.error('Erreur lors de la sauvegarde:', error);
-    toast.error('Erreur lors de la sauvegarde');
-  }
-};
+  };
 
   const PhotoUploadSection = ({ 
     category, 
@@ -471,6 +588,8 @@ const handleSave = async () => {
                       </div>
                       <p className="text-xs text-gray-500">
                         {(photo.size / 1024).toFixed(1)} KB
+                        {photo.id && <span className="ml-2 text-green-600">✓ Uploadée</span>}
+                        {photo.file && <span className="ml-2 text-orange-600">⏳ À uploader</span>}
                       </p>
                       <Input
                         type="text"
