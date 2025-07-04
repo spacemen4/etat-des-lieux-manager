@@ -314,52 +314,50 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     }
   };
 
-  const handleSave = async () => {
-    if (!validateForm()) {
-      toast.error('Veuillez corriger les erreurs avant de sauvegarder');
-      return;
+const handleSave = async () => {
+  if (!validateForm()) {
+    toast.error('Veuillez corriger les erreurs avant de sauvegarder');
+    return;
+  }
+
+  try {
+    // TEMPORARY: Skip photo upload and save only existing photos
+    const finalPhotos = {
+      electricite: photos.electricite.filter(photo => !photo.file && photo.url),
+      gaz: photos.gaz.filter(photo => !photo.file && photo.url),
+      eau: photos.eau.filter(photo => !photo.file && photo.url)
+    };
+
+    // Warn user about skipped photos
+    const newPhotosCount = [...photos.electricite, ...photos.gaz, ...photos.eau]
+      .filter(photo => photo.file).length;
+    
+    if (newPhotosCount > 0) {
+      toast.warning(`${newPhotosCount} nouvelle(s) photo(s) ne seront pas uploadées (endpoint non configuré)`);
     }
 
-    try {
-      let finalPhotos;
-      
-      // Tenter l'upload des photos
-      try {
-        finalPhotos = await uploadPhotos();
-      } catch (uploadError) {
-        console.warn('Upload échoué, sauvegarde sans photos:', uploadError);
-        toast.warning('Les photos n\'ont pas pu être uploadées mais les données ont été sauvegardées');
-        
-        // Sauvegarder sans upload des photos
-        finalPhotos = {
-          electricite: photos.electricite.filter(photo => !photo.file),
-          gaz: photos.gaz.filter(photo => !photo.file),
-          eau: photos.eau.filter(photo => !photo.file)
-        };
-      }
+    const payload = {
+      ...(releveCompteurs?.id && { id: releveCompteurs.id }),
+      etat_des_lieux_id: etatId,
+      nom_ancien_occupant: formData.nom_ancien_occupant || null,
+      electricite_n_compteur: formData.electricite_n_compteur || null,
+      electricite_h_pleines: formData.electricite_h_pleines || null,
+      electricite_h_creuses: formData.electricite_h_creuses || null,
+      gaz_naturel_n_compteur: formData.gaz_naturel_n_compteur || null,
+      gaz_naturel_releve: formData.gaz_naturel_releve || null,
+      eau_chaude_m3: formData.eau_chaude_m3 || null,
+      eau_froide_m3: formData.eau_froide_m3 || null,
+      photos: finalPhotos,
+    };
 
-      const payload = {
-        ...(releveCompteurs?.id && { id: releveCompteurs.id }),
-        etat_des_lieux_id: etatId,
-        nom_ancien_occupant: formData.nom_ancien_occupant || null,
-        electricite_n_compteur: formData.electricite_n_compteur || null,
-        electricite_h_pleines: formData.electricite_h_pleines || null,
-        electricite_h_creuses: formData.electricite_h_creuses || null,
-        gaz_naturel_n_compteur: formData.gaz_naturel_n_compteur || null,
-        gaz_naturel_releve: formData.gaz_naturel_releve || null,
-        eau_chaude_m3: formData.eau_chaude_m3 || null,
-        eau_froide_m3: formData.eau_froide_m3 || null,
-        photos: finalPhotos,
-      };
-
-      await updateReleveCompteursMutation.mutateAsync(payload);
-      toast.success('Relevé des compteurs sauvegardé');
-      refetch();
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
-      toast.error('Erreur lors de la sauvegarde');
-    }
-  };
+    await updateReleveCompteursMutation.mutateAsync(payload);
+    toast.success('Relevé des compteurs sauvegardé (sans nouvelles photos)');
+    refetch();
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde:', error);
+    toast.error('Erreur lors de la sauvegarde');
+  }
+};
 
   const PhotoUploadSection = ({ 
     category, 
