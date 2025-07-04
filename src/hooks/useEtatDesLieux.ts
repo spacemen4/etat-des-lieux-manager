@@ -93,8 +93,8 @@ export const useUpdateEtatSortie = () => {
   return useMutation({
     mutationFn: async (updates: {
       id: string;
-      date_sortie: string;
-      statut: 'finalise';
+      date_sortie: string | null; // Allow null to clear the date
+      statut: 'finalise' | 'en_cours'; // Allow reverting status
     }) => {
       const { id, ...rest } = updates;
       const { data, error } = await supabase

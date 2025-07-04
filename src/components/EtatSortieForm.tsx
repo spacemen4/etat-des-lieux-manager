@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, CheckCircle, ArrowRight } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import FormProgress from '@/components/FormProgress';
-import { useUpdateEtatSortie } from '@/hooks/useEtatDesLieux';
+import { useEtatDesLieuxById, useUpdateEtatSortie } from '@/hooks/useEtatDesLieux';
+import type { EtatDesLieux } from '@/types/etatDesLieux';
+
 
 // Import des composants d'étapes
 import GeneralStep from '@/components/steps/GeneralStep';
@@ -27,6 +29,19 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [isValidationChecked, setIsValidationChecked] = useState(false);
+  const [initialEtatDesLieux, setInitialEtatDesLieux] = useState<EtatDesLieux | null>(null);
+
+  const { data: etatData, isLoading: isLoadingEtat, error: errorEtat } = useEtatDesLieuxById(etatId);
+
+  useEffect(() => {
+    if (etatData) {
+      setInitialEtatDesLieux(etatData as EtatDesLieux);
+      // If date_sortie exists and is not today, pre-check the validation box?
+      // Or handle this in the finalization step's UI.
+      // For now, if it's already finalized, let's assume they might want to make changes,
+      // so they'll need to re-check.
+    }
+  }, [etatData]);
   
   const steps = [
     { id: 'general', title: 'Général', completed: false, current: true },
@@ -63,21 +78,35 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
 
   const handleFinalize = async () => {
     if (!isValidationChecked) {
-      toast.error('Vous devez confirmer la validation avant de finaliser');
+      toast.error('Vous devez confirmer la validation avant de procéder.');
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    let dateSortieToUpdate: string | null = new Date().toISOString().split('T')[0];
+    let toastMessage = 'État des lieux finalisé avec succès';
+
+    if (initialEtatDesLieux?.date_sortie) {
+      // If it was already finalized, keep the original date_sortie unless explicitly changed
+      // For now, we assume GeneralStep would handle explicit changes to date_sortie.
+      // Here, we preserve it.
+      dateSortieToUpdate = initialEtatDesLieux.date_sortie;
+      toastMessage = 'Modifications de l\'état des lieux sauvegardées';
+    }
     
+    // If GeneralStep has cleared date_sortie, this path should ideally not be taken.
+    // Or, if it is, we might need to get the current date_sortie from GeneralStep's state.
+    // This simplified logic assumes date_sortie is either new or preserved.
+    // A more robust solution would involve GeneralStep communicating its date_sortie value.
+
     updateEtatSortieMutation.mutate(
       { 
         id: etatId, 
-        date_sortie: today,
-        statut: 'finalise'
+        date_sortie: dateSortieToUpdate, // This will be today if new, or existing if already finalized
+        statut: 'finalise' // Always 'finalise' when this step is completed
       },
       {
         onSuccess: () => {
-          toast.success('État des lieux finalisé avec succès');
+          toast.success(toastMessage);
           navigate('/');
         },
         onError: (error) => {
@@ -124,10 +153,20 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                Finaliser l'état des lieux
+                {initialEtatDesLieux?.date_sortie ? 'Confirmer les modifications' : 'Finaliser l\'état des lieux'}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <p className="text-sm text-slate-600">
+                {initialEtatDesLieux?.date_sortie
+                  ? `Cet état des lieux a été initialement finalisé le ${new Date(initialEtatDesLieux.date_sortie).toLocaleDateString()}. En confirmant, vous sauvegardez les modifications apportées.`
+                  : "Veuillez confirmer que toutes les informations sont correctes pour finaliser cet état des lieux de sortie."}
+              </p>
+              {initialEtatDesLieux?.date_sortie && (
+                <p className="text-sm text-slate-600">
+                  La date de sortie enregistrée restera le <strong className='text-slate-800'>{new Date(initialEtatDesLieux.date_sortie).toLocaleDateString()}</strong>. Pour la modifier, veuillez retourner à l'étape 'Général'.
+                </p>
+              )}
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="validation"
@@ -135,7 +174,7 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
                   onCheckedChange={handleCheckboxChange}
                 />
                 <Label htmlFor="validation">
-                  Je confirme que toutes les informations sont correctes et que l'état des lieux peut être finalisé
+                  Je confirme que toutes les informations sont correctes et que l'état des lieux peut être {initialEtatDesLieux?.date_sortie ? 'mis à jour' : 'finalisé'}
                 </Label>
               </div>
               
@@ -144,7 +183,9 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
                 disabled={!isValidationChecked || updateEtatSortieMutation.isPending}
                 className="w-full"
               >
-                {updateEtatSortieMutation.isPending ? 'Finalisation...' : 'Finaliser l\'état des lieux'}
+                {updateEtatSortieMutation.isPending
+                  ? (initialEtatDesLieux?.date_sortie ? 'Sauvegarde...' : 'Finalisation...')
+                  : (initialEtatDesLieux?.date_sortie ? 'Sauvegarder les modifications' : 'Finaliser l\'état des lieux')}
               </Button>
             </CardContent>
           </Card>
@@ -154,6 +195,24 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
         return null;
     }
   };
+
+  if (isLoadingEtat) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="ml-2">Chargement des données de l'état des lieux...</p>
+      </div>
+    );
+  }
+
+  if (errorEtat) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600">Erreur lors du chargement des données: {errorEtat.message}</p>
+        <Button onClick={() => navigate('/')} className="mt-4">Retour au tableau de bord</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -170,7 +229,7 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
           </Button>
           <div>
             <h2 className="text-3xl font-bold text-slate-900">
-              État des lieux de sortie
+              {initialEtatDesLieux?.date_sortie ? 'Modifier l\'état des lieux de sortie' : 'État des lieux de sortie'}
             </h2>
             <p className="text-slate-600">
               Étape {currentStep + 1} sur {steps.length}: {steps[currentStep].title}

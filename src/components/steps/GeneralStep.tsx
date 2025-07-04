@@ -92,6 +92,28 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
   };
 
   const handleSave = () => {
+    let newStatut = formData.statut;
+    // If date_sortie is being cleared, set statut to 'en_cours'
+    if (etatDesLieuxInitial?.date_sortie && !formData.date_sortie) {
+      newStatut = 'en_cours';
+    }
+    // If date_sortie is being set or already exists, and current statut is not 'finalise', set to 'finalise'
+    // However, the main finalization is handled by EtatSortieForm's last step.
+    // Here, we primarily care about reverting to 'en_cours' if date_sortie is cleared.
+    // If date_sortie has a value, we can assume it's 'finalise' or will become 'finalise'
+    // unless the user explicitly changes the statut dropdown to something else (which is less likely for a sortie).
+    else if (formData.date_sortie && formData.statut !== 'finalise') {
+      // If a sortie date is present, the status should reflect a completed state.
+      // Let's ensure it's 'finalise' unless it's being cleared.
+      // The dropdown for 'statut' might still allow other values, but this logic nudges it.
+      // The 'finalise' status is primarily set by the last step of EtatSortieForm.
+      // This step should ensure that if date_sortie is present, status isn't 'en_cours'.
+      if (newStatut === 'en_cours') {
+         newStatut = 'finalise'; // Or rely on the existing formData.statut if user picked something specific
+      }
+    }
+
+
     // Type validation before sending
     const validatedData = {
       id: etatId,
@@ -102,9 +124,9 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
       bailleur_adresse: formData.bailleur_adresse,
       locataire_nom: formData.locataire_nom,
       locataire_adresse: formData.locataire_adresse,
-      date_entree: formData.date_entree,
-      date_sortie: formData.date_sortie,
-      statut: formData.statut,
+      date_entree: formData.date_entree || null, // Ensure null if empty
+      date_sortie: formData.date_sortie || null, // Ensure null if empty
+      statut: newStatut,
     };
 
     updateEtatDesLieux(

@@ -290,8 +290,8 @@ const Dashboard = () => {
                           {!etat.date_sortie ? "En cours" : "Terminé"}
                         </Badge>
                       </div>
-                      {!etat.date_sortie && (
-                        <div className="flex gap-2 mt-2">
+                      <div className="flex flex-col gap-2 mt-2">
+                        {!etat.date_sortie && (
                           <Button 
                             size="sm" 
                             asChild
@@ -303,9 +303,21 @@ const Dashboard = () => {
                               {etat.type_etat_des_lieux === 'entree' ? "État d'entrée" : "État de sortie"}
                             </a>
                           </Button>
-                          
-                        </div>
-                      )}
+                        )}
+                        {etat.date_sortie && (
+                          <Button
+                            size="sm"
+                            asChild
+                            variant="outline"
+                            className="border-slate-400 hover:bg-slate-100 text-slate-700"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <a href={`/sortie/${etat.id}`} className="flex items-center gap-1">
+                              <FileText className="h-3 w-3" /> Reprendre et modifier l'état des lieux
+                            </a>
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
