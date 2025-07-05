@@ -266,6 +266,8 @@ export const useAddPhotoToReleveCompteurs = () => {
       photoType: 'photos' | 'photos_electricite' | 'photos_eau' | 'photos_gaz'; 
       photoData: any 
     }) => {
+      console.log('🔍 Ajout photo - etatId:', etatId, 'photoType:', photoType, 'photoData:', photoData);
+      
       // D'abord, récupérer les données existantes
       const { data: existingData, error: fetchError } = await supabase
         .from('releve_compteurs')
@@ -273,18 +275,42 @@ export const useAddPhotoToReleveCompteurs = () => {
         .eq('etat_des_lieux_id', etatId)
         .single();
 
-      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+      console.log('📊 Données existantes:', existingData, 'Erreur fetch:', fetchError);
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('❌ Erreur lors de la récupération des données:', fetchError);
+        throw fetchError;
+      }
 
       // Préparer les nouvelles photos
       const currentPhotos = existingData?.[photoType] || [];
       const updatedPhotos = [...currentPhotos, photoData];
 
+      console.log('📸 Photos actuelles:', currentPhotos, 'Photos mises à jour:', updatedPhotos);
+
       // Créer ou mettre à jour l'enregistrement
-      const updateData = {
+      const updateData = existingData ? {
+        ...existingData,
+        [photoType]: updatedPhotos,
+      } : {
         etat_des_lieux_id: etatId,
         [photoType]: updatedPhotos,
-        ...existingData
+        // Valeurs par défaut pour les autres champs
+        nom_ancien_occupant: null,
+        electricite_n_compteur: null,
+        electricite_h_pleines: null,
+        electricite_h_creuses: null,
+        gaz_naturel_n_compteur: null,
+        gaz_naturel_releve: null,
+        eau_chaude_m3: null,
+        eau_froide_m3: null,
+        photos: photoType === 'photos' ? updatedPhotos : [],
+        photos_electricite: photoType === 'photos_electricite' ? updatedPhotos : [],
+        photos_eau: photoType === 'photos_eau' ? updatedPhotos : [],
+        photos_gaz: photoType === 'photos_gaz' ? updatedPhotos : [],
       };
+
+      console.log('💾 Données à sauvegarder:', updateData);
 
       const { data, error } = await supabase
         .from('releve_compteurs')
@@ -292,7 +318,12 @@ export const useAddPhotoToReleveCompteurs = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erreur lors de la sauvegarde:', error);
+        throw error;
+      }
+
+      console.log('✅ Photo ajoutée avec succès:', data);
       return data;
     },
     onSuccess: (data) => {
@@ -315,6 +346,8 @@ export const useDeletePhotoFromReleveCompteurs = () => {
       photoType: 'photos' | 'photos_electricite' | 'photos_eau' | 'photos_gaz'; 
       photoIndex: number 
     }) => {
+      console.log('🗑️ Suppression photo - etatId:', etatId, 'photoType:', photoType, 'photoIndex:', photoIndex);
+      
       // Récupérer les données existantes
       const { data: existingData, error: fetchError } = await supabase
         .from('releve_compteurs')
@@ -322,17 +355,26 @@ export const useDeletePhotoFromReleveCompteurs = () => {
         .eq('etat_des_lieux_id', etatId)
         .single();
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('❌ Erreur lors de la récupération des données:', fetchError);
+        throw fetchError;
+      }
+
+      console.log('📊 Données existantes:', existingData);
 
       // Supprimer la photo à l'index spécifié
       const currentPhotos = existingData[photoType] || [];
       const updatedPhotos = currentPhotos.filter((_: any, index: number) => index !== photoIndex);
+
+      console.log('📸 Photos actuelles:', currentPhotos, 'Photos après suppression:', updatedPhotos);
 
       // Mettre à jour l'enregistrement
       const updateData = {
         ...existingData,
         [photoType]: updatedPhotos,
       };
+
+      console.log('💾 Données à sauvegarder:', updateData);
 
       const { data, error } = await supabase
         .from('releve_compteurs')
@@ -341,7 +383,12 @@ export const useDeletePhotoFromReleveCompteurs = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erreur lors de la sauvegarde:', error);
+        throw error;
+      }
+
+      console.log('✅ Photo supprimée avec succès:', data);
       return data;
     },
     onSuccess: (data) => {
