@@ -643,6 +643,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' 
                           value={photo.description || ''}
                           onChange={(e) => handleExistingPhotoDescriptionChange(photo.id, e.target.value)}
                           className="text-xs h-7"
+                          key={`existing-${photo.id}`}
                         />
                       </div>
                     </div>
@@ -657,7 +658,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' 
                 <h5 className="text-sm font-medium text-gray-700">Nouvelles photos</h5>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {newCategoryPhotos.map((photo, index) => (
-                    <div key={index} className="relative border rounded-lg overflow-hidden bg-white">
+                    <div key={`new-${category}-${index}`} className="relative border rounded-lg overflow-hidden bg-white">
                       <div className="aspect-video bg-gray-100 flex items-center justify-center">
                         <img
                           src={URL.createObjectURL(photo)}
@@ -688,6 +689,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' 
                           value={photo.description || ''}
                           onChange={(e) => handleNewPhotoDescriptionChange(category, index, e.target.value)}
                           className="text-xs h-7"
+                          key={`new-${category}-${index}`}
                         />
                       </div>
                     </div>
