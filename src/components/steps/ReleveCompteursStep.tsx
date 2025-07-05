@@ -37,7 +37,9 @@ interface ReleveCompteursStepProps {
 }
 
 const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => {
+  console.log('[ReleveCompteursStep] Render - etatId:', etatId);
   const { data: releveCompteurs, refetch, isLoading, error } = useReleveCompteursByEtatId(etatId);
+  console.log('[ReleveCompteursStep] Hook useReleveCompteursByEtatId:', releveCompteurs, 'isLoading:', isLoading, 'error:', error);
   const updateReleveCompteursMutation = useUpdateReleveCompteurs();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -71,6 +73,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
 
   // Fonction pour charger les photos existantes depuis la base
   const loadExistingPhotos = async (releveId: string) => {
+    console.log('[loadExistingPhotos] called with releveId:', releveId);
     if (!releveId) return;
     
     setLoadingPhotos(true);
@@ -195,9 +198,9 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
 
   // Chargement initial des données
   useEffect(() => {
+    console.log('[useEffect] releveCompteurs:', releveCompteurs, 'initialDataLoaded:', initialDataLoaded);
     if (releveCompteurs && !initialDataLoaded) {
       console.log('🔄 Chargement initial des données...');
-      
       const newFormData = {
         nom_ancien_occupant: releveCompteurs.nom_ancien_occupant || '',
         electricite_n_compteur: releveCompteurs.electricite_n_compteur || '',
@@ -208,15 +211,15 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
         eau_chaude_m3: releveCompteurs.eau_chaude_m3 || '',
         eau_froide_m3: releveCompteurs.eau_froide_m3 || '',
       };
-      
       setFormData(newFormData);
       console.log('📝 Données du formulaire chargées:', newFormData);
-
       // Charger les photos existantes
       if (releveCompteurs.id) {
+        console.log('[useEffect] Appel de loadExistingPhotos avec id:', releveCompteurs.id);
         loadExistingPhotos(releveCompteurs.id);
+      } else {
+        console.log('[useEffect] Pas d\'id pour charger les photos');
       }
-      
       setInitialDataLoaded(true);
       toast.success('Dernier relevé chargé avec succès');
     }
@@ -727,7 +730,6 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
 
   // Calculer hasErrors ici, en dehors du JSX
   const hasErrors = Object.values(errors).some(error => error !== '');
-
   // Afficher un badge "Dernier relevé" si des données existent
   const hasExistingData = releveCompteurs && (
     releveCompteurs.nom_ancien_occupant ||
@@ -735,8 +737,10 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     releveCompteurs.gaz_naturel_n_compteur ||
     releveCompteurs.eau_chaude_m3
   );
-
+  console.log('[ReleveCompteursStep] hasExistingData:', hasExistingData);
+  // ...existing code...
   if (isLoading) {
+    console.log('[ReleveCompteursStep] isLoading...');
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
@@ -748,8 +752,8 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
       </Card>
     );
   }
-
   if (error) {
+    console.log('[ReleveCompteursStep] error:', error);
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
@@ -764,8 +768,8 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
       </Card>
     );
   }
-
   // Main component return
+  console.log('[ReleveCompteursStep] Render main form. formData:', formData, 'photos:', photos);
   return (
     <Card>
       <CardHeader>
