@@ -4,32 +4,33 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useReleveCompteursByEtatId, useUpdateReleveCompteurs } from '@/hooks/useEtatDesLieux';
 import { toast } from 'sonner';
 import { Zap, Flame, Droplets, User, Camera, X, Upload, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface Photo {
-  id?: string;
-  file?: File;
-  url?: string;
+  id: string;
   name: string;
   size: number;
   type: string;
+  url: string;
   description?: string;
   category: 'electricite' | 'gaz' | 'eau';
-  file_path?: string;
+  file_path: string;
 }
 
-interface PhotoRecord {
+interface ReleveCompteurs {
   id: string;
-  releve_compteurs_id: string;
-  file_name: string;
-  file_path: string;
-  file_size: number;
-  mime_type: string;
-  uploaded_at: string;
-  description: string | null;
+  etat_des_lieux_id: string;
+  nom_ancien_occupant: string | null;
+  electricite_n_compteur: string | null;
+  electricite_h_pleines: string | null;
+  electricite_h_creuses: string | null;
+  gaz_naturel_n_compteur: string | null;
+  gaz_naturel_releve: string | null;
+  eau_chaude_m3: string | null;
+  eau_froide_m3: string | null;
+  photos: Photo[];
 }
 
 interface ReleveCompteursStepProps {
@@ -38,10 +39,12 @@ interface ReleveCompteursStepProps {
 
 const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => {
   console.log('[ReleveCompteursStep] Render - etatId:', etatId);
-  const { data: releveCompteurs, refetch, isLoading, error } = useReleveCompteursByEtatId(etatId);
-  console.log('[ReleveCompteursStep] Hook useReleveCompteursByEtatId:', releveCompteurs, 'isLoading:', isLoading, 'error:', error);
-  const updateReleveCompteursMutation = useUpdateReleveCompteurs();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [releveCompteurs, setReleveCompteurs] = useState<ReleveCompteurs | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
   const [formData, setFormData] = useState({
     nom_ancien_occupant: '',
@@ -54,10 +57,10 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     eau_froide_m3: '',
   });
 
-  const [photos, setPhotos] = useState<{
-    electricite: Photo[];
-    gaz: Photo[];
-    eau: Photo[];
+  const [newPhotos, setNewPhotos] = useState<{
+    electricite: (File & { description?: string })[];
+    gaz: (File & { description?: string })[];
+    eau: (File & { description?: string })[];
   }>({
     electricite: [],
     gaz: [],
@@ -65,109 +68,57 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [uploadingPhotos, setUploadingPhotos] = useState(false);
-  const [loadingPhotos, setLoadingPhotos] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
-  // Ajout d'un état pour suivre si les données initiales ont été chargées
-  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
-  // Fonction pour charger les photos existantes depuis la base
-  const loadExistingPhotos = async (releveId: string) => {
-  if (!releveId) return;
-  
-  setLoadingPhotos(true);
-  
-  try {
-    const { data, error } = await supabase
-      .from('releve_compteurs_photos')
-      .select('*')
-      .eq('releve_compteurs_id', releveId)
-      .order('uploaded_at', { ascending: true });
+  // Fonction pour charger les données
+  const loadData = async () => {
+    console.log('🔄 Chargement des données...');
+    setIsLoading(true);
+    setError(null);
 
-    if (error) throw error;
-
-    const categorizedPhotos = {
-      electricite: [] as Photo[],
-      gaz: [] as Photo[],
-      eau: [] as Photo[],
-    };
-
-    if (data) {
-      for (const photoRecord of data) {
-        try {
-          const category = photoRecord.file_path.includes('/gaz/') ? 'gaz' : 
-                         photoRecord.file_path.includes('/eau/') ? 'eau' : 'electricite';
-
-          const { data: publicUrlData } = supabase.storage
-            .from('etat-des-lieux-photos')
-            .getPublicUrl(photoRecord.file_path);
-
-          categorizedPhotos[category].push({
-            id: photoRecord.id,
-            name: photoRecord.file_name,
-            size: photoRecord.file_size,
-            type: photoRecord.mime_type,
-            url: publicUrlData.publicUrl,
-            description: photoRecord.description || '',
-            category,
-            file_path: photoRecord.file_path
-          });
-        } catch (photoError) {
-          console.error(`Error processing photo ${photoRecord.id}:`, photoError);
-        }
-      }
-    }
-
-    setPhotos(categorizedPhotos);
-  } catch (error) {
-    console.error('Error loading photos:', error);
-    toast.error('Erreur lors du chargement des photos');
-  } finally {
-    setLoadingPhotos(false);
-  }
-};
-
-  // Fonction pour recharger les données
-  const handleRefreshData = async () => {
-    console.log('🔄 Rechargement des données...');
     try {
-      await refetch();
-      if (releveCompteurs?.id) {
-        await loadExistingPhotos(releveCompteurs.id);
+      const { data, error } = await supabase
+        .from('releve_compteurs')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        throw error;
       }
-      toast.success('Données rechargées avec succès');
-    } catch (error) {
-      console.error('❌ Erreur lors du rechargement:', error);
-      toast.error('Erreur lors du rechargement des données');
+
+      if (data) {
+        console.log('✅ Données chargées:', data);
+        setReleveCompteurs(data);
+        setFormData({
+          nom_ancien_occupant: data.nom_ancien_occupant || '',
+          electricite_n_compteur: data.electricite_n_compteur || '',
+          electricite_h_pleines: data.electricite_h_pleines || '',
+          electricite_h_creuses: data.electricite_h_creuses || '',
+          gaz_naturel_n_compteur: data.gaz_naturel_n_compteur || '',
+          gaz_naturel_releve: data.gaz_naturel_releve || '',
+          eau_chaude_m3: data.eau_chaude_m3 || '',
+          eau_froide_m3: data.eau_froide_m3 || '',
+        });
+      } else {
+        console.log('ℹ️ Aucune donnée existante');
+        setReleveCompteurs(null);
+      }
+    } catch (err) {
+      console.error('❌ Erreur lors du chargement:', err);
+      setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Chargement initial des données
+  // Chargement initial
   useEffect(() => {
-  if (releveCompteurs && !initialDataLoaded) {
-    setFormData({
-      nom_ancien_occupant: releveCompteurs.nom_ancien_occupant || '',
-      electricite_n_compteur: releveCompteurs.electricite_n_compteur || '',
-      electricite_h_pleines: releveCompteurs.electricite_h_pleines || '',
-      electricite_h_creuses: releveCompteurs.electricite_h_creuses || '',
-      gaz_naturel_n_compteur: releveCompteurs.gaz_naturel_n_compteur || '',
-      gaz_naturel_releve: releveCompteurs.gaz_naturel_releve || '',
-      eau_chaude_m3: releveCompteurs.eau_chaude_m3 || '',
-      eau_froide_m3: releveCompteurs.eau_froide_m3 || '',
-    });
+    loadData();
+  }, [etatId]);
 
-    if (releveCompteurs.id) {
-      loadExistingPhotos(releveCompteurs.id);
-    }
-    
-    setInitialDataLoaded(true);
-  }
-}, [releveCompteurs, initialDataLoaded]);
-
-  // Réinitialiser dataLoaded quand l'etatId change
+  // Réinitialiser les nouvelles photos quand l'etatId change
   useEffect(() => {
-    setDataLoaded(false);
-    setPhotos({
+    setNewPhotos({
       electricite: [],
       gaz: [],
       eau: []
@@ -191,7 +142,6 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     
-    // Validate numeric fields
     Object.keys(formData).forEach(field => {
       const value = formData[field as keyof typeof formData];
       const error = validateNumericField(field, value);
@@ -215,7 +165,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     const files = event.target.files;
     if (!files) return;
 
-    const newPhotos: Photo[] = [];
+    const validFiles: (File & { description?: string })[] = [];
     const maxSize = 5 * 1024 * 1024; // 5MB
 
     Array.from(files).forEach(file => {
@@ -229,69 +179,20 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
         return;
       }
 
-      const photo: Photo = {
-        file,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: URL.createObjectURL(file),
-        category,
-      };
-
-      newPhotos.push(photo);
+      const fileWithDescription = file as File & { description?: string };
+      fileWithDescription.description = '';
+      validFiles.push(fileWithDescription);
     });
 
-    setPhotos(prev => ({
+    setNewPhotos(prev => ({
       ...prev,
-      [category]: [...prev[category], ...newPhotos]
+      [category]: [...prev[category], ...validFiles]
     }));
   };
 
-  const handleRemovePhoto = async (category: 'electricite' | 'gaz' | 'eau', index: number) => {
-    const photo = photos[category][index];
-    
-    // Si c'est une photo existante (avec ID), la supprimer de Supabase
-    if (photo.id && photo.file_path) {
-      try {
-        console.log(`🗑️ Suppression de la photo: ${photo.name}`);
-        
-        // Supprimer le fichier du storage
-        const { error: storageError } = await supabase.storage
-          .from('etat-des-lieux-photos')
-          .remove([photo.file_path]);
-
-        if (storageError) {
-          console.error('❌ Erreur lors de la suppression du fichier:', storageError);
-        }
-
-        // Supprimer l'enregistrement de la base de données
-        const { error: dbError } = await supabase
-          .from('releve_compteurs_photos')
-          .delete()
-          .eq('id', photo.id);
-
-        if (dbError) {
-          console.error('❌ Erreur lors de la suppression de l\'enregistrement:', dbError);
-          toast.error('Erreur lors de la suppression de la photo');
-          return;
-        }
-
-        toast.success('Photo supprimée avec succès');
-        console.log(`✅ Photo supprimée: ${photo.name}`);
-      } catch (error) {
-        console.error('❌ Erreur lors de la suppression:', error);
-        toast.error('Erreur lors de la suppression de la photo');
-        return;
-      }
-    }
-
-    // Mettre à jour l'état local
-    setPhotos(prev => {
+  const handleRemoveNewPhoto = (category: 'electricite' | 'gaz' | 'eau', index: number) => {
+    setNewPhotos(prev => {
       const categoryPhotos = [...prev[category]];
-      // Nettoyer l'URL si c'est un nouveau fichier
-      if (categoryPhotos[index].url && categoryPhotos[index].file) {
-        URL.revokeObjectURL(categoryPhotos[index].url!);
-      }
       categoryPhotos.splice(index, 1);
       return {
         ...prev,
@@ -300,8 +201,43 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     });
   };
 
-  const handlePhotoDescriptionChange = (category: 'electricite' | 'gaz' | 'eau', index: number, description: string) => {
-    setPhotos(prev => {
+  const handleRemoveExistingPhoto = async (photoId: string, filePath: string) => {
+    try {
+      console.log(`🗑️ Suppression de la photo: ${photoId}`);
+      
+      // Supprimer le fichier du storage
+      const { error: storageError } = await supabase.storage
+        .from('etat-des-lieux-photos')
+        .remove([filePath]);
+
+      if (storageError) {
+        console.error('❌ Erreur lors de la suppression du fichier:', storageError);
+      }
+
+      // Mettre à jour les photos dans la base de données
+      const updatedPhotos = releveCompteurs?.photos.filter(photo => photo.id !== photoId) || [];
+      
+      const { error: updateError } = await supabase
+        .from('releve_compteurs')
+        .update({ photos: updatedPhotos })
+        .eq('id', releveCompteurs?.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Mettre à jour l'état local
+      setReleveCompteurs(prev => prev ? { ...prev, photos: updatedPhotos } : null);
+      
+      toast.success('Photo supprimée avec succès');
+    } catch (error) {
+      console.error('❌ Erreur lors de la suppression:', error);
+      toast.error('Erreur lors de la suppression de la photo');
+    }
+  };
+
+  const handleNewPhotoDescriptionChange = (category: 'electricite' | 'gaz' | 'eau', index: number, description: string) => {
+    setNewPhotos(prev => {
       const categoryPhotos = [...prev[category]];
       categoryPhotos[index] = { ...categoryPhotos[index], description };
       return {
@@ -311,159 +247,84 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     });
   };
 
-  const uploadPhotos = async (releveId: string): Promise<void> => {
-    console.log('🚀 Début de l\'upload des photos vers Supabase');
-    
-    const allPhotos = [...photos.electricite, ...photos.gaz, ...photos.eau];
-    const photosToUpload = allPhotos.filter(photo => photo.file);
-    
-    console.log('📊 Statistiques des photos:');
-    console.log('- Total photos:', allPhotos.length);
-    console.log('- Photos à uploader:', photosToUpload.length);
-    console.log('- Photos par catégorie:', {
-      electricite: photos.electricite.length,
-      gaz: photos.gaz.length,
-      eau: photos.eau.length
+  const handleExistingPhotoDescriptionChange = (photoId: string, description: string) => {
+    setReleveCompteurs(prev => {
+      if (!prev) return null;
+      
+      const updatedPhotos = prev.photos.map(photo => 
+        photo.id === photoId ? { ...photo, description } : photo
+      );
+      
+      return { ...prev, photos: updatedPhotos };
     });
+  };
+
+  const uploadPhotos = async (): Promise<Photo[]> => {
+    console.log('🚀 Début de l\'upload des photos');
     
-    if (photosToUpload.length === 0) {
+    const allNewPhotos = [...newPhotos.electricite, ...newPhotos.gaz, ...newPhotos.eau];
+    
+    if (allNewPhotos.length === 0) {
       console.log('✅ Aucune photo à uploader');
-      return;
+      return [];
     }
 
     setUploadingPhotos(true);
+    const uploadedPhotos: Photo[] = [];
 
     try {
-      let uploadSuccessCount = 0;
-      let uploadErrorCount = 0;
+      for (const photo of allNewPhotos) {
+        console.log(`📤 Upload de ${photo.name}...`);
 
-      for (let i = 0; i < photosToUpload.length; i++) {
-        const photo = photosToUpload[i];
-        
-        console.log(`\n📤 Upload photo ${i + 1}/${photosToUpload.length}:`);
-        console.log('- Nom:', photo.name);
-        console.log('- Taille:', photo.size, 'bytes');
-        console.log('- Type:', photo.type);
-        console.log('- Catégorie:', photo.category);
-        console.log('- Description:', photo.description || 'Aucune');
+        // Déterminer la catégorie
+        let category: 'electricite' | 'gaz' | 'eau' = 'electricite';
+        if (newPhotos.gaz.includes(photo)) category = 'gaz';
+        else if (newPhotos.eau.includes(photo)) category = 'eau';
 
-        if (!photo.file) {
-          console.log('❌ Pas de fichier pour cette photo, skip');
-          continue;
+        // Générer un nom de fichier unique
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(2, 15);
+        const fileExtension = photo.name.split('.').pop();
+        const fileName = `${etatId}/${category}/${timestamp}_${randomId}.${fileExtension}`;
+
+        // Upload vers Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('etat-des-lieux-photos')
+          .upload(fileName, photo, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          throw new Error(`Erreur upload ${photo.name}: ${uploadError.message}`);
         }
 
-        try {
-          console.log('🌐 Upload vers Supabase Storage');
-          const startTime = Date.now();
-          
-          // Générer un nom de fichier unique
-          const timestamp = Date.now();
-          const randomId = Math.random().toString(36).substring(2, 15);
-          const fileExtension = photo.name.split('.').pop();
-          const fileName = `${etatId}/${photo.category}/${timestamp}_${randomId}.${fileExtension}`;
-          
-          console.log('📁 Nom du fichier:', fileName);
+        // Obtenir l'URL publique
+        const { data: publicUrlData } = supabase.storage
+          .from('etat-des-lieux-photos')
+          .getPublicUrl(fileName);
 
-          // Upload vers Supabase Storage
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('etat-des-lieux-photos')
-            .upload(fileName, photo.file, {
-              cacheControl: '3600',
-              upsert: false
-            });
+        const uploadedPhoto: Photo = {
+          id: `${timestamp}_${randomId}`,
+          name: photo.name,
+          size: photo.size,
+          type: photo.type,
+          url: publicUrlData.publicUrl,
+          description: photo.description || '',
+          category,
+          file_path: fileName
+        };
 
-          const endTime = Date.now();
-          console.log(`⏱️ Temps de réponse: ${endTime - startTime}ms`);
-
-          if (uploadError) {
-            console.error('❌ Erreur Supabase Storage:', uploadError);
-            throw new Error(`Erreur Supabase Storage: ${uploadError.message}`);
-          }
-
-          console.log('✅ Upload Supabase Storage réussi:', uploadData);
-
-          // Obtenir l'URL publique du fichier
-          const { data: publicUrlData } = supabase.storage
-            .from('etat-des-lieux-photos')
-            .getPublicUrl(fileName);
-
-          if (!publicUrlData.publicUrl) {
-            throw new Error('Impossible d\'obtenir l\'URL publique');
-          }
-
-          console.log('🔗 URL publique:', publicUrlData.publicUrl);
-          
-          // Insérer l'enregistrement dans la table releve_compteurs_photos
-          const { data: dbData, error: dbError } = await supabase
-            .from('releve_compteurs_photos')
-            .insert({
-              releve_compteurs_id: releveId,
-              file_name: photo.name,
-              file_path: fileName,
-              file_size: photo.size,
-              mime_type: photo.type,
-              description: photo.description || null,
-            })
-            .select()
-            .single();
-
-          if (dbError) {
-            console.error('❌ Erreur insertion base de données:', dbError);
-            // Supprimer le fichier uploadé si l'insertion échoue
-            await supabase.storage
-              .from('etat-des-lieux-photos')
-              .remove([fileName]);
-            throw new Error(`Erreur base de données: ${dbError.message}`);
-          }
-
-          console.log('✅ Enregistrement base de données réussi:', dbData);
-          
-          uploadSuccessCount++;
-          
-          console.log(`✅ Photo ${photo.name} uploadée avec succès dans la catégorie ${photo.category}`);
-          
-          // Nettoyer l'URL temporaire
-          if (photo.url) {
-            URL.revokeObjectURL(photo.url);
-          }
-          
-        } catch (photoError) {
-          uploadErrorCount++;
-          console.error(`❌ Erreur lors de l'upload de ${photo.name}:`, photoError);
-          
-          // Messages d'erreur plus spécifiques
-          if (photoError.message.includes('Bucket not found')) {
-            toast.error(`Bucket 'etat-des-lieux-photos' introuvable`);
-          } else if (photoError.message.includes('Invalid JWT')) {
-            toast.error(`Erreur d'authentification Supabase`);
-          } else if (photoError.message.includes('File size')) {
-            toast.error(`Fichier ${photo.name} trop volumineux`);
-          } else {
-            toast.error(`Erreur lors de l'upload de ${photo.name}`);
-          }
-        }
+        uploadedPhotos.push(uploadedPhoto);
+        console.log(`✅ Photo uploadée: ${photo.name}`);
       }
 
-      console.log('\n📊 Résumé de l\'upload:');
-      console.log('- Succès:', uploadSuccessCount);
-      console.log('- Erreurs:', uploadErrorCount);
-      
-      if (uploadErrorCount > 0 && uploadSuccessCount === 0) {
-        console.log('❌ Aucune photo uploadée avec succès');
-        throw new Error(`Échec de l'upload de toutes les photos (${uploadErrorCount} erreurs)`);
-      }
-
-      if (uploadSuccessCount > 0) {
-        toast.success(`${uploadSuccessCount} photo(s) uploadée(s) avec succès`);
-      }
-
+      return uploadedPhotos;
     } catch (error) {
-      console.error('💥 Erreur générale lors de l\'upload des photos:', error);
-      toast.error('Erreur lors de l\'upload des photos');
+      console.error('❌ Erreur lors de l\'upload:', error);
       throw error;
     } finally {
       setUploadingPhotos(false);
-      console.log('🏁 Fin de l\'upload des photos');
     }
   };
 
@@ -473,12 +334,20 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
       return;
     }
 
+    setIsSaving(true);
+    
     try {
       console.log('💾 Début de la sauvegarde...');
       
-      // Préparer les données du formulaire
-      const payload = {
-        ...(releveCompteurs?.id && { id: releveCompteurs.id }),
+      // Upload des nouvelles photos
+      const uploadedPhotos = await uploadPhotos();
+      
+      // Combiner les photos existantes et nouvelles
+      const existingPhotos = releveCompteurs?.photos || [];
+      const allPhotos = [...existingPhotos, ...uploadedPhotos];
+
+      // Préparer les données
+      const dataToSave = {
         etat_des_lieux_id: etatId,
         nom_ancien_occupant: formData.nom_ancien_occupant || null,
         electricite_n_compteur: formData.electricite_n_compteur || null,
@@ -488,65 +357,54 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
         gaz_naturel_releve: formData.gaz_naturel_releve || null,
         eau_chaude_m3: formData.eau_chaude_m3 || null,
         eau_froide_m3: formData.eau_froide_m3 || null,
-        photos: {}, // On ne stocke plus les photos dans ce champ JSON
+        photos: allPhotos,
       };
 
-      console.log('📝 Données à sauvegarder:', payload);
+      console.log('📝 Données à sauvegarder:', dataToSave);
 
-      // Sauvegarder les données du formulaire
-      const result = await updateReleveCompteursMutation.mutateAsync(payload);
-      
-      // Obtenir l'ID du relevé (soit existant, soit nouveau)
-      const releveId = result?.id || releveCompteurs?.id;
-      
-      if (!releveId) {
-        throw new Error('Impossible de récupérer l\'ID du relevé');
+      let result;
+      if (releveCompteurs?.id) {
+        // Mise à jour
+        const { data, error } = await supabase
+          .from('releve_compteurs')
+          .update(dataToSave)
+          .eq('id', releveCompteurs.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
+      } else {
+        // Création
+        const { data, error } = await supabase
+          .from('releve_compteurs')
+          .insert(dataToSave)
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
       }
 
-      console.log('✅ Données du formulaire sauvegardées, releveId:', releveId);
-
-      // Upload des nouvelles photos
-      await uploadPhotos(releveId);
-
-      // Mettre à jour les descriptions des photos existantes
-      const existingPhotos = [...photos.electricite, ...photos.gaz, ...photos.eau]
-        .filter(photo => photo.id && !photo.file);
-
-      if (existingPhotos.length > 0) {
-        console.log(`📝 Mise à jour des descriptions de ${existingPhotos.length} photos existantes`);
-        
-        for (const photo of existingPhotos) {
-          if (photo.id) {
-            const { error } = await supabase
-              .from('releve_compteurs_photos')
-              .update({ description: photo.description || null })
-              .eq('id', photo.id);
-
-            if (error) {
-              console.error('❌ Erreur lors de la mise à jour de la description:', error);
-            } else {
-              console.log(`✅ Description mise à jour pour la photo ${photo.name}`);
-            }
-          }
-        }
-      }
+      console.log('✅ Sauvegarde réussie:', result);
+      
+      // Mettre à jour l'état local
+      setReleveCompteurs(result);
+      
+      // Réinitialiser les nouvelles photos
+      setNewPhotos({
+        electricite: [],
+        gaz: [],
+        eau: []
+      });
 
       toast.success('Relevé des compteurs sauvegardé avec succès');
-      
-      // Recharger les données pour mettre à jour l'affichage
-      console.log('🔄 Rechargement des données...');
-      await refetch();
-      
-      // Recharger les photos pour afficher les nouvelles photos uploadées
-      if (releveId) {
-        await loadExistingPhotos(releveId);
-      }
-      
-      console.log('✅ Sauvegarde terminée avec succès');
       
     } catch (error) {
       console.error('❌ Erreur lors de la sauvegarde:', error);
       toast.error('Erreur lors de la sauvegarde');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -562,7 +420,8 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     description: string;
   }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const categoryPhotos = photos[category];
+    const existingPhotos = releveCompteurs?.photos.filter(p => p.category === category) || [];
+    const newCategoryPhotos = newPhotos[category];
 
     return (
       <div className="space-y-4">
@@ -570,14 +429,8 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
           {icon}
           <h4 className="font-medium">{title}</h4>
           <Badge variant="outline" className="text-xs">
-            {categoryPhotos.length} photo{categoryPhotos.length !== 1 ? 's' : ''}
+            {existingPhotos.length + newCategoryPhotos.length} photo{existingPhotos.length + newCategoryPhotos.length !== 1 ? 's' : ''}
           </Badge>
-          {loadingPhotos && (
-            <Badge variant="secondary" className="text-xs">
-              <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-              Chargement...
-            </Badge>
-          )}
         </div>
         
         <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
@@ -600,7 +453,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
                     variant="outline"
                     size="sm"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={loadingPhotos}
+                    disabled={uploadingPhotos}
                   >
                     <ImageIcon className="h-4 w-4 mr-2" />
                     Ajouter photos
@@ -612,12 +465,14 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
               </div>
             </div>
 
-            {categoryPhotos.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {categoryPhotos.map((photo, index) => (
-                  <div key={photo.id || index} className="relative border rounded-lg overflow-hidden bg-white">
-                    <div className="aspect-video bg-gray-100 flex items-center justify-center">
-                      {photo.url ? (
+            {/* Photos existantes */}
+            {existingPhotos.length > 0 && (
+              <div className="space-y-2">
+                <h5 className="text-sm font-medium text-gray-700">Photos sauvegardées</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {existingPhotos.map((photo) => (
+                    <div key={photo.id} className="relative border rounded-lg overflow-hidden bg-white">
+                      <div className="aspect-video bg-gray-100 flex items-center justify-center">
                         <img
                           src={photo.url}
                           alt={photo.name}
@@ -627,38 +482,80 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
                             e.currentTarget.style.display = 'none';
                           }}
                         />
-                      ) : (
-                        <ImageIcon className="h-8 w-8 text-gray-400" />
-                      )}
-                    </div>
-                    <div className="p-2 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium truncate">{photo.name}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemovePhoto(category, index)}
-                          className="text-red-500 hover:text-red-700 h-5 w-5 p-0"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        {(photo.size / 1024).toFixed(1)} KB
-                        {photo.id && <span className="ml-2 text-green-600">✓ Sauvegardée</span>}
-                        {photo.file && <span className="ml-2 text-orange-600">⏳ À sauvegarder</span>}
-                      </p>
-                      <Input
-                        type="text"
-                        placeholder="Description"
-                        value={photo.description || ''}
-                        onChange={(e) => handlePhotoDescriptionChange(category, index, e.target.value)}
-                        className="text-xs h-7"
-                      />
+                      <div className="p-2 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium truncate">{photo.name}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveExistingPhoto(photo.id, photo.file_path)}
+                            className="text-red-500 hover:text-red-700 h-5 w-5 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          {(photo.size / 1024).toFixed(1)} KB
+                          <span className="ml-2 text-green-600">✓ Sauvegardée</span>
+                        </p>
+                        <Input
+                          type="text"
+                          placeholder="Description"
+                          value={photo.description || ''}
+                          onChange={(e) => handleExistingPhotoDescriptionChange(photo.id, e.target.value)}
+                          className="text-xs h-7"
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Nouvelles photos */}
+            {newCategoryPhotos.length > 0 && (
+              <div className="space-y-2">
+                <h5 className="text-sm font-medium text-gray-700">Nouvelles photos</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {newCategoryPhotos.map((photo, index) => (
+                    <div key={index} className="relative border rounded-lg overflow-hidden bg-white">
+                      <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                        <img
+                          src={URL.createObjectURL(photo)}
+                          alt={photo.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="p-2 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium truncate">{photo.name}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveNewPhoto(category, index)}
+                            className="text-red-500 hover:text-red-700 h-5 w-5 p-0"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          {(photo.size / 1024).toFixed(1)} KB
+                          <span className="ml-2 text-orange-600">⏳ À sauvegarder</span>
+                        </p>
+                        <Input
+                          type="text"
+                          placeholder="Description"
+                          value={photo.description || ''}
+                          onChange={(e) => handleNewPhotoDescriptionChange(category, index, e.target.value)}
+                          className="text-xs h-7"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -667,19 +564,17 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
     );
   };
 
-  // Calculer hasErrors ici, en dehors du JSX
   const hasErrors = Object.values(errors).some(error => error !== '');
-  // Afficher un badge "Dernier relevé" si des données existent
   const hasExistingData = releveCompteurs && (
     releveCompteurs.nom_ancien_occupant ||
     releveCompteurs.electricite_n_compteur ||
     releveCompteurs.gaz_naturel_n_compteur ||
     releveCompteurs.eau_chaude_m3
   );
-  console.log('[ReleveCompteursStep] hasExistingData:', hasExistingData);
-  // ...existing code...
+
+  const hasNewPhotos = Object.values(newPhotos).some(photos => photos.length > 0);
+
   if (isLoading) {
-    console.log('[ReleveCompteursStep] isLoading...');
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
@@ -691,14 +586,14 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
       </Card>
     );
   }
+
   if (error) {
-    console.log('[ReleveCompteursStep] error:', error);
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
           <div className="text-center text-red-500">
             <p className="text-sm">Erreur lors du chargement des données</p>
-            <Button variant="outline" size="sm" onClick={handleRefreshData} className="mt-2">
+            <Button variant="outline" size="sm" onClick={loadData} className="mt-2">
               <RefreshCw className="h-4 w-4 mr-2" />
               Réessayer
             </Button>
@@ -707,8 +602,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
       </Card>
     );
   }
-  // Main component return
-  console.log('[ReleveCompteursStep] Render main form. formData:', formData, 'photos:', photos);
+
   return (
     <Card>
       <CardHeader>
@@ -745,11 +639,6 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
               onChange={(e) => handleInputChange('nom_ancien_occupant', e.target.value)}
               placeholder="Nom complet de l'ancien occupant pour le transfert"
             />
-            {releveCompteurs?.nom_ancien_occupant && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Dernier enregistrement: {releveCompteurs.nom_ancien_occupant}
-              </p>
-            )}
           </div>
         </div>
 
@@ -771,12 +660,8 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
               onChange={(e) => handleInputChange('electricite_n_compteur', e.target.value)}
               placeholder="Ex: 12345678901234"
             />
-            {releveCompteurs?.electricite_n_compteur && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Dernier numéro enregistré: {releveCompteurs.electricite_n_compteur}
-              </p>
-            )}
           </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="electricite_h_pleines" className="flex items-center gap-2">
@@ -793,11 +678,6 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
               />
               {errors.electricite_h_pleines && (
                 <p className="text-sm text-red-500 mt-1">{errors.electricite_h_pleines}</p>
-              )}
-              {releveCompteurs?.electricite_h_pleines && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Dernier index heures pleines: {releveCompteurs.electricite_h_pleines}
-                </p>
               )}
             </div>
             <div>
@@ -816,15 +696,9 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
               {errors.electricite_h_creuses && (
                 <p className="text-sm text-red-500 mt-1">{errors.electricite_h_creuses}</p>
               )}
-              {releveCompteurs?.electricite_h_creuses && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Dernier index heures creuses: {releveCompteurs.electricite_h_creuses}
-                </p>
-              )}
             </div>
           </div>
 
-          {/* Photos Électricité */}
           <PhotoUploadSection
             category="electricite"
             title="Photos du compteur électrique"
@@ -851,12 +725,8 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
               onChange={(e) => handleInputChange('gaz_naturel_n_compteur', e.target.value)}
               placeholder="Ex: 12345678"
             />
-            {releveCompteurs?.gaz_naturel_n_compteur && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Dernier numéro gaz: {releveCompteurs.gaz_naturel_n_compteur}
-              </p>
-            )}
           </div>
+          
           <div>
             <Label htmlFor="gaz_naturel_releve" className="flex items-center gap-2">
               Index gaz naturel
@@ -873,14 +743,8 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
             {errors.gaz_naturel_releve && (
               <p className="text-sm text-red-500 mt-1">{errors.gaz_naturel_releve}</p>
             )}
-            {releveCompteurs?.gaz_naturel_releve && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Dernier index gaz: {releveCompteurs.gaz_naturel_releve}
-              </p>
-            )}
           </div>
 
-          {/* Photos Gaz */}
           <PhotoUploadSection
             category="gaz"
             title="Photos du compteur gaz"
