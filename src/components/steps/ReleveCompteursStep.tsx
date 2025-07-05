@@ -66,6 +66,8 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  // Ajout d'un état pour suivre si les données initiales ont été chargées
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
   // Fonction pour charger les photos existantes depuis la base
   const loadExistingPhotos = async (releveId: string) => {
@@ -193,7 +195,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
 
   // Chargement initial des données
   useEffect(() => {
-    if (releveCompteurs && !dataLoaded) {
+    if (releveCompteurs && !initialDataLoaded) {
       console.log('🔄 Chargement initial des données...');
       
       const newFormData = {
@@ -215,9 +217,10 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
         loadExistingPhotos(releveCompteurs.id);
       }
       
-      setDataLoaded(true);
+      setInitialDataLoaded(true);
+      toast.success('Dernier relevé chargé avec succès');
     }
-  }, [releveCompteurs, dataLoaded]);
+  }, [releveCompteurs, initialDataLoaded]);
 
   // Réinitialiser dataLoaded quand l'etatId change
   useEffect(() => {
@@ -725,50 +728,63 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
   // Calculer hasErrors ici, en dehors du JSX
   const hasErrors = Object.values(errors).some(error => error !== '');
 
-if (isLoading) {
+  // Afficher un badge "Dernier relevé" si des données existent
+  const hasExistingData = releveCompteurs && (
+    releveCompteurs.nom_ancien_occupant ||
+    releveCompteurs.electricite_n_compteur ||
+    releveCompteurs.gaz_naturel_n_compteur ||
+    releveCompteurs.eau_chaude_m3
+  );
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+            <p className="text-sm text-muted-foreground">Chargement des données...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="text-center text-red-500">
+            <p className="text-sm">Erreur lors du chargement des données</p>
+            <Button variant="outline" size="sm" onClick={handleRefreshData} className="mt-2">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Réessayer
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Main component return
   return (
     <Card>
-      <CardContent className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-sm text-muted-foreground">Chargement des données...</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-if (error) {
-  return (
-    <Card>
-      <CardContent className="flex items-center justify-center py-8">
-        <div className="text-center text-red-500">
-          <p className="text-sm">Erreur lors du chargement des données</p>
-          <Button variant="outline" size="sm" onClick={handleRefreshData} className="mt-2">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Réessayer
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Main component return
-return (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <Badge variant="outline" className="px-2 py-1">
-          Relevé de compteurs
-        </Badge>
-        Relevé des compteurs
-      </CardTitle>
-      <p className="text-sm text-muted-foreground">
-        Renseignez les informations et index de tous les compteurs présents dans le logement
-      </p>
-    </CardHeader>
-    <CardContent className="space-y-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Badge variant="outline" className="px-2 py-1">
+            Relevé de compteurs
+          </Badge>
+          Relevé des compteurs
+          {hasExistingData && (
+            <Badge variant="secondary" className="ml-2">
+              Dernier relevé chargé
+            </Badge>
+          )}
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Renseignez les informations et index de tous les compteurs présents dans le logement
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
         {/* Section Ancien occupant */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b">
@@ -786,9 +802,11 @@ return (
               onChange={(e) => handleInputChange('nom_ancien_occupant', e.target.value)}
               placeholder="Nom complet de l'ancien occupant pour le transfert"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Nécessaire pour le transfert des compteurs auprès des fournisseurs
-            </p>
+            {releveCompteurs?.nom_ancien_occupant && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Dernier enregistrement: {releveCompteurs.nom_ancien_occupant}
+              </p>
+            )}
           </div>
         </div>
 
@@ -810,11 +828,12 @@ return (
               onChange={(e) => handleInputChange('electricite_n_compteur', e.target.value)}
               placeholder="Ex: 12345678901234"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Numéro à 14 chiffres généralement inscrit sur le compteur
-            </p>
+            {releveCompteurs?.electricite_n_compteur && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Dernier numéro enregistré: {releveCompteurs.electricite_n_compteur}
+              </p>
+            )}
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="electricite_h_pleines" className="flex items-center gap-2">
@@ -832,6 +851,11 @@ return (
               {errors.electricite_h_pleines && (
                 <p className="text-sm text-red-500 mt-1">{errors.electricite_h_pleines}</p>
               )}
+              {releveCompteurs?.electricite_h_pleines && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dernier index heures pleines: {releveCompteurs.electricite_h_pleines}
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="electricite_h_creuses" className="flex items-center gap-2">
@@ -848,6 +872,11 @@ return (
               />
               {errors.electricite_h_creuses && (
                 <p className="text-sm text-red-500 mt-1">{errors.electricite_h_creuses}</p>
+              )}
+              {releveCompteurs?.electricite_h_creuses && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dernier index heures creuses: {releveCompteurs.electricite_h_creuses}
+                </p>
               )}
             </div>
           </div>
@@ -879,11 +908,12 @@ return (
               onChange={(e) => handleInputChange('gaz_naturel_n_compteur', e.target.value)}
               placeholder="Ex: 12345678"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Numéro inscrit sur le compteur gaz
-            </p>
+            {releveCompteurs?.gaz_naturel_n_compteur && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Dernier numéro gaz: {releveCompteurs.gaz_naturel_n_compteur}
+              </p>
+            )}
           </div>
-
           <div>
             <Label htmlFor="gaz_naturel_releve" className="flex items-center gap-2">
               Index gaz naturel
@@ -899,6 +929,11 @@ return (
             />
             {errors.gaz_naturel_releve && (
               <p className="text-sm text-red-500 mt-1">{errors.gaz_naturel_releve}</p>
+            )}
+            {releveCompteurs?.gaz_naturel_releve && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Dernier index gaz: {releveCompteurs.gaz_naturel_releve}
+              </p>
             )}
           </div>
 
@@ -934,6 +969,11 @@ return (
               {errors.eau_chaude_m3 && (
                 <p className="text-sm text-red-500 mt-1">{errors.eau_chaude_m3}</p>
               )}
+              {releveCompteurs?.eau_chaude_m3 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dernier index eau chaude: {releveCompteurs.eau_chaude_m3}
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="eau_froide_m3" className="flex items-center gap-2">
@@ -951,6 +991,11 @@ return (
               {errors.eau_froide_m3 && (
                 <p className="text-sm text-red-500 mt-1">{errors.eau_froide_m3}</p>
               )}
+              {releveCompteurs?.eau_froide_m3 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dernier index eau froide: {releveCompteurs.eau_froide_m3}
+                </p>
+              )}
             </div>
           </div>
 
@@ -965,15 +1010,15 @@ return (
 
         {/* Bouton de sauvegarde */}
         <div className="pt-4">
-            <Button 
+          <Button 
             onClick={handleSave} 
             disabled={updateReleveCompteursMutation.isPending || hasErrors || uploadingPhotos}
             className="w-full"
             size="lg"
           >
             {uploadingPhotos ? 'Upload des photos...' : 
-             updateReleveCompteursMutation.isPending ? 'Sauvegarde en cours...' : 
-             'Sauvegarder le relevé'}
+              updateReleveCompteursMutation.isPending ? 'Sauvegarde en cours...' : 
+              hasExistingData ? 'Mettre à jour le relevé' : 'Enregistrer le relevé'}
           </Button>
           {hasErrors && (
             <p className="text-sm text-red-500 mt-2 text-center">
@@ -1007,9 +1052,9 @@ return (
             <li>• Conservez une copie de ce relevé pour vos démarches administratives</li>
           </ul>
         </div>
-    </CardContent>
-  </Card>
-);
+      </CardContent>
+    </Card>
+  );
 };
 
 export default ReleveCompteursStep;
