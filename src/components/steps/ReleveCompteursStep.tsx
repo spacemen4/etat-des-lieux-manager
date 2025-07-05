@@ -4,35 +4,146 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
 import { Zap, Flame, Droplets, User, Camera, X, Upload, Image as ImageIcon, RefreshCw } from 'lucide-react';
 
-// Mock supabase for demo purposes
+// Configuration Supabase - REMPLACEZ PAR VOS VRAIES VALEURS
+const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXB2eXJjdGxoYWd0emtic3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjg1NjYsImV4cCI6MjA2NjYwNDU2Nn0.4APWILaWXOtXCwdFYTk4MDithvZhp55ZJB6PnVn8D1w';
+
+// Import dynamique de Supabase (remplacez par votre vraie configuration)
 const supabase = {
   from: (table: string) => ({
     select: (columns: string) => ({
       eq: (column: string, value: string) => ({
-        single: async () => ({ data: null, error: { code: 'PGRST116' } })
+        single: async () => {
+          try {
+            // Simulation d'un appel réel - remplacez par votre client Supabase
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${columns}&${column}=eq.${value}`, {
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+              }
+            });
+            
+            if (!response.ok) {
+              if (response.status === 406) {
+                return { data: null, error: { code: 'PGRST116' } };
+              }
+              throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return { data: data[0] || null, error: null };
+          } catch (error) {
+            return { data: null, error };
+          }
+        }
       })
     }),
     update: (data: any) => ({
       eq: (column: string, value: string) => ({
         select: () => ({
-          single: async () => ({ data: { id: '1', ...data }, error: null })
+          single: async () => {
+            try {
+              const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${column}=eq.${value}`, {
+                method: 'PATCH',
+                headers: {
+                  'apikey': SUPABASE_ANON_KEY,
+                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                  'Content-Type': 'application/json',
+                  'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(data)
+              });
+              
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+              }
+              
+              const result = await response.json();
+              return { data: result[0], error: null };
+            } catch (error) {
+              return { data: null, error };
+            }
+          }
         })
       })
     }),
     insert: (data: any) => ({
       select: () => ({
-        single: async () => ({ data: { id: '1', ...data }, error: null })
+        single: async () => {
+          try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+              method: 'POST',
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+              },
+              body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const result = await response.json();
+            return { data: result[0], error: null };
+          } catch (error) {
+            return { data: null, error };
+          }
+        }
       })
     })
   }),
   storage: {
     from: (bucket: string) => ({
-      upload: async (path: string, file: File) => ({ data: { path }, error: null }),
-      remove: async (paths: string[]) => ({ error: null }),
-      getPublicUrl: (path: string) => ({ data: { publicUrl: `https://example.com/${path}` } })
+      upload: async (path: string, file: File) => {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Upload failed: ${response.status}`);
+          }
+          
+          return { data: { path }, error: null };
+        } catch (error) {
+          return { data: null, error };
+        }
+      },
+      remove: async (paths: string[]) => {
+        try {
+          const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}`, {
+            method: 'DELETE',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ prefixes: paths })
+          });
+          
+          return { error: response.ok ? null : new Error('Delete failed') };
+        } catch (error) {
+          return { error };
+        }
+      },
+      getPublicUrl: (path: string) => ({
+        data: { publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}` }
+      })
     })
   }
 };
@@ -319,10 +430,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' 
         // Upload vers Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('etat-des-lieux-photos')
-          .upload(fileName, photo, {
-            cacheControl: '3600',
-            upsert: false
-          });
+          .upload(fileName, photo);
 
         if (uploadError) {
           throw new Error(`Erreur upload ${photo.name}: ${uploadError.message}`);
@@ -431,7 +539,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' 
       
     } catch (error) {
       console.error('❌ Erreur lors de la sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde');
+      alert('Erreur lors de la sauvegarde. Vérifiez votre configuration Supabase.');
     } finally {
       setIsSaving(false);
     }
@@ -601,8 +709,6 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' 
     releveCompteurs.eau_chaude_m3
   );
 
-  const hasNewPhotos = Object.values(newPhotos).some(photos => photos.length > 0);
-
   if (isLoading) {
     return (
       <Card>
@@ -622,6 +728,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' 
         <CardContent className="flex items-center justify-center py-8">
           <div className="text-center text-red-500">
             <p className="text-sm">Erreur lors du chargement des données</p>
+            <p className="text-xs mt-1">Vérifiez votre configuration Supabase</p>
             <Button variant="outline" size="sm" onClick={loadData} className="mt-2">
               <RefreshCw className="h-4 w-4 mr-2" />
               Réessayer
@@ -649,6 +756,11 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' 
         <p className="text-sm text-gray-600">
           Renseignez les informations et index de tous les compteurs présents dans le logement
         </p>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
+          <p className="text-sm text-red-800">
+            <strong>⚠️ Configuration requise:</strong> Remplacez les valeurs SUPABASE_URL et SUPABASE_ANON_KEY par vos vraies informations Supabase dans le code.
+          </p>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Section Ancien occupant */}
