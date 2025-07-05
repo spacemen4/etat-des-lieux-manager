@@ -1,6 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
+// Interface pour le relevé compteurs
+interface ReleveCompteurs {
+  id?: string;
+  etat_des_lieux_id: string;
+  nom_ancien_occupant?: string;
+  electricite_n_compteur?: string;
+  electricite_h_pleines?: string;
+  electricite_h_creuses?: string;
+  gaz_naturel_n_compteur?: string;
+  gaz_naturel_releve?: string;
+  eau_chaude_m3?: string;
+  eau_froide_m3?: string;
+  photos?: any[];
+  photos_electricite?: any[];
+  photos_eau?: any[];
+  photos_gaz?: any[];
+}
+
 // Function to fetch all états des lieux
 export const useEtatDesLieux = () => {
   return useQuery({
@@ -8,7 +26,7 @@ export const useEtatDesLieux = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('etat_des_lieux')
-        .select('*, rendez_vous_id') // Assurez-vous que rendez_vous_id est sélectionné
+        .select('*, rendez_vous_id')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -93,8 +111,8 @@ export const useUpdateEtatSortie = () => {
   return useMutation({
     mutationFn: async (updates: {
       id: string;
-      date_sortie: string | null; // Allow null to clear the date
-      statut: 'finalise' | 'en_cours'; // Allow reverting status
+      date_sortie: string | null;
+      statut: 'finalise' | 'en_cours';
     }) => {
       const { id, ...rest } = updates;
       const { data, error } = await supabase
@@ -196,7 +214,7 @@ export const useUpdatePiece = () => {
   });
 };
 
-// Relevé compteurs hooks
+// Relevé compteurs hooks - ADAPTÉS POUR LA NOUVELLE STRUCTURE
 export const useReleveCompteursByEtatId = (etatId: string) => {
   return useQuery({
     queryKey: ['releve_compteurs', etatId],
@@ -218,10 +236,108 @@ export const useUpdateReleveCompteurs = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (releve: any) => {
+    mutationFn: async (releve: ReleveCompteurs) => {
       const { data, error } = await supabase
         .from('releve_compteurs')
         .upsert(releve)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['releve_compteurs', data.etat_des_lieux_id] });
+    },
+  });
+};
+
+// Hook pour ajouter des photos à un type spécifique
+export const useAddPhotoToReleveCompteurs = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      etatId, 
+      photoType, 
+      photoData 
+    }: { 
+      etatId: string; 
+      photoType: 'photos' | 'photos_electricite' | 'photos_eau' | 'photos_gaz'; 
+      photoData: any 
+    }) => {
+      // D'abord, récupérer les données existantes
+      const { data: existingData, error: fetchError } = await supabase
+        .from('releve_compteurs')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
+      // Préparer les nouvelles photos
+      const currentPhotos = existingData?.[photoType] || [];
+      const updatedPhotos = [...currentPhotos, photoData];
+
+      // Créer ou mettre à jour l'enregistrement
+      const updateData = {
+        etat_des_lieux_id: etatId,
+        [photoType]: updatedPhotos,
+        ...existingData
+      };
+
+      const { data, error } = await supabase
+        .from('releve_compteurs')
+        .upsert(updateData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['releve_compteurs', data.etat_des_lieux_id] });
+    },
+  });
+};
+
+// Hook pour supprimer une photo d'un type spécifique
+export const useDeletePhotoFromReleveCompteurs = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      etatId, 
+      photoType, 
+      photoIndex 
+    }: { 
+      etatId: string; 
+      photoType: 'photos' | 'photos_electricite' | 'photos_eau' | 'photos_gaz'; 
+      photoIndex: number 
+    }) => {
+      // Récupérer les données existantes
+      const { data: existingData, error: fetchError } = await supabase
+        .from('releve_compteurs')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Supprimer la photo à l'index spécifié
+      const currentPhotos = existingData[photoType] || [];
+      const updatedPhotos = currentPhotos.filter((_: any, index: number) => index !== photoIndex);
+
+      // Mettre à jour l'enregistrement
+      const updateData = {
+        ...existingData,
+        [photoType]: updatedPhotos,
+      };
+
+      const { data, error } = await supabase
+        .from('releve_compteurs')
+        .update(updateData)
+        .eq('etat_des_lieux_id', etatId)
         .select()
         .single();
 
