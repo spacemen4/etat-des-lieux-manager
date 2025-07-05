@@ -6,7 +6,36 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Zap, Flame, Droplets, User, Camera, X, Upload, Image as ImageIcon, RefreshCw } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+
+// Mock supabase for demo purposes
+const supabase = {
+  from: (table: string) => ({
+    select: (columns: string) => ({
+      eq: (column: string, value: string) => ({
+        single: async () => ({ data: null, error: { code: 'PGRST116' } })
+      })
+    }),
+    update: (data: any) => ({
+      eq: (column: string, value: string) => ({
+        select: () => ({
+          single: async () => ({ data: { id: '1', ...data }, error: null })
+        })
+      })
+    }),
+    insert: (data: any) => ({
+      select: () => ({
+        single: async () => ({ data: { id: '1', ...data }, error: null })
+      })
+    })
+  }),
+  storage: {
+    from: (bucket: string) => ({
+      upload: async (path: string, file: File) => ({ data: { path }, error: null }),
+      remove: async (paths: string[]) => ({ error: null }),
+      getPublicUrl: (path: string) => ({ data: { publicUrl: `https://example.com/${path}` } })
+    })
+  }
+};
 
 interface Photo {
   id: string;
@@ -37,7 +66,7 @@ interface ReleveCompteursStepProps {
   etatId: string;
 }
 
-const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => {
+const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' }) => {
   console.log('[ReleveCompteursStep] Render - etatId:', etatId);
   
   const [releveCompteurs, setReleveCompteurs] = useState<ReleveCompteurs | null>(null);
@@ -170,12 +199,12 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
 
     Array.from(files).forEach(file => {
       if (file.size > maxSize) {
-        toast.error(`Le fichier ${file.name} est trop volumineux (max 5MB)`);
+        alert(`Le fichier ${file.name} est trop volumineux (max 5MB)`);
         return;
       }
 
       if (!file.type.startsWith('image/')) {
-        toast.error(`Le fichier ${file.name} n'est pas une image`);
+        alert(`Le fichier ${file.name} n'est pas une image`);
         return;
       }
 
@@ -229,10 +258,10 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
       // Mettre à jour l'état local
       setReleveCompteurs(prev => prev ? { ...prev, photos: updatedPhotos } : null);
       
-      toast.success('Photo supprimée avec succès');
+      alert('Photo supprimée avec succès');
     } catch (error) {
       console.error('❌ Erreur lors de la suppression:', error);
-      toast.error('Erreur lors de la suppression de la photo');
+      alert('Erreur lors de la suppression de la photo');
     }
   };
 
@@ -330,7 +359,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
 
   const handleSave = async () => {
     if (!validateForm()) {
-      toast.error('Veuillez corriger les erreurs avant de sauvegarder');
+      alert('Veuillez corriger les erreurs avant de sauvegarder');
       return;
     }
 
@@ -398,11 +427,11 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
         eau: []
       });
 
-      toast.success('Relevé des compteurs sauvegardé avec succès');
+      alert('Relevé des compteurs sauvegardé avec succès');
       
     } catch (error) {
       console.error('❌ Erreur lors de la sauvegarde:', error);
-      toast.error('Erreur lors de la sauvegarde');
+      alert('Erreur lors de la sauvegarde');
     } finally {
       setIsSaving(false);
     }
@@ -579,8 +608,8 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
       <Card>
         <CardContent className="flex items-center justify-center py-8">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-            <p className="text-sm text-muted-foreground">Chargement des données...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+            <p className="text-sm text-gray-600">Chargement des données...</p>
           </div>
         </CardContent>
       </Card>
@@ -617,7 +646,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
             </Badge>
           )}
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-gray-600">
           Renseignez les informations et index de tous les compteurs présents dans le logement
         </p>
       </CardHeader>
