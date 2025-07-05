@@ -73,113 +73,59 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
 
   // Fonction pour charger les photos existantes depuis la base
   const loadExistingPhotos = async (releveId: string) => {
-    console.log('[loadExistingPhotos] called with releveId:', releveId);
-    if (!releveId) return;
-    
-    setLoadingPhotos(true);
-    console.log('🔄 Chargement des photos existantes pour releveId:', releveId);
-    
-    try {
-      const { data, error } = await supabase
-        .from('releve_compteurs_photos')
-        .select('*')
-        .eq('releve_compteurs_id', releveId)
-        .order('uploaded_at', { ascending: true });
+  if (!releveId) return;
+  
+  setLoadingPhotos(true);
+  
+  try {
+    const { data, error } = await supabase
+      .from('releve_compteurs_photos')
+      .select('*')
+      .eq('releve_compteurs_id', releveId)
+      .order('uploaded_at', { ascending: true });
 
-      if (error) {
-        console.error('❌ Erreur lors du chargement des photos:', error);
-        toast.error('Erreur lors du chargement des photos');
-        return;
-      }
+    if (error) throw error;
 
-      if (data && data.length > 0) {
-        console.log(`📷 ${data.length} photos trouvées`);
-        
-        const categorizedPhotos: {
-          electricite: Photo[];
-          gaz: Photo[];
-          eau: Photo[];
-        } = {
-          electricite: [],
-          gaz: [],
-          eau: []
-        };
+    const categorizedPhotos = {
+      electricite: [] as Photo[],
+      gaz: [] as Photo[],
+      eau: [] as Photo[],
+    };
 
-        // Traitement des photos avec gestion d'erreur pour chaque photo
-        for (const photoRecord of data) {
-          try {
-            // Déterminer la catégorie depuis le chemin du fichier
-            let category: 'electricite' | 'gaz' | 'eau' = 'electricite';
-            if (photoRecord.file_path.includes('/gaz/')) {
-              category = 'gaz';
-            } else if (photoRecord.file_path.includes('/eau/')) {
-              category = 'eau';
-            }
+    if (data) {
+      for (const photoRecord of data) {
+        try {
+          const category = photoRecord.file_path.includes('/gaz/') ? 'gaz' : 
+                         photoRecord.file_path.includes('/eau/') ? 'eau' : 'electricite';
 
-            // Vérifier si le fichier existe dans le storage
-            const { data: fileData, error: fileError } = await supabase.storage
-              .from('etat-des-lieux-photos')
-              .list(photoRecord.file_path.split('/').slice(0, -1).join('/'), {
-                search: photoRecord.file_path.split('/').pop()
-              });
+          const { data: publicUrlData } = supabase.storage
+            .from('etat-des-lieux-photos')
+            .getPublicUrl(photoRecord.file_path);
 
-            if (fileError || !fileData?.length) {
-              console.warn(`⚠️ Fichier introuvable: ${photoRecord.file_path}`);
-              // Supprimer l'enregistrement orphelin
-              await supabase
-                .from('releve_compteurs_photos')
-                .delete()
-                .eq('id', photoRecord.id);
-              continue;
-            }
-
-            // Obtenir l'URL publique
-            const { data: publicUrlData } = supabase.storage
-              .from('etat-des-lieux-photos')
-              .getPublicUrl(photoRecord.file_path);
-
-            const photo: Photo = {
-              id: photoRecord.id,
-              name: photoRecord.file_name,
-              size: photoRecord.file_size,
-              type: photoRecord.mime_type,
-              url: publicUrlData.publicUrl,
-              description: photoRecord.description || '',
-              category,
-              file_path: photoRecord.file_path
-            };
-
-            categorizedPhotos[category].push(photo);
-            console.log(`✅ Photo chargée: ${photo.name} (${category})`);
-            
-          } catch (photoError) {
-            console.error(`❌ Erreur lors du traitement de la photo ${photoRecord.file_name}:`, photoError);
-          }
+          categorizedPhotos[category].push({
+            id: photoRecord.id,
+            name: photoRecord.file_name,
+            size: photoRecord.file_size,
+            type: photoRecord.mime_type,
+            url: publicUrlData.publicUrl,
+            description: photoRecord.description || '',
+            category,
+            file_path: photoRecord.file_path
+          });
+        } catch (photoError) {
+          console.error(`Error processing photo ${photoRecord.id}:`, photoError);
         }
-
-        setPhotos(categorizedPhotos);
-        console.log('📊 Photos chargées par catégorie:', {
-          electricite: categorizedPhotos.electricite.length,
-          gaz: categorizedPhotos.gaz.length,
-          eau: categorizedPhotos.eau.length
-        });
-        
-      } else {
-        console.log('📷 Aucune photo trouvée');
-        // Réinitialiser les photos si aucune n'est trouvée
-        setPhotos({
-          electricite: [],
-          gaz: [],
-          eau: []
-        });
       }
-    } catch (error) {
-      console.error('💥 Erreur lors du chargement des photos:', error);
-      toast.error('Erreur lors du chargement des photos');
-    } finally {
-      setLoadingPhotos(false);
     }
-  };
+
+    setPhotos(categorizedPhotos);
+  } catch (error) {
+    console.error('Error loading photos:', error);
+    toast.error('Erreur lors du chargement des photos');
+  } finally {
+    setLoadingPhotos(false);
+  }
+};
 
   // Fonction pour recharger les données
   const handleRefreshData = async () => {
@@ -198,32 +144,25 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
 
   // Chargement initial des données
   useEffect(() => {
-    console.log('[useEffect] releveCompteurs:', releveCompteurs, 'initialDataLoaded:', initialDataLoaded);
-    if (releveCompteurs && !initialDataLoaded) {
-      console.log('🔄 Chargement initial des données...');
-      const newFormData = {
-        nom_ancien_occupant: releveCompteurs.nom_ancien_occupant || '',
-        electricite_n_compteur: releveCompteurs.electricite_n_compteur || '',
-        electricite_h_pleines: releveCompteurs.electricite_h_pleines || '',
-        electricite_h_creuses: releveCompteurs.electricite_h_creuses || '',
-        gaz_naturel_n_compteur: releveCompteurs.gaz_naturel_n_compteur || '',
-        gaz_naturel_releve: releveCompteurs.gaz_naturel_releve || '',
-        eau_chaude_m3: releveCompteurs.eau_chaude_m3 || '',
-        eau_froide_m3: releveCompteurs.eau_froide_m3 || '',
-      };
-      setFormData(newFormData);
-      console.log('📝 Données du formulaire chargées:', newFormData);
-      // Charger les photos existantes
-      if (releveCompteurs.id) {
-        console.log('[useEffect] Appel de loadExistingPhotos avec id:', releveCompteurs.id);
-        loadExistingPhotos(releveCompteurs.id);
-      } else {
-        console.log('[useEffect] Pas d\'id pour charger les photos');
-      }
-      setInitialDataLoaded(true);
-      toast.success('Dernier relevé chargé avec succès');
+  if (releveCompteurs && !initialDataLoaded) {
+    setFormData({
+      nom_ancien_occupant: releveCompteurs.nom_ancien_occupant || '',
+      electricite_n_compteur: releveCompteurs.electricite_n_compteur || '',
+      electricite_h_pleines: releveCompteurs.electricite_h_pleines || '',
+      electricite_h_creuses: releveCompteurs.electricite_h_creuses || '',
+      gaz_naturel_n_compteur: releveCompteurs.gaz_naturel_n_compteur || '',
+      gaz_naturel_releve: releveCompteurs.gaz_naturel_releve || '',
+      eau_chaude_m3: releveCompteurs.eau_chaude_m3 || '',
+      eau_froide_m3: releveCompteurs.eau_froide_m3 || '',
+    });
+
+    if (releveCompteurs.id) {
+      loadExistingPhotos(releveCompteurs.id);
     }
-  }, [releveCompteurs, initialDataLoaded]);
+    
+    setInitialDataLoaded(true);
+  }
+}, [releveCompteurs, initialDataLoaded]);
 
   // Réinitialiser dataLoaded quand l'etatId change
   useEffect(() => {

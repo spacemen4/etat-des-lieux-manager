@@ -203,17 +203,14 @@ export const useReleveCompteursByEtatId = (etatId: string) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('releve_compteurs')
-        .select('*', { head: false })
+        .select('*')
         .eq('etat_des_lieux_id', etatId)
-        .single()
-        .headers({
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        });
+        .single();
 
       if (error && error.code !== 'PGRST116') throw error;
       return data;
     },
+    enabled: !!etatId,
   });
 };
 
