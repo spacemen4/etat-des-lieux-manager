@@ -845,15 +845,16 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' 
         </div>
 
         {/* Bouton de sauvegarde */}
+        {/* Bouton de sauvegarde */}
         <div className="pt-4">
           <Button 
             onClick={handleSave} 
-            disabled={updateReleveCompteursMutation.isPending || hasErrors || uploadingPhotos}
+            disabled={isSaving || hasErrors || uploadingPhotos}
             className="w-full"
             size="lg"
           >
             {uploadingPhotos ? 'Upload des photos...' : 
-              updateReleveCompteursMutation.isPending ? 'Sauvegarde en cours...' : 
+              isSaving ? 'Sauvegarde en cours...' : 
               hasExistingData ? 'Mettre à jour le relevé' : 'Enregistrer le relevé'}
           </Button>
           {hasErrors && (
