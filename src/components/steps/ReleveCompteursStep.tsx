@@ -725,34 +725,50 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
   // Calculer hasErrors ici, en dehors du JSX
   const hasErrors = Object.values(errors).some(error => error !== '');
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-            <p className="text-sm text-muted-foreground">Chargement des données...</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+if (isLoading) {
+  return (
+    <Card>
+      <CardContent className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-muted-foreground">Chargement des données...</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
-  if (error) {
-    return (
-      <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Badge variant="outline" className="px-2 py-1">
-            Relevé de compteurs
-          </Badge>
-          Relevé des compteurs
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Renseignez les informations et index de tous les compteurs présents dans le logement
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-6">
+if (error) {
+  return (
+    <Card>
+      <CardContent className="flex items-center justify-center py-8">
+        <div className="text-center text-red-500">
+          <p className="text-sm">Erreur lors du chargement des données</p>
+          <Button variant="outline" size="sm" onClick={handleRefreshData} className="mt-2">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Réessayer
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Main component return
+return (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <Badge variant="outline" className="px-2 py-1">
+          Relevé de compteurs
+        </Badge>
+        Relevé des compteurs
+      </CardTitle>
+      <p className="text-sm text-muted-foreground">
+        Renseignez les informations et index de tous les compteurs présents dans le logement
+      </p>
+    </CardHeader>
+    <CardContent className="space-y-6">
         {/* Section Ancien occupant */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b">
@@ -991,9 +1007,9 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId }) => 
             <li>• Conservez une copie de ce relevé pour vos démarches administratives</li>
           </ul>
         </div>
-      </CardContent>
-    </Card>
-  );
+    </CardContent>
+  </Card>
+);
 };
 
 export default ReleveCompteursStep;
