@@ -47,16 +47,23 @@ const supabaseClient = {
       throw new Error(`API Error: ${response.status} - ${errorData.message || response.statusText}`);
     }
 
-    return response.json();
+    // For POST, PATCH, DELETE with 'return=representation', Supabase returns an array.
+    // For GET (list), it's an array. For GET (single with ?id=eq.x), it might be an array with one item.
+    // We'll adjust this to be more flexible or ensure callers expect an array.
+    const responseData = await response.json();
+    // console.log('[DEBUG] apiCall: responseData', responseData);
+    return responseData;
   },
 
   // Opérations sur les pièces
   pieces: {
     async fetchAll(etatId) {
-      return await supabaseClient.apiCall(`pieces?etat_des_lieux_id=eq.${etatId}&select=*`);
+      // Assuming pieces table might have a 'photos' column as JSONB
+      return await supabaseClient.apiCall(`pieces?etat_des_lieux_id=eq.${etatId}&select=*,photos`);
     },
 
     async create(piece) {
+      // Ensure 'photos' is part of the piece object if it's being created with photos
       const [result] = await supabaseClient.apiCall('pieces', {
         method: 'POST',
         body: JSON.stringify(piece)
@@ -65,6 +72,7 @@ const supabaseClient = {
     },
 
     async update(id, updates) {
+      // Ensure 'photos' is part of the updates object if photos are being changed
       const [result] = await supabaseClient.apiCall(`pieces?id=eq.${id}`, {
         method: 'PATCH',
         body: JSON.stringify(updates)
@@ -80,36 +88,6 @@ const supabaseClient = {
   },
 
   // Opérations sur les photos
-  photos: {
-    async fetchForPiece(pieceId) {
-      return await supabaseClient.apiCall(`photos?piece_id=eq.${pieceId}&select=*`);
-    },
-
-    async create(photo) {
-      console.log('[DEBUG] photos.create: photo object', photo);
-      const [result] = await supabaseClient.apiCall('photos', {
-        method: 'POST',
-        body: JSON.stringify(photo)
-      });
-      console.log('[DEBUG] photos.create: result', result);
-      return result;
-    },
-
-    async update(id, updates) {
-      const [result] = await supabaseClient.apiCall(`photos?id=eq.${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(updates)
-      });
-      return result;
-    },
-
-    async delete(id) {
-      await supabaseClient.apiCall(`photos?id=eq.${id}`, {
-        method: 'DELETE'
-      });
-    }
-  },
-
   // Opérations sur le stockage
   storage: {
     from: (bucket) => ({
@@ -159,6 +137,18 @@ const supabaseClient = {
     })
   }
 };
+
+// Interface for Photo metadata (similar to ReleveCompteursStep)
+interface PhotoMetadata {
+  id: string; // Unique ID for the photo (e.g., timestamp_randomId or file_path)
+  name: string;
+  size: number;
+  type: string;
+  url: string;
+  description?: string;
+  category: string; // e.g., 'pieces'
+  file_path: string; // Path in Supabase storage
+}
 
 const PIECES_TYPES = [
   'Salon', 'Cuisine', 'Chambre', 'Salle de bain', 'WC', 'Entrée', 'Couloir',
@@ -247,22 +237,16 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
     const loadPieces = async () => {
       try {
         setIsLoading(true);
+        // piecesData should now include the 'photos' array directly if the 'pieces' table has it.
         const piecesData = await supabaseClient.pieces.fetchAll(etatId);
         
-        // Charger les photos pour chaque pièce
-        const piecesWithPhotos = await Promise.all(
-          piecesData.map(async (piece) => {
-            try {
-              const photos = await supabaseClient.photos.fetchForPiece(piece.id);
-              return { ...piece, photos: photos || [] };
-            } catch (error) {
-              console.error(`Erreur chargement photos pour pièce ${piece.id}:`, error);
-              return { ...piece, photos: [] };
-            }
-          })
-        );
+        // Ensure each piece has a 'photos' array, even if null from DB, default to empty array.
+        const piecesWithInitializedPhotos = piecesData.map(p => ({
+          ...p,
+          photos: p.photos || []
+        }));
         
-        setPieces(piecesWithPhotos);
+        setPieces(piecesWithInitializedPhotos);
       } catch (error) {
         console.error('Erreur chargement pièces:', error);
         showToast('Erreur lors du chargement des pièces', 'error');
@@ -276,9 +260,10 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
 
   useEffect(() => {
     if (selectedPiece) {
+      // Assuming selectedPiece from `pieces` state already has `photos` array
       const { id, etat_des_lieux_id, nom_piece, photos, created_at, updated_at, ...restData } = selectedPiece;
       setFormData(restData);
-      setCurrentPieceExistingPhotos(photos || []);
+      setCurrentPieceExistingPhotos(photos || []); // photos is PhotoMetadata[]
       setCurrentPieceNewPhotos([]);
     } else {
       setFormData({});
@@ -329,16 +314,24 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
       // Supprimer du stockage
       await supabaseClient.storage.from('etat-des-lieux-photos').remove([filePath]);
       
-      // Supprimer de la base de données
-      await supabaseClient.photos.delete(photoId);
+      // Mettre à jour l'état local (la sauvegarde mettra à jour la BD)
+      const updatedPhotos = currentPieceExistingPhotos.filter(p => p.id !== photoId);
+      setCurrentPieceExistingPhotos(updatedPhotos);
       
-      // Mettre à jour l'état local
-      setCurrentPieceExistingPhotos(prev => prev.filter(p => p.id !== photoId));
+      // Mettre à jour la pièce sélectionnée pour refléter la suppression de la photo
+      // et déclencher la sauvegarde pour persister ce changement.
+      if (selectedPiece) {
+        const pieceUpdateWithRemovedPhoto = { ...selectedPiece, photos: updatedPhotos };
+        setSelectedPiece(pieceUpdateWithRemovedPhoto);
+        // Optionnel: sauvegarder immédiatement la pièce avec la liste de photos mise à jour
+        // await supabaseClient.pieces.update(selectedPiece.id, { photos: updatedPhotos });
+        // Pour l'instant, on laisse la sauvegarde principale gérer ça via handleSave.
+      }
       
-      showToast('Photo supprimée avec succès', 'success');
+      showToast('Photo marquée pour suppression. Sauvegardez la pièce pour confirmer.', 'info');
     } catch (error) {
-      console.error('Erreur suppression photo:', error);
-      showToast('Erreur lors de la suppression de la photo', 'error');
+      console.error('Erreur suppression photo du stockage:', error);
+      showToast('Erreur lors de la suppression du fichier photo du stockage.', 'error');
     } finally {
       setIsProcessingPhotos(false);
     }
@@ -346,44 +339,40 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
 
   const handleExistingPhotoDescriptionChangeCurrentPiece = (photoId, description) => {
     setCurrentPieceExistingPhotos(prev => prev.map(p => p.id === photoId ? { ...p, description } : p));
+    // Note: This change will be persisted when the piece is saved.
   };
 
-  const _uploadPhotosForCurrentPiece = async () => {
+  // _uploadPhotosForCurrentPiece now returns an array of PhotoMetadata
+  const _uploadPhotosForCurrentPiece = async (): Promise<PhotoMetadata[]> => {
     if (currentPieceNewPhotos.length === 0 || !selectedPiece) return [];
     
     setIsProcessingPhotos(true);
-    const uploadedResults = [];
+    const uploadedPhotoMetadataList: PhotoMetadata[] = [];
     
     try {
       for (const photoFile of currentPieceNewPhotos) {
         const timestamp = Date.now();
         const randomId = Math.random().toString(36).substring(2, 15);
+        const photoInternalId = `${timestamp}_${randomId}`; // Used for React keys and local ID
         const fileExtension = photoFile.name.split('.').pop();
-        const fileName = `${etatId}/pieces/${selectedPiece.id}/${timestamp}_${randomId}.${fileExtension}`;
-        console.log('[DEBUG] _uploadPhotosForCurrentPiece: etatId', etatId);
-        console.log('[DEBUG] _uploadPhotosForCurrentPiece: selectedPiece.id', selectedPiece.id);
-        console.log('[DEBUG] _uploadPhotosForCurrentPiece: generated fileName', fileName);
+        // Ensure selectedPiece.id is valid, otherwise, this might be an issue if piece not yet saved
+        const pieceIdForPath = selectedPiece.id || "unknown_piece";
+        const fileName = `${etatId}/pieces/${pieceIdForPath}/${photoInternalId}.${fileExtension}`;
         
-        // Upload vers Supabase Storage
-        console.log('[DEBUG] _uploadPhotosForCurrentPiece: Uploading to Supabase Storage...');
+        console.log('[DEBUG] _uploadPhotosForCurrentPiece: Uploading to Supabase Storage path:', fileName);
         const { data: uploadData, error: uploadError } = await supabaseClient.storage
           .from('etat-des-lieux-photos')
           .upload(fileName, photoFile);
         
-        console.log('[DEBUG] _uploadPhotosForCurrentPiece: uploadData', uploadData);
-        console.log('[DEBUG] _uploadPhotosForCurrentPiece: uploadError', uploadError);
         if (uploadError) throw uploadError;
         
-        // Obtenir l'URL publique
         console.log('[DEBUG] _uploadPhotosForCurrentPiece: Getting public URL...');
         const { data: publicUrlData } = supabaseClient.storage
           .from('etat-des-lieux-photos')
           .getPublicUrl(uploadData.path);
-        console.log('[DEBUG] _uploadPhotosForCurrentPiece: publicUrlData', publicUrlData);
         
-        // Enregistrer les métadonnées en base
-        const photoRecordParams = {
-          piece_id: selectedPiece.id,
+        const photoMetadata: PhotoMetadata = {
+          id: photoInternalId, // Use the generated ID
           name: photoFile.name,
           size: photoFile.size,
           type: photoFile.type,
@@ -392,21 +381,15 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
           category: 'pieces',
           file_path: uploadData.path
         };
-        console.log('[DEBUG] _uploadPhotosForCurrentPiece: photoRecordParams for DB', photoRecordParams);
-
-        const photoRecord = await supabaseClient.photos.create(photoRecordParams);
-        console.log('[DEBUG] _uploadPhotosForCurrentPiece: photoRecord from DB', photoRecord);
-        
-        uploadedResults.push(photoRecord);
+        uploadedPhotoMetadataList.push(photoMetadata);
+        console.log('[DEBUG] _uploadPhotosForCurrentPiece: Generated photo metadata:', photoMetadata);
       }
       
-      console.log('[DEBUG] _uploadPhotosForCurrentPiece: All photos processed, uploadedResults:', uploadedResults);
-      return uploadedResults;
+      console.log('[DEBUG] _uploadPhotosForCurrentPiece: All photos processed, metadata list:', uploadedPhotoMetadataList);
+      return uploadedPhotoMetadataList;
     } catch (error) {
       console.error('Erreur upload photos:', error);
       showToast(`Erreur upload photos: ${error.message}`, 'error');
-      // Log the error object itself for more details if available
-      console.log('[DEBUG] _uploadPhotosForCurrentPiece: CATCH block error object', error);
       throw error;
     } finally {
       setIsProcessingPhotos(false);
@@ -419,30 +402,37 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
     setIsSaving(true);
     
     try {
-      // Upload des nouvelles photos
-      const newlyUploadedPhotos = await _uploadPhotosForCurrentPiece();
+      // 1. Upload des nouvelles photos et obtenir leurs métadonnées
+      const newPhotoMetadataList = await _uploadPhotosForCurrentPiece();
       
-      // Mise à jour des descriptions des photos existantes
-      for (const photo of currentPieceExistingPhotos) {
-        if (photo.id && photo.description !== (selectedPiece.photos?.find(p => p.id === photo.id)?.description || '')) {
-          await supabaseClient.photos.update(photo.id, {
-            description: photo.description
-          });
-        }
-      }
+      // 2. Combiner les photos existantes (avec leurs descriptions potentiellement mises à jour)
+      //    et les métadonnées des nouvelles photos.
+      //    currentPieceExistingPhotos already reflects description changes.
+      const allPhotosForPiece: PhotoMetadata[] = [
+        ...currentPieceExistingPhotos,
+        ...newPhotoMetadataList
+      ];
+
+      // 3. Préparer les données de la pièce à sauvegarder, y compris le tableau de photos.
+      const pieceDataToSave = {
+        ...formData, // Contient les autres champs de la pièce
+        photos: allPhotosForPiece, // Le tableau complet des métadonnées des photos
+      };
       
-      // Mise à jour de la pièce
-      const updatedPiece = await supabaseClient.pieces.update(selectedPiece.id, formData);
+      // 4. Mettre à jour la pièce dans la base de données
+      console.log('[DEBUG] handleSave: Updating piece with data:', pieceDataToSave);
+      const updatedPieceFromDB = await supabaseClient.pieces.update(selectedPiece.id, pieceDataToSave);
       
-      // Mise à jour de l'état local
-      const allPhotos = [...currentPieceExistingPhotos, ...newlyUploadedPhotos];
-      const updatedPieceWithPhotos = { ...updatedPiece, photos: allPhotos };
-      
-      setPieces(prev => prev.map(piece => 
-        piece.id === selectedPiece.id ? updatedPieceWithPhotos : piece
+      // 5. Mettre à jour l'état local
+      //    updatedPieceFromDB should ideally return the piece with the photos array included.
+      //    If not, ensure updatedPieceFromDB is merged correctly with allPhotosForPiece for local state.
+      const finalUpdatedPieceForState = { ...updatedPieceFromDB, photos: allPhotosForPiece };
+
+      setPieces(prevPieces => prevPieces.map(p =>
+        p.id === selectedPiece.id ? finalUpdatedPieceForState : p
       ));
       
-      setSelectedPiece(updatedPieceWithPhotos);
+      setSelectedPiece(finalUpdatedPieceForState);
       setCurrentPieceNewPhotos([]);
       
       showToast(`Pièce "${selectedPiece.nom_piece}" sauvegardée avec succès`, 'success');
@@ -463,19 +453,21 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
     setIsCreating(true);
 
     try {
-      const newPiece = await supabaseClient.pieces.create({
+      const newPieceData = {
         etat_des_lieux_id: etatId,
         nom_piece: newPieceName.trim(),
-      });
+        photos: [], // Initialize with an empty array for photos
+      };
+      const newPiece = await supabaseClient.pieces.create(newPieceData);
 
-      const pieceWithPhotos = { ...newPiece, photos: [] };
-      setPieces(prev => [...prev, pieceWithPhotos]);
+      // newPiece should already have the 'photos' array from the DB response if 'return=representation'
+      setPieces(prev => [...prev, newPiece]);
 
       showToast(`Pièce "${newPieceName}" créée avec succès`, 'success');
       setNewPieceName('');
       setSelectedSuggestion('');
       setIsCreateDialogOpen(false);
-      setSelectedPiece(pieceWithPhotos);
+      setSelectedPiece(newPiece);
     } catch (error) {
       console.error('Erreur création pièce:', error);
       showToast('Erreur lors de la création de la pièce', 'error');
@@ -499,27 +491,24 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
     try {
       const pieceToDelete = pieces.find(p => p.id === pieceId);
       
-      // Supprimer les photos du stockage et de la base
+      // Supprimer les photos du stockage si elles existent
       if (pieceToDelete?.photos && pieceToDelete.photos.length > 0) {
-        const photoPaths = pieceToDelete.photos.map(p => p.file_path);
-        
-        try {
-          await supabaseClient.storage.from('etat-des-lieux-photos').remove(photoPaths);
-        } catch (storageError) {
-          console.error("Erreur suppression photos du stockage:", storageError);
-        }
-        
-        // Supprimer les enregistrements de photos
-        for (const photo of pieceToDelete.photos) {
+        const photoPaths = pieceToDelete.photos.map(p => p.file_path).filter(Boolean); // Ensure paths are valid
+        if (photoPaths.length > 0) {
           try {
-            await supabaseClient.photos.delete(photo.id);
-          } catch (photoError) {
-            console.error("Erreur suppression photo de la base:", photoError);
+            console.log('[DEBUG] handleDeletePiece: Removing photos from storage:', photoPaths);
+            await supabaseClient.storage.from('etat-des-lieux-photos').remove(photoPaths);
+          } catch (storageError) {
+            console.error("Erreur suppression photos du stockage lors de la suppression de la pièce:", storageError);
+            showToast('Erreur partielle: certaines photos du stockage n\'ont pu être supprimées.', 'error');
+            // Continue with deleting the piece record itself
           }
         }
       }
 
-      // Supprimer la pièce
+      // Supprimer la pièce de la base de données
+      // (cela supprimera la pièce et sa colonne 'photos' contenant les métadonnées)
+      console.log('[DEBUG] handleDeletePiece: Deleting piece record from DB:', pieceId);
       await supabaseClient.pieces.delete(pieceId);
       
       // Mettre à jour l'état local
