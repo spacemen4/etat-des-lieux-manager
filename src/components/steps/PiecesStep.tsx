@@ -189,7 +189,6 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Photo handling functions
   const handleFileSelectCurrentPiece = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || !selectedPiece) return;
@@ -254,7 +253,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
           name: photoFile.name, 
           size: photoFile.size, 
           type: photoFile.type,
-          url: URL.createObjectURL(photoFile), // Utiliser une URL locale pour la démo
+          url: URL.createObjectURL(photoFile),
           description: photoFile.description || '',
           category: 'pieces', 
           file_path: uploadData!.path
@@ -578,7 +577,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
                 size="sm"
                 onClick={() => handleDeletePiece(selectedPiece.id, selectedPiece.nom_piece)}
                 className="text-red-500 hover:text-red-700"
-                disabled={deletePieceMutation.isPending && deletePieceMutation.variables === selectedPiece.id}
+                disabled={isDeleting}
               >
                 <Trash2 className="h-4 w-4 mr-1" /> Supprimer cette pièce
               </Button>
@@ -619,7 +618,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
               </div>
               <div 
                 className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors cursor-pointer" 
-                onClick={() => !(isProcessingPhotos || updatePieceMutation.isPending) && fileInputRef.current?.click()}
+                onClick={() => !(isProcessingPhotos || isSaving) && fileInputRef.current?.click()}
               >
                 <input 
                   ref={fileInputRef} 
@@ -628,15 +627,15 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
                   accept="image/*" 
                   onChange={handleFileSelectCurrentPiece} 
                   className="hidden" 
-                  disabled={isProcessingPhotos || updatePieceMutation.isPending}
+                  disabled={isProcessingPhotos || isSaving}
                 />
                 <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
                 <Button 
                   type="button" 
                   variant="outline" 
                   size="sm" 
-                  onClick={(e) => {e.stopPropagation(); !(isProcessingPhotos || updatePieceMutation.isPending) && fileInputRef.current?.click();}} 
-                  disabled={isProcessingPhotos || updatePieceMutation.isPending}
+                  onClick={(e) => {e.stopPropagation(); !(isProcessingPhotos || isSaving) && fileInputRef.current?.click();}} 
+                  disabled={isProcessingPhotos || isSaving}
                 >
                   <ImageIcon className="h-4 w-4 mr-2" /> Ajouter des photos
                 </Button>
@@ -662,7 +661,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
                             size="icon" 
                             onClick={() => handleRemoveExistingPhotoCurrentPiece(photo.id, photo.file_path)} 
                             className="h-6 w-6 p-0" 
-                            disabled={isProcessingPhotos || updatePieceMutation.isPending}
+                            disabled={isProcessingPhotos || isSaving}
                           >
                             <X className="h-3 w-3" />
                           </Button>
@@ -674,7 +673,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
                             value={photo.description || ''} 
                             onChange={(e) => handleExistingPhotoDescriptionChangeCurrentPiece(photo.id, e.target.value)} 
                             className="text-xs h-7 w-full" 
-                            disabled={isProcessingPhotos || updatePieceMutation.isPending}
+                            disabled={isProcessingPhotos || isSaving}
                           />
                           <p className="text-xs text-gray-500 truncate mt-1" title={photo.name}>
                             {(photo.size / 1024).toFixed(1)} KB <span className="text-green-600">✓</span>
@@ -704,7 +703,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
                             size="icon" 
                             onClick={() => handleRemoveNewPhotoCurrentPiece(idx)} 
                             className="h-6 w-6 p-0" 
-                            disabled={isProcessingPhotos || updatePieceMutation.isPending}
+                            disabled={isProcessingPhotos || isSaving}
                           >
                             <X className="h-3 w-3" />
                           </Button>
@@ -716,7 +715,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
                             value={photoFile.description || ''} 
                             onChange={(e) => handleNewPhotoDescriptionChangeCurrentPiece(idx, e.target.value)} 
                             className="text-xs h-7 w-full" 
-                            disabled={isProcessingPhotos || updatePieceMutation.isPending}
+                            disabled={isProcessingPhotos || isSaving}
                           />
                           <p className="text-xs text-gray-500 truncate mt-1" title={photoFile.name}>
                             {(photoFile.size / 1024).toFixed(1)} KB <span className="text-orange-500">↯</span>
@@ -744,10 +743,10 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
             <div className="flex gap-2 pt-6 mt-4 border-t">
               <Button
                 onClick={handleSave}
-                disabled={updatePieceMutation.isPending || isProcessingPhotos || deletePieceMutation.isPending}
+                disabled={isSaving || isProcessingPhotos || isDeleting}
                 className="flex-1"
               >
-                {updatePieceMutation.isPending || isProcessingPhotos ? 'Sauvegarde...' : `Sauvegarder ${selectedPiece.nom_piece}`}
+                {isSaving || isProcessingPhotos ? 'Sauvegarde...' : `Sauvegarder ${selectedPiece.nom_piece}`}
               </Button>
               <Button
                 variant="outline"
