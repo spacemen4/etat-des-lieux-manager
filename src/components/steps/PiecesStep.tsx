@@ -5,8 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Edit, Trash2, Home, Camera, Upload, Image as ImageIcon, X } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertCircle, Home, LogOut, MessageSquare, Check, Camera, Upload, Image as ImageIcon, X } from 'lucide-react';
 
 // Configuration Supabase (simulée)
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
@@ -47,20 +48,34 @@ interface Piece {
   id: string;
   etat_des_lieux_id: string;
   nom_piece: string;
-  revetements_sols?: string;
-  murs_menuiseries?: string;
-  plafond?: string;
-  electricite_plomberie?: string;
-  placards?: string;
-  sanitaires?: string;
-  menuiseries?: string;
-  rangements?: string;
-  baignoire_douche?: string;
-  eviers_robinetterie?: string;
-  chauffage_tuyauterie?: string;
-  meubles_cuisine?: string;
-  hotte?: string;
-  plaque_cuisson?: string;
+  revetements_sols_entree?: string;
+  murs_menuiseries_entree?: string;
+  plafond_entree?: string;
+  electricite_plomberie_entree?: string;
+  placards_entree?: string;
+  sanitaires_entree?: string;
+  menuiseries_entree?: string;
+  rangements_entree?: string;
+  baignoire_douche_entree?: string;
+  eviers_robinetterie_entree?: string;
+  chauffage_tuyauterie_entree?: string;
+  meubles_cuisine_entree?: string;
+  hotte_entree?: string;
+  plaque_cuisson_entree?: string;
+  revetements_sols_sortie?: string;
+  murs_menuiseries_sortie?: string;
+  plafond_sortie?: string;
+  electricite_plomberie_sortie?: string;
+  placards_sortie?: string;
+  sanitaires_sortie?: string;
+  menuiseries_sortie?: string;
+  rangements_sortie?: string;
+  baignoire_douche_sortie?: string;
+  eviers_robinetterie_sortie?: string;
+  chauffage_tuyauterie_sortie?: string;
+  meubles_cuisine_sortie?: string;
+  hotte_sortie?: string;
+  plaque_cuisson_sortie?: string;
   commentaires?: string;
   photos: Photo[];
 }
@@ -138,6 +153,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newPieceName, setNewPieceName] = useState('');
   const [selectedSuggestion, setSelectedSuggestion] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'entree' | 'sortie'>('entree');
   const [formData, setFormData] = useState<PieceFormData>({});
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -325,6 +341,24 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     setNewPieceName(suggestion);
   };
 
+  const copyFromEntreeToSortie = () => {
+    if (!selectedPiece) return;
+    
+    const entreeFields = getFieldsForPiece(selectedPiece.nom_piece);
+    const newFormData = { ...formData };
+    
+    entreeFields.forEach(field => {
+      const entreeKey = `${field}_entree` as keyof PieceFormData;
+      const sortieKey = `${field}_sortie` as keyof PieceFormData;
+      if (formData[entreeKey]) {
+        newFormData[sortieKey] = formData[entreeKey];
+      }
+    });
+    
+    setFormData(newFormData);
+    showToast('Données copiées de l\'entrée vers la sortie', 'info');
+  };
+
   const handleDeletePiece = async (pieceId: string, pieceName: string) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer la pièce "${pieceName}" et toutes ses données associées (y compris les photos) ? Cette action est irréversible.`)) {
       setIsDeleting(true);
@@ -359,7 +393,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     }
   };
 
-  const renderPieceFields = () => {
+  const renderPieceFields = (suffix: 'entree' | 'sortie') => {
     if (!selectedPiece) return null;
     
     const fields = getFieldsForPiece(selectedPiece.nom_piece);
@@ -383,7 +417,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     return (
       <div className="space-y-4">
         {fields.map((field) => {
-          const fieldKey = field as keyof PieceFormData;
+          const fieldKey = `${field}_${suffix}` as keyof PieceFormData;
           return (
             <div key={fieldKey} className="space-y-2">
               <Label htmlFor={fieldKey}>{fieldLabels[field] || field}</Label>
@@ -391,7 +425,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
                 id={fieldKey}
                 value={formData[fieldKey] || ''}
                 onChange={(e) => handleInputChange(fieldKey, e.target.value)}
-                placeholder={`Décrivez l'état des ${fieldLabels[field]?.toLowerCase() || field}`}
+                placeholder={`Décrivez l'état des ${fieldLabels[field]?.toLowerCase() || field} lors de ${suffix === 'entree' ? 'l\'entrée' : 'la sortie'}`}
                 className="min-h-[80px]"
               />
             </div>
@@ -550,38 +584,59 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {/* Formulaire des champs de la pièce */}
-              {renderPieceFields()}
-
-              {/* Section Photos */}
-              <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <Camera className="h-5 w-5 text-slate-600" />
-                  <h3 className="text-lg font-semibold text-slate-700">Photos pour {selectedPiece.nom_piece}</h3>
-                  <Badge variant="secondary">{currentPieceExistingPhotos.length + currentPieceNewPhotos.length} photo(s)</Badge>
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'entree' | 'sortie')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="entree">État à l'entrée</TabsTrigger>
+                <TabsTrigger value="sortie">État à la sortie</TabsTrigger>
+              </TabsList>
+              <TabsContent value="entree">
+                {renderPieceFields('entree')}
+              </TabsContent>
+              <TabsContent value="sortie">
+                <div className="space-y-4">
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyFromEntreeToSortie}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Copier depuis l'entrée
+                    </Button>
+                  </div>
+                  {renderPieceFields('sortie')}
                 </div>
-                <div 
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors cursor-pointer" 
-                  onClick={() => !(isProcessingPhotos || isSaving) && fileInputRef.current?.click()}
+              </TabsContent>
+            </Tabs>
+
+            {/* Section Photos */}
+            <div className="mt-6 p-4 border rounded-lg bg-slate-50 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <Camera className="h-5 w-5 text-slate-600" />
+                <h3 className="text-lg font-semibold text-slate-700">Photos pour {selectedPiece.nom_piece}</h3>
+                <Badge variant="secondary">{currentPieceExistingPhotos.length + currentPieceNewPhotos.length} photo(s)</Badge>
+              </div>
+              <div 
+                className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors cursor-pointer" 
+                onClick={() => !(isProcessingPhotos || isSaving) && fileInputRef.current?.click()}
+              >
+                <input 
+                  ref={fileInputRef} 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  onChange={handleFileSelectCurrentPiece} 
+                  className="hidden" 
+                  disabled={isProcessingPhotos || isSaving}
+                />
+                <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={(e) => {e.stopPropagation(); !(isProcessingPhotos || isSaving) && fileInputRef.current?.click();}} 
+                  disabled={isProcessingPhotos || isSaving}
                 >
-                  <input 
-                    ref={fileInputRef} 
-                    type="file" 
-                    multiple 
-                    accept="image/*" 
-                    onChange={handleFileSelectCurrentPiece} 
-                    className="hidden" 
-                    disabled={isProcessingPhotos || isSaving}
-                  />
-                  <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={(e) => {e.stopPropagation(); !(isProcessingPhotos || isSaving) && fileInputRef.current?.click();}} 
-                    disabled={isProcessingPhotos || isSaving}
-                  >
                   <ImageIcon className="h-4 w-4 mr-2" /> Ajouter des photos
                 </Button>
                 <p className="text-xs text-gray-500 mt-1">Max 5MB par image.</p>
