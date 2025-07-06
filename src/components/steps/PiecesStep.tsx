@@ -45,11 +45,7 @@ const supabase = {
 
 // Mock hooks pour la démo
 const usePiecesByEtatId = (etatId: string) => {
-  const [pieces, setPieces] = useState([
-    { id: '1', etat_des_lieux_id: etatId, nom_piece: 'Salon', photos: [] },
-    { id: '2', etat_des_lieux_id: etatId, nom_piece: 'Cuisine', photos: [] },
-    { id: '3', etat_des_lieux_id: etatId, nom_piece: 'Chambre 1', photos: [] },
-  ]);
+  const [pieces, setPieces] = useState([]);
   
   return {
     data: pieces,
@@ -378,25 +374,6 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     });
   };
 
-  const handleQuickCreatePiece = (pieceName: string) => {
-    const newPiece: Omit<Piece, 'id'> = {
-      etat_des_lieux_id: etatId,
-      nom_piece: pieceName,
-      photos: []
-    };
-
-    createPieceMutation.mutate(newPiece, {
-      onSuccess: () => {
-        toast.success(`Pièce "${pieceName}" créée avec succès`);
-        refetch();
-      },
-      onError: (error) => {
-        toast.error('Erreur lors de la création de la pièce');
-        console.error('Erreur création pièce:', error);
-      },
-    });
-  };
-
   const handleSuggestionSelect = (suggestion: string) => {
     setSelectedSuggestion(suggestion);
     setNewPieceName(suggestion);
@@ -597,20 +574,8 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
             <div className="text-center py-8">
               <Home className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune pièce ajoutée</h3>
-                            <p className="text-gray-500 mb-4">Commencez par ajouter les pièces de votre état des lieux</p>
-              <div className="grid grid-cols-2 gap-2">
-                {['Salon', 'Cuisine', 'Chambre 1', 'Salle de bain'].map((piece) => (
-                  <Button
-                    key={piece}
-                    variant="outline"
-                    onClick={() => handleQuickCreatePiece(piece)}
-                    className="text-sm"
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    {piece}
-                  </Button>
-                ))}
-              </div>
+              <p className="text-gray-500 mb-4">Commencez par ajouter les pièces de votre état des lieux</p>
+              <p className="text-sm text-gray-400">Cliquez sur "Ajouter une pièce" pour commencer</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
