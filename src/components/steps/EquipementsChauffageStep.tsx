@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { useEquipementsChauffageByEtatId, useUpdateEquipementsChauffage } from '@/hooks/useEtatDesLieux';
 import { toast } from 'sonner';
+import { Camera, X } from 'lucide-react';
+
+interface Photo {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url: string;
+  description?: string;
+  file_path: string;
+}
 
 interface EquipementsChauffageStepProps {
   etatId: string;
@@ -16,6 +27,10 @@ interface EquipementsChauffageStepProps {
 const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ etatId }) => {
   const { data: equipementsChauffage, refetch, isLoading } = useEquipementsChauffageByEtatId(etatId);
   const updateEquipementsChauffageMutation = useUpdateEquipementsChauffage();
+  
+  const [newPhotos, setNewPhotos] = useState<(File & { description?: string })[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     chaudiere_etat: '',
@@ -53,6 +68,61 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const validFiles: (File & { description?: string })[] = [];
+    const maxSize = 5 * 1024 * 1024;
+
+    Array.from(files).forEach(file => {
+      if (file.size > maxSize) {
+        toast.error(`Le fichier ${file.name} est trop volumineux (max 5MB)`);
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast.error(`Le fichier ${file.name} n'est pas une image`);
+        return;
+      }
+      const fileWithDescription = file as File & { description?: string };
+      fileWithDescription.description = '';
+      validFiles.push(fileWithDescription);
+    });
+
+    setNewPhotos(prev => [...prev, ...validFiles]);
+  };
+
+  const handleRemoveNewPhoto = (photoIndex: number) => {
+    setNewPhotos(prev => prev.filter((_, index) => index !== photoIndex));
+  };
+
+  const uploadPhotos = async (): Promise<Photo[]> => {
+    if (newPhotos.length === 0) return [];
+
+    setUploadingPhotos(true);
+    const uploadedPhotos: Photo[] = [];
+
+    for (const photo of newPhotos) {
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 15);
+      const fileName = `${etatId}/equipements_chauffage/${timestamp}_${randomId}_${photo.name}`;
+      
+      const uploadedPhoto: Photo = {
+        id: `${timestamp}_${randomId}`,
+        name: photo.name,
+        size: photo.size,
+        type: photo.type,
+        url: `placeholder-url-${fileName}`,
+        description: photo.description || '',
+        file_path: fileName
+      };
+      uploadedPhotos.push(uploadedPhoto);
+    }
+
+    setUploadingPhotos(false);
+    return uploadedPhotos;
+  };
+
   const handleSave = async () => {
     try {
       if (!etatId) {
@@ -60,13 +130,18 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
         return;
       }
 
+      const uploadedPhotos = await uploadPhotos();
+      const existingPhotos = equipementsChauffage?.photos || [];
+      const allPhotos = [...existingPhotos, ...uploadedPhotos];
+
       const dataToSend = {
         etat_des_lieux_id: etatId,
         ...formData,
+        photos: allPhotos,
       };
 
       await updateEquipementsChauffageMutation.mutateAsync(dataToSend);
-      
+      setNewPhotos([]);
       toast.success('Équipements de chauffage sauvegardés');
       refetch();
     } catch (error) {
@@ -213,12 +288,72 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
           />
         </div>
 
+        {/* Section Photos */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Photos</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Camera className="h-4 w-4 mr-2" />
+              Ajouter photos
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+          </div>
+
+          {/* Nouvelles photos */}
+          {newPhotos.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {newPhotos.map((photo, photoIndex) => (
+                <div key={photoIndex} className="relative group">
+                  <img
+                    src={URL.createObjectURL(photo)}
+                    alt={photo.name}
+                    className="w-full h-24 object-cover rounded border"
+                  />
+                  <div className="absolute top-1 right-1">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => handleRemoveNewPhoto(photoIndex)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <Input
+                    placeholder="Description..."
+                    value={photo.description || ''}
+                    className="mt-1 text-xs"
+                    onChange={(e) => {
+                      const updatedPhotos = [...newPhotos];
+                      updatedPhotos[photoIndex] = { ...updatedPhotos[photoIndex], description: e.target.value };
+                      setNewPhotos(updatedPhotos);
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <Button
           onClick={handleSave}
-          disabled={updateEquipementsChauffageMutation.isPending}
+          disabled={updateEquipementsChauffageMutation.isPending || uploadingPhotos}
           className="w-full"
         >
-          {updateEquipementsChauffageMutation.isPending ? 'Sauvegarde...' : 'Sauvegarder'}
+          {uploadingPhotos ? 'Upload photos...' : updateEquipementsChauffageMutation.isPending ? 'Sauvegarde...' : 'Sauvegarder'}
         </Button>
       </CardContent>
     </Card>
