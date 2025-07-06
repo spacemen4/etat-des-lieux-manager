@@ -11,17 +11,131 @@ import { Plus, Edit, Trash2, Home, Camera, Upload, Image as ImageIcon, X } from 
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXB2eXJjdGxoYWd0emtic3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjg1NjYsImV4cCI6MjA2NjYwNDU2Nn0.4APWILaWXOtXCwdFYTk4MDithvZhp55ZJB6PnVn8D1w';
 
-const supabase = {
+// Configuration Supabase réelle
+const supabaseClient = {
+  // Fonction pour faire des requêtes à l'API Supabase
+  async apiCall(endpoint, options = {}) {
+    const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+    const headers = {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+      ...options.headers
+    };
+
+    const response = await fetch(url, {
+      ...options,
+      headers
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`API Error: ${response.status} - ${errorData.message || response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  // Opérations sur les pièces
+  pieces: {
+    async fetchAll(etatId) {
+      return await supabaseClient.apiCall(`pieces?etat_des_lieux_id=eq.${etatId}&select=*`);
+    },
+
+    async create(piece) {
+      const [result] = await supabaseClient.apiCall('pieces', {
+        method: 'POST',
+        body: JSON.stringify(piece)
+      });
+      return result;
+    },
+
+    async update(id, updates) {
+      const [result] = await supabaseClient.apiCall(`pieces?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      });
+      return result;
+    },
+
+    async delete(id) {
+      await supabaseClient.apiCall(`pieces?id=eq.${id}`, {
+        method: 'DELETE'
+      });
+    }
+  },
+
+  // Opérations sur les photos
+  photos: {
+    async fetchForPiece(pieceId) {
+      return await supabaseClient.apiCall(`photos?piece_id=eq.${pieceId}&select=*`);
+    },
+
+    async create(photo) {
+      const [result] = await supabaseClient.apiCall('photos', {
+        method: 'POST',
+        body: JSON.stringify(photo)
+      });
+      return result;
+    },
+
+    async update(id, updates) {
+      const [result] = await supabaseClient.apiCall(`photos?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      });
+      return result;
+    },
+
+    async delete(id) {
+      await supabaseClient.apiCall(`photos?id=eq.${id}`, {
+        method: 'DELETE'
+      });
+    }
+  },
+
+  // Opérations sur le stockage
   storage: {
     from: (bucket) => ({
-      upload: async (path, file) => {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      async upload(path, file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`Upload Error: ${response.status} - ${errorData.message || response.statusText}`);
+        }
+
         return { data: { path }, error: null };
       },
-      remove: async (paths) => {
-        await new Promise(resolve => setTimeout(resolve, 500));
+
+      async remove(paths) {
+        const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ prefixes: paths })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`Delete Error: ${response.status} - ${errorData.message || response.statusText}`);
+        }
+
         return { error: null };
       },
+
       getPublicUrl: (path) => ({
         data: { publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}` }
       })
@@ -90,7 +204,7 @@ const getFieldsForPiece = (pieceName) => {
 
 const PiecesStep = ({ etatId = 'demo-etat' }) => {
   const [pieces, setPieces] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedPiece, setSelectedPiece] = useState(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newPieceName, setNewPieceName] = useState('');
@@ -106,12 +220,46 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
 
   const showToast = (message, type = 'info') => {
     console.log(`[${type.toUpperCase()}] ${message}`);
-    alert(`${type.toUpperCase()}: ${message}`);
+    // Simulation d'un toast - vous pouvez intégrer une vraie librairie de toast
+    const alertType = type === 'error' ? 'Erreur' : type === 'success' ? 'Succès' : 'Info';
+    alert(`${alertType}: ${message}`);
   };
+
+  // Chargement initial des pièces depuis Supabase
+  useEffect(() => {
+    const loadPieces = async () => {
+      try {
+        setIsLoading(true);
+        const piecesData = await supabaseClient.pieces.fetchAll(etatId);
+        
+        // Charger les photos pour chaque pièce
+        const piecesWithPhotos = await Promise.all(
+          piecesData.map(async (piece) => {
+            try {
+              const photos = await supabaseClient.photos.fetchForPiece(piece.id);
+              return { ...piece, photos: photos || [] };
+            } catch (error) {
+              console.error(`Erreur chargement photos pour pièce ${piece.id}:`, error);
+              return { ...piece, photos: [] };
+            }
+          })
+        );
+        
+        setPieces(piecesWithPhotos);
+      } catch (error) {
+        console.error('Erreur chargement pièces:', error);
+        showToast('Erreur lors du chargement des pièces', 'error');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPieces();
+  }, [etatId]);
 
   useEffect(() => {
     if (selectedPiece) {
-      const { id, etat_des_lieux_id, nom_piece, photos, ...restData } = selectedPiece;
+      const { id, etat_des_lieux_id, nom_piece, photos, created_at, updated_at, ...restData } = selectedPiece;
       setFormData(restData);
       setCurrentPieceExistingPhotos(photos || []);
       setCurrentPieceNewPhotos([]);
@@ -129,6 +277,7 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
   const handleFileSelectCurrentPiece = (event) => {
     const files = event.target.files;
     if (!files || !selectedPiece) return;
+    
     const validFiles = [];
     Array.from(files).forEach(file => {
       if (file.size > 5 * 1024 * 1024) { 
@@ -143,6 +292,7 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
       fileWithDesc.description = '';
       validFiles.push(fileWithDesc);
     });
+    
     setCurrentPieceNewPhotos(prev => [...prev, ...validFiles]);
   };
 
@@ -156,13 +306,22 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
 
   const handleRemoveExistingPhotoCurrentPiece = async (photoId, filePath) => {
     if (!selectedPiece) return;
+    
     setIsProcessingPhotos(true);
     try {
-      await supabase.storage.from('etat-des-lieux-photos').remove([filePath]);
+      // Supprimer du stockage
+      await supabaseClient.storage.from('etat-des-lieux-photos').remove([filePath]);
+      
+      // Supprimer de la base de données
+      await supabaseClient.photos.delete(photoId);
+      
+      // Mettre à jour l'état local
       setCurrentPieceExistingPhotos(prev => prev.filter(p => p.id !== photoId));
-      showToast('Photo retirée localement. Sauvegardez la pièce pour confirmer.', 'info');
+      
+      showToast('Photo supprimée avec succès', 'success');
     } catch (error) {
-      showToast('Erreur suppression photo stockage.', 'error');
+      console.error('Erreur suppression photo:', error);
+      showToast('Erreur lors de la suppression de la photo', 'error');
     } finally {
       setIsProcessingPhotos(false);
     }
@@ -174,31 +333,48 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
 
   const _uploadPhotosForCurrentPiece = async () => {
     if (currentPieceNewPhotos.length === 0 || !selectedPiece) return [];
+    
     setIsProcessingPhotos(true);
     const uploadedResults = [];
+    
     try {
       for (const photoFile of currentPieceNewPhotos) {
         const timestamp = Date.now();
         const randomId = Math.random().toString(36).substring(2, 15);
         const fileExtension = photoFile.name.split('.').pop();
         const fileName = `${etatId}/pieces/${selectedPiece.id}/${timestamp}_${randomId}.${fileExtension}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage.from('etat-des-lieux-photos').upload(fileName, photoFile);
+        
+        // Upload vers Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabaseClient.storage
+          .from('etat-des-lieux-photos')
+          .upload(fileName, photoFile);
+        
         if (uploadError) throw uploadError;
-        const { data: publicUrlData } = supabase.storage.from('etat-des-lieux-photos').getPublicUrl(uploadData.path);
-        uploadedResults.push({
-          id: `${timestamp}_${randomId}`, 
-          name: photoFile.name, 
-          size: photoFile.size, 
+        
+        // Obtenir l'URL publique
+        const { data: publicUrlData } = supabaseClient.storage
+          .from('etat-des-lieux-photos')
+          .getPublicUrl(uploadData.path);
+        
+        // Enregistrer les métadonnées en base
+        const photoRecord = await supabaseClient.photos.create({
+          piece_id: selectedPiece.id,
+          name: photoFile.name,
+          size: photoFile.size,
           type: photoFile.type,
-          url: URL.createObjectURL(photoFile),
+          url: publicUrlData.publicUrl,
           description: photoFile.description || '',
-          category: 'pieces', 
+          category: 'pieces',
           file_path: uploadData.path
         });
+        
+        uploadedResults.push(photoRecord);
       }
+      
       return uploadedResults;
     } catch (error) {
-      showToast(`Erreur upload photos: ${error instanceof Error ? error.message : 'Inconnue'}`, 'error');
+      console.error('Erreur upload photos:', error);
+      showToast(`Erreur upload photos: ${error.message}`, 'error');
       throw error;
     } finally {
       setIsProcessingPhotos(false);
@@ -207,33 +383,42 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
 
   const handleSave = async () => {
     if (!selectedPiece) return;
+    
     setIsSaving(true);
-    setIsProcessingPhotos(true);
-
+    
     try {
+      // Upload des nouvelles photos
       const newlyUploadedPhotos = await _uploadPhotosForCurrentPiece();
+      
+      // Mise à jour des descriptions des photos existantes
+      for (const photo of currentPieceExistingPhotos) {
+        if (photo.id && photo.description !== (selectedPiece.photos?.find(p => p.id === photo.id)?.description || '')) {
+          await supabaseClient.photos.update(photo.id, {
+            description: photo.description
+          });
+        }
+      }
+      
+      // Mise à jour de la pièce
+      const updatedPiece = await supabaseClient.pieces.update(selectedPiece.id, formData);
+      
+      // Mise à jour de l'état local
       const allPhotos = [...currentPieceExistingPhotos, ...newlyUploadedPhotos];
-
-      const updatedPiece = {
-        ...selectedPiece,
-        ...formData,
-        photos: allPhotos,
-      };
-
+      const updatedPieceWithPhotos = { ...updatedPiece, photos: allPhotos };
+      
       setPieces(prev => prev.map(piece => 
-        piece.id === selectedPiece.id ? updatedPiece : piece
+        piece.id === selectedPiece.id ? updatedPieceWithPhotos : piece
       ));
-
-      setSelectedPiece(updatedPiece);
-
-      showToast(`Pièce "${selectedPiece.nom_piece}" sauvegardée.`, 'success');
+      
+      setSelectedPiece(updatedPieceWithPhotos);
       setCurrentPieceNewPhotos([]);
+      
+      showToast(`Pièce "${selectedPiece.nom_piece}" sauvegardée avec succès`, 'success');
     } catch (error) {
       console.error('Erreur sauvegarde pièce:', error);
-      showToast('Erreur lors de la sauvegarde de la pièce.', 'error');
+      showToast('Erreur lors de la sauvegarde de la pièce', 'error');
     } finally {
       setIsSaving(false);
-      setIsProcessingPhotos(false);
     }
   };
 
@@ -246,24 +431,22 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
     setIsCreating(true);
 
     try {
-      const newPiece = {
-        id: `piece_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`,
+      const newPiece = await supabaseClient.pieces.create({
         etat_des_lieux_id: etatId,
         nom_piece: newPieceName.trim(),
-        photos: []
-      };
+      });
 
-      setPieces(prev => [...prev, newPiece]);
+      const pieceWithPhotos = { ...newPiece, photos: [] };
+      setPieces(prev => [...prev, pieceWithPhotos]);
 
       showToast(`Pièce "${newPieceName}" créée avec succès`, 'success');
       setNewPieceName('');
       setSelectedSuggestion('');
       setIsCreateDialogOpen(false);
-
-      setSelectedPiece(newPiece);
+      setSelectedPiece(pieceWithPhotos);
     } catch (error) {
-      showToast('Erreur lors de la création de la pièce', 'error');
       console.error('Erreur création pièce:', error);
+      showToast('Erreur lors de la création de la pièce', 'error');
     } finally {
       setIsCreating(false);
     }
@@ -275,34 +458,51 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
   };
 
   const handleDeletePiece = async (pieceId, pieceName) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la pièce "${pieceName}" et toutes ses données associées (y compris les photos) ? Cette action est irréversible.`)) {
-      setIsDeleting(true);
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer la pièce "${pieceName}" et toutes ses données associées (y compris les photos) ? Cette action est irréversible.`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    
+    try {
+      const pieceToDelete = pieces.find(p => p.id === pieceId);
       
-      try {
-        const pieceToDelete = pieces.find(p => p.id === pieceId);
-        if (pieceToDelete?.photos && pieceToDelete.photos.length > 0) {
-          const photoPaths = pieceToDelete.photos.map(p => p.file_path);
+      // Supprimer les photos du stockage et de la base
+      if (pieceToDelete?.photos && pieceToDelete.photos.length > 0) {
+        const photoPaths = pieceToDelete.photos.map(p => p.file_path);
+        
+        try {
+          await supabaseClient.storage.from('etat-des-lieux-photos').remove(photoPaths);
+        } catch (storageError) {
+          console.error("Erreur suppression photos du stockage:", storageError);
+        }
+        
+        // Supprimer les enregistrements de photos
+        for (const photo of pieceToDelete.photos) {
           try {
-            await supabase.storage.from('etat-des-lieux-photos').remove(photoPaths);
-            showToast("Photos associées en cours de suppression du stockage...", 'info');
-          } catch (storageError) {
-            showToast("Erreur lors de la suppression des photos du stockage. La pièce sera supprimée de la base de données, mais les fichiers pourraient persister.", 'error');
-            console.error("Storage deletion error:", storageError);
+            await supabaseClient.photos.delete(photo.id);
+          } catch (photoError) {
+            console.error("Erreur suppression photo de la base:", photoError);
           }
         }
-
-        setPieces(prev => prev.filter(piece => piece.id !== pieceId));
-        
-        if (selectedPiece && selectedPiece.id === pieceId) {
-          setSelectedPiece(null);
-        }
-
-        showToast(`Pièce "${pieceName}" supprimée.`, 'success');
-      } catch (error) {
-        showToast(`Erreur lors de la suppression de la pièce: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, 'error');
-      } finally {
-        setIsDeleting(false);
       }
+
+      // Supprimer la pièce
+      await supabaseClient.pieces.delete(pieceId);
+      
+      // Mettre à jour l'état local
+      setPieces(prev => prev.filter(piece => piece.id !== pieceId));
+      
+      if (selectedPiece && selectedPiece.id === pieceId) {
+        setSelectedPiece(null);
+      }
+
+      showToast(`Pièce "${pieceName}" supprimée avec succès`, 'success');
+    } catch (error) {
+      console.error('Erreur suppression pièce:', error);
+      showToast(`Erreur lors de la suppression de la pièce: ${error.message}`, 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
