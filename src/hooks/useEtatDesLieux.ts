@@ -214,6 +214,42 @@ export const useUpdatePiece = () => {
   });
 };
 
+export const useDeletePiece = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (pieceId: string) => {
+      // First, we might need to fetch the piece to get its etat_des_lieux_id if not passed directly
+      // For now, assume we will refetch broadly or the calling component handles this.
+      // Alternatively, the component could pass etat_des_lieux_id if available.
+      const { data, error } = await supabase
+        .from('pieces')
+        .delete()
+        .eq('id', pieceId)
+        .select() // To get the deleted record, useful for invalidation if needed
+        .single();
+
+      if (error) throw error;
+      return data; // Returns the deleted piece, or at least its ID
+    },
+    onSuccess: (data, variables) => {
+      // 'data' here is the result of the delete operation (the deleted piece)
+      // 'variables' is pieceId
+      // We need etat_des_lieux_id to invalidate the specific query for pieces of that etat.
+      // If 'data' contains etat_des_lieux_id, we can use it.
+      // Otherwise, we might need to invalidate all 'pieces' queries or have the component pass it.
+      if (data && data.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ queryKey: ['pieces', data.etat_des_lieux_id] });
+      } else {
+        // Fallback: invalidate all pieces queries if etat_des_lieux_id is not available from the delete response
+        queryClient.invalidateQueries({ queryKey: ['pieces'] });
+      }
+      // Also, potentially invalidate the main etat_des_lieux list if pieces are part of its details
+      // queryClient.invalidateQueries({ queryKey: ['etat_des_lieux'] });
+    },
+  });
+};
+
 // Relevé compteurs hooks - ADAPTÉS POUR LA NOUVELLE STRUCTURE
 export const useReleveCompteursByEtatId = (etatId: string) => {
   return useQuery({
