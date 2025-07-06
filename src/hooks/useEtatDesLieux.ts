@@ -35,9 +35,6 @@ export const useEtatDesLieux = () => {
   });
 };
 
-// Since useUpdateEquipementsChauffage uses upsert, useCreateEquipementsChauffage can be an alias or identical.
-export const useCreateEquipementsChauffage = useUpdateEquipementsChauffage;
-
 // Function to fetch all rendez-vous
 export const useRendezVous = () => {
   return useQuery({
@@ -787,9 +784,6 @@ export const useUpdateEquipementsEnergetiques = () => {
   });
 };
 
-// Since useUpdateEquipementsEnergetiques uses upsert, useCreateEquipementsEnergetiques can be an alias or identical.
-export const useCreateEquipementsEnergetiques = useUpdateEquipementsEnergetiques;
-
 // Équipements de chauffage hooks
 export const useEquipementsChauffageByEtatId = (etatId: string) => {
   return useQuery({
@@ -838,3 +832,5 @@ export const useUpdateEquipementsChauffage = () => {
     },
   });
 };
+
+// Since useUpdateEquipementsEnergetiques uses upsert, useCreateEquipementsEnerget
