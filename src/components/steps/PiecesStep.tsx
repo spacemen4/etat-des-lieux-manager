@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
 import { Plus, Edit, Trash2, AlertCircle, Home, LogOut, MessageSquare, Check, Camera, Upload, Image as ImageIcon, X } from 'lucide-react';
 
 // Configuration Supabase (simulée)
@@ -18,23 +17,14 @@ const supabase = {
   storage: {
     from: (bucket: string) => ({
       upload: async (path: string, file: File) => {
-        const formDataBody = new FormData();
-        formDataBody.append('file', file);
-        const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
-          method: 'POST',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-          body: formDataBody
-        });
-        if (!response.ok) throw new Error(`Upload failed: ${response.statusText} (${response.status})`);
+        // Simulation d'upload
+        await new Promise(resolve => setTimeout(resolve, 1000));
         return { data: { path }, error: null };
       },
       remove: async (paths: string[]) => {
-        const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}`, {
-          method: 'DELETE',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prefixes: paths })
-        });
-        return { error: response.ok ? null : new Error('Delete failed') };
+        // Simulation de suppression
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return { error: null };
       },
       getPublicUrl: (path: string) => ({
         data: { publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}` }
@@ -42,46 +32,6 @@ const supabase = {
     })
   }
 };
-
-// Mock hooks pour la démo
-const usePiecesByEtatId = (etatId: string) => {
-  const [pieces, setPieces] = useState([]);
-  
-  return {
-    data: pieces,
-    isLoading: false,
-    error: null,
-    refetch: () => {}
-  };
-};
-
-const useUpdatePiece = () => ({
-  mutate: (data: any, callbacks: any) => {
-    setTimeout(() => {
-      callbacks.onSuccess();
-    }, 1000);
-  },
-  isPending: false
-});
-
-const useCreatePiece = () => ({
-  mutate: (data: any, callbacks: any) => {
-    setTimeout(() => {
-      callbacks.onSuccess();
-    }, 1000);
-  },
-  isPending: false
-});
-
-const useDeletePiece = () => ({
-  mutate: (id: string, callbacks: any) => {
-    setTimeout(() => {
-      callbacks.onSuccess();
-    }, 1000);
-  },
-  isPending: false,
-  variables: null
-});
 
 interface Photo {
   id: string;
@@ -185,7 +135,6 @@ const PIECE_FIELD_CONFIG = {
 };
 
 const getFieldsForPiece = (pieceName: string) => {
-  // Trouver le type de pièce basé sur le nom
   const pieceType = PIECES_TYPES.find(type => 
     pieceName.toLowerCase().includes(type.toLowerCase()) || 
     PIECES_SUGGESTIONS[type]?.some(suggestion => 
@@ -197,24 +146,31 @@ const getFieldsForPiece = (pieceName: string) => {
 };
 
 const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
-  const { data: pieces, isLoading, error, refetch } = usePiecesByEtatId(etatId);
-  const updatePieceMutation = useUpdatePiece();
-  const createPieceMutation = useCreatePiece();
-  const deletePieceMutation = useDeletePiece();
-
+  // État local pour gérer les pièces
+  const [pieces, setPieces] = useState<Piece[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newPieceName, setNewPieceName] = useState('');
   const [selectedSuggestion, setSelectedSuggestion] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'entree' | 'sortie'>('entree');
-  
   const [formData, setFormData] = useState<PieceFormData>({});
+  const [isCreating, setIsCreating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Photo states
   const [currentPieceNewPhotos, setCurrentPieceNewPhotos] = useState<(File & { description?: string })[]>([]);
   const [currentPieceExistingPhotos, setCurrentPieceExistingPhotos] = useState<Photo[]>([]);
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fonction pour afficher les notifications
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    // Simuler toast
+    console.log(`[${type.toUpperCase()}] ${message}`);
+    alert(`${type.toUpperCase()}: ${message}`);
+  };
 
   useEffect(() => {
     if (selectedPiece) {
@@ -240,11 +196,11 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     const validFiles: (File & { description?: string })[] = [];
     Array.from(files).forEach(file => {
       if (file.size > 5 * 1024 * 1024) { 
-        toast.error(`Fichier ${file.name} trop volumineux (max 5MB)`); 
+        showToast(`Fichier ${file.name} trop volumineux (max 5MB)`, 'error'); 
         return; 
       }
       if (!file.type.startsWith('image/')) { 
-        toast.error(`Fichier ${file.name} n'est pas une image`); 
+        showToast(`Fichier ${file.name} n'est pas une image`, 'error'); 
         return; 
       }
       const fileWithDesc = file as (File & { description?: string });
@@ -268,9 +224,9 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     try {
       await supabase.storage.from('etat-des-lieux-photos').remove([filePath]);
       setCurrentPieceExistingPhotos(prev => prev.filter(p => p.id !== photoId));
-      toast.info('Photo retirée localement. Sauvegardez la pièce pour confirmer.');
+      showToast('Photo retirée localement. Sauvegardez la pièce pour confirmer.', 'info');
     } catch (error) {
-      toast.error('Erreur suppression photo stockage.');
+      showToast('Erreur suppression photo stockage.', 'error');
     } finally {
       setIsProcessingPhotos(false);
     }
@@ -298,7 +254,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
           name: photoFile.name, 
           size: photoFile.size, 
           type: photoFile.type,
-          url: publicUrlData.publicUrl, 
+          url: URL.createObjectURL(photoFile), // Utiliser une URL locale pour la démo
           description: photoFile.description || '',
           category: 'pieces', 
           file_path: uploadData!.path
@@ -306,7 +262,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
       }
       return uploadedResults;
     } catch (error) {
-      toast.error(`Erreur upload photos: ${error instanceof Error ? error.message : 'Inconnue'}`);
+      showToast(`Erreur upload photos: ${error instanceof Error ? error.message : 'Inconnue'}`, 'error');
       throw error;
     } finally {
       setIsProcessingPhotos(false);
@@ -315,63 +271,70 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
 
   const handleSave = async () => {
     if (!selectedPiece) return;
+    setIsSaving(true);
     setIsProcessingPhotos(true);
 
     try {
       const newlyUploadedPhotos = await _uploadPhotosForCurrentPiece();
       const allPhotos = [...currentPieceExistingPhotos, ...newlyUploadedPhotos];
 
-      const dataToSave: Piece = {
-        id: selectedPiece.id,
-        etat_des_lieux_id: etatId,
-        nom_piece: selectedPiece.nom_piece,
+      const updatedPiece: Piece = {
+        ...selectedPiece,
         ...formData,
         photos: allPhotos,
       };
 
-      updatePieceMutation.mutate(dataToSave, {
-        onSuccess: () => {
-          toast.success(`Pièce "${selectedPiece.nom_piece}" sauvegardée.`);
-          setCurrentPieceNewPhotos([]);
-          refetch();
-        },
-        onError: (error) => {
-          console.error('Erreur sauvegarde pièce:', error);
-          toast.error('Erreur lors de la sauvegarde de la pièce.');
-        },
-      });
+      // Mettre à jour la pièce dans l'état local
+      setPieces(prev => prev.map(piece => 
+        piece.id === selectedPiece.id ? updatedPiece : piece
+      ));
+
+      // Mettre à jour la pièce sélectionnée
+      setSelectedPiece(updatedPiece);
+
+      showToast(`Pièce "${selectedPiece.nom_piece}" sauvegardée.`, 'success');
+      setCurrentPieceNewPhotos([]);
     } catch (error) {
-      toast.error(`Erreur lors du processus de sauvegarde: ${error instanceof Error ? error.message : "Erreur inconnue"}`);
+      console.error('Erreur sauvegarde pièce:', error);
+      showToast('Erreur lors de la sauvegarde de la pièce.', 'error');
     } finally {
+      setIsSaving(false);
       setIsProcessingPhotos(false);
     }
   };
 
-  const handleCreatePiece = () => {
+  const handleCreatePiece = async () => {
     if (!newPieceName.trim()) {
-      toast.error('Veuillez saisir un nom de pièce');
+      showToast('Veuillez saisir un nom de pièce', 'error');
       return;
     }
 
-    const newPiece: Omit<Piece, 'id'> = {
-      etat_des_lieux_id: etatId,
-      nom_piece: newPieceName.trim(),
-      photos: []
-    };
+    setIsCreating(true);
 
-    createPieceMutation.mutate(newPiece, {
-      onSuccess: () => {
-        toast.success(`Pièce "${newPieceName}" créée avec succès`);
-        setNewPieceName('');
-        setSelectedSuggestion('');
-        setIsCreateDialogOpen(false);
-        refetch();
-      },
-      onError: (error) => {
-        toast.error('Erreur lors de la création de la pièce');
-        console.error('Erreur création pièce:', error);
-      },
-    });
+    try {
+      const newPiece: Piece = {
+        id: `piece_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`,
+        etat_des_lieux_id: etatId,
+        nom_piece: newPieceName.trim(),
+        photos: []
+      };
+
+      // Ajouter la nouvelle pièce à l'état local
+      setPieces(prev => [...prev, newPiece]);
+
+      showToast(`Pièce "${newPieceName}" créée avec succès`, 'success');
+      setNewPieceName('');
+      setSelectedSuggestion('');
+      setIsCreateDialogOpen(false);
+      
+      // Sélectionner automatiquement la nouvelle pièce
+      setSelectedPiece(newPiece);
+    } catch (error) {
+      showToast('Erreur lors de la création de la pièce', 'error');
+      console.error('Erreur création pièce:', error);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleSuggestionSelect = (suggestion: string) => {
@@ -394,33 +357,40 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     });
     
     setFormData(newFormData);
-    toast.info('Données copiées de l\'entrée vers la sortie');
+    showToast('Données copiées de l\'entrée vers la sortie', 'info');
   };
 
   const handleDeletePiece = async (pieceId: string, pieceName: string) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer la pièce "${pieceName}" et toutes ses données associées (y compris les photos) ? Cette action est irréversible.`)) {
-      const pieceToDelete = pieces?.find(p => p.id === pieceId);
-      if (pieceToDelete?.photos && pieceToDelete.photos.length > 0) {
-        const photoPaths = pieceToDelete.photos.map(p => p.file_path);
-        try {
-          await supabase.storage.from('etat-des-lieux-photos').remove(photoPaths);
-          toast.info("Photos associées en cours de suppression du stockage...");
-        } catch (storageError) {
-          toast.error("Erreur lors de la suppression des photos du stockage. La pièce sera supprimée de la base de données, mais les fichiers pourraient persister.");
-          console.error("Storage deletion error:", storageError);
+      setIsDeleting(true);
+      
+      try {
+        const pieceToDelete = pieces.find(p => p.id === pieceId);
+        if (pieceToDelete?.photos && pieceToDelete.photos.length > 0) {
+          const photoPaths = pieceToDelete.photos.map(p => p.file_path);
+          try {
+            await supabase.storage.from('etat-des-lieux-photos').remove(photoPaths);
+            showToast("Photos associées en cours de suppression du stockage...", 'info');
+          } catch (storageError) {
+            showToast("Erreur lors de la suppression des photos du stockage. La pièce sera supprimée de la base de données, mais les fichiers pourraient persister.", 'error');
+            console.error("Storage deletion error:", storageError);
+          }
         }
-      }
 
-      deletePieceMutation.mutate(pieceId, {
-        onSuccess: () => {
-          toast.success(`Pièce "${pieceName}" supprimée.`);
+        // Supprimer la pièce de l'état local
+        setPieces(prev => prev.filter(piece => piece.id !== pieceId));
+        
+        // Si la pièce supprimée était sélectionnée, désélectionner
+        if (selectedPiece && selectedPiece.id === pieceId) {
           setSelectedPiece(null);
-          refetch();
-        },
-        onError: (error) => {
-          toast.error(`Erreur lors de la suppression de la pièce: ${error.message}`);
-        },
-      });
+        }
+
+        showToast(`Pièce "${pieceName}" supprimée.`, 'success');
+      } catch (error) {
+        showToast(`Erreur lors de la suppression de la pièce: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, 'error');
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -472,17 +442,6 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600">Chargement des pièces...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center text-red-600">
-          <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-          <p>Erreur lors du chargement des pièces</p>
         </div>
       </div>
     );
@@ -560,9 +519,9 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
                   </Button>
                   <Button 
                     onClick={handleCreatePiece}
-                    disabled={!newPieceName.trim() || createPieceMutation.isPending}
+                    disabled={!newPieceName.trim() || isCreating}
                   >
-                    {createPieceMutation.isPending ? 'Création...' : 'Créer'}
+                    {isCreating ? 'Création...' : 'Créer'}
                   </Button>
                 </div>
               </div>
@@ -570,7 +529,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
           </Dialog>
         </CardHeader>
         <CardContent>
-          {!pieces || pieces.length === 0 ? (
+          {pieces.length === 0 ? (
             <div className="text-center py-8">
               <Home className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune pièce ajoutée</h3>
@@ -594,7 +553,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
                     size="icon"
                     className="h-9 w-9 flex-shrink-0 text-red-500 hover:text-red-700"
                     onClick={(e) => { e.stopPropagation(); handleDeletePiece(piece.id, piece.nom_piece); }}
-                    disabled={deletePieceMutation.isPending && deletePieceMutation.variables === piece.id}
+                    disabled={isDeleting}
                     title={`Supprimer ${piece.nom_piece}`}
                   >
                     <Trash2 className="h-4 w-4" />
