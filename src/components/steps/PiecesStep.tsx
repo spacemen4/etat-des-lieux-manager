@@ -14,62 +14,23 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = {
   storage: {
-    from: (bucket: string) => ({
-      upload: async (path: string, file: File) => {
+    from: (bucket) => ({
+      upload: async (path, file) => {
         // Simulation d'upload
         await new Promise(resolve => setTimeout(resolve, 1000));
         return { data: { path }, error: null };
       },
-      remove: async (paths: string[]) => {
+      remove: async (paths) => {
         // Simulation de suppression
         await new Promise(resolve => setTimeout(resolve, 500));
         return { error: null };
       },
-      getPublicUrl: (path: string) => ({
+      getPublicUrl: (path) => ({
         data: { publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}` }
       })
     })
   }
 };
-
-interface Photo {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  url: string;
-  description?: string;
-  category: string;
-  file_path: string;
-}
-
-interface Piece {
-  id: string;
-  etat_des_lieux_id: string;
-  nom_piece: string;
-  revetements_sols?: string;
-  murs_menuiseries?: string;
-  plafond?: string;
-  electricite_plomberie?: string;
-  placards?: string;
-  sanitaires?: string;
-  menuiseries?: string;
-  rangements?: string;
-  baignoire_douche?: string;
-  eviers_robinetterie?: string;
-  chauffage_tuyauterie?: string;
-  meubles_cuisine?: string;
-  hotte?: string;
-  plaque_cuisson?: string;
-  commentaires?: string;
-  photos: Photo[];
-}
-
-interface PieceFormData extends Omit<Partial<Piece>, 'id' | 'etat_des_lieux_id' | 'nom_piece' | 'photos'> {}
-
-interface PiecesStepProps {
-  etatId: string;
-}
 
 const PIECES_TYPES = [
   'Salon', 'Cuisine', 'Chambre', 'Salle de bain', 'WC', 'Entrée', 'Couloir',
@@ -119,7 +80,7 @@ const PIECE_FIELD_CONFIG = {
   'Salle à manger': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'menuiseries', 'chauffage_tuyauterie']
 };
 
-const getFieldsForPiece = (pieceName: string) => {
+const getFieldsForPiece = (pieceName) => {
   const pieceType = PIECES_TYPES.find(type => 
     pieceName.toLowerCase().includes(type.toLowerCase()) || 
     PIECES_SUGGESTIONS[type]?.some(suggestion => 
@@ -130,27 +91,27 @@ const getFieldsForPiece = (pieceName: string) => {
   return PIECE_FIELD_CONFIG[pieceType || 'Salon'] || [];
 };
 
-const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
+const PiecesStep = ({ etatId = 'demo-etat' }) => {
   // État local pour gérer les pièces
-  const [pieces, setPieces] = useState<Piece[]>([]);
+  const [pieces, setPieces] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
+  const [selectedPiece, setSelectedPiece] = useState(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newPieceName, setNewPieceName] = useState('');
-  const [selectedSuggestion, setSelectedSuggestion] = useState<string>('');
-  const [formData, setFormData] = useState<PieceFormData>({});
+  const [selectedSuggestion, setSelectedSuggestion] = useState('');
+  const [formData, setFormData] = useState({});
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Photo states
-  const [currentPieceNewPhotos, setCurrentPieceNewPhotos] = useState<(File & { description?: string })[]>([]);
-  const [currentPieceExistingPhotos, setCurrentPieceExistingPhotos] = useState<Photo[]>([]);
+  const [currentPieceNewPhotos, setCurrentPieceNewPhotos] = useState([]);
+  const [currentPieceExistingPhotos, setCurrentPieceExistingPhotos] = useState([]);
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef(null);
 
   // Fonction pour afficher les notifications
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+  const showToast = (message, type = 'info') => {
     // Simuler toast
     console.log(`[${type.toUpperCase()}] ${message}`);
     alert(`${type.toUpperCase()}: ${message}`);
@@ -169,14 +130,14 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     }
   }, [selectedPiece]);
 
-  const handleInputChange = (field: keyof PieceFormData, value: string) => {
+  const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFileSelectCurrentPiece = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelectCurrentPiece = (event) => {
     const files = event.target.files;
     if (!files || !selectedPiece) return;
-    const validFiles: (File & { description?: string })[] = [];
+    const validFiles = [];
     Array.from(files).forEach(file => {
       if (file.size > 5 * 1024 * 1024) { 
         showToast(`Fichier ${file.name} trop volumineux (max 5MB)`, 'error'); 
@@ -186,22 +147,22 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
         showToast(`Fichier ${file.name} n'est pas une image`, 'error'); 
         return; 
       }
-      const fileWithDesc = file as (File & { description?: string });
+      const fileWithDesc = file;
       fileWithDesc.description = '';
       validFiles.push(fileWithDesc);
     });
     setCurrentPieceNewPhotos(prev => [...prev, ...validFiles]);
   };
 
-  const handleRemoveNewPhotoCurrentPiece = (photoIndex: number) => {
+  const handleRemoveNewPhotoCurrentPiece = (photoIndex) => {
     setCurrentPieceNewPhotos(prev => prev.filter((_, index) => index !== photoIndex));
   };
 
-  const handleNewPhotoDescriptionChangeCurrentPiece = (photoIndex: number, description: string) => {
+  const handleNewPhotoDescriptionChangeCurrentPiece = (photoIndex, description) => {
     setCurrentPieceNewPhotos(prev => prev.map((photo, i) => i === photoIndex ? { ...photo, description } : photo));
   };
 
-  const handleRemoveExistingPhotoCurrentPiece = async (photoId: string, filePath: string) => {
+  const handleRemoveExistingPhotoCurrentPiece = async (photoId, filePath) => {
     if (!selectedPiece) return;
     setIsProcessingPhotos(true);
     try {
@@ -215,14 +176,14 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     }
   };
 
-  const handleExistingPhotoDescriptionChangeCurrentPiece = (photoId: string, description: string) => {
+  const handleExistingPhotoDescriptionChangeCurrentPiece = (photoId, description) => {
     setCurrentPieceExistingPhotos(prev => prev.map(p => p.id === photoId ? { ...p, description } : p));
   };
 
-  const _uploadPhotosForCurrentPiece = async (): Promise<Photo[]> => {
+  const _uploadPhotosForCurrentPiece = async () => {
     if (currentPieceNewPhotos.length === 0 || !selectedPiece) return [];
     setIsProcessingPhotos(true);
-    const uploadedResults: Photo[] = [];
+    const uploadedResults = [];
     try {
       for (const photoFile of currentPieceNewPhotos) {
         const timestamp = Date.now();
@@ -231,7 +192,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
         const fileName = `${etatId}/pieces/${selectedPiece.id}/${timestamp}_${randomId}.${fileExtension}`;
         const { data: uploadData, error: uploadError } = await supabase.storage.from('etat-des-lieux-photos').upload(fileName, photoFile);
         if (uploadError) throw uploadError;
-        const { data: publicUrlData } = supabase.storage.from('etat-des-lieux-photos').getPublicUrl(uploadData!.path);
+        const { data: publicUrlData } = supabase.storage.from('etat-des-lieux-photos').getPublicUrl(uploadData.path);
         uploadedResults.push({
           id: `${timestamp}_${randomId}`, 
           name: photoFile.name, 
@@ -240,7 +201,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
           url: URL.createObjectURL(photoFile),
           description: photoFile.description || '',
           category: 'pieces', 
-          file_path: uploadData!.path
+          file_path: uploadData.path
         });
       }
       return uploadedResults;
@@ -261,7 +222,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
       const newlyUploadedPhotos = await _uploadPhotosForCurrentPiece();
       const allPhotos = [...currentPieceExistingPhotos, ...newlyUploadedPhotos];
 
-      const updatedPiece: Piece = {
+      const updatedPiece = {
         ...selectedPiece,
         ...formData,
         photos: allPhotos,
@@ -295,7 +256,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     setIsCreating(true);
 
     try {
-      const newPiece: Piece = {
+      const newPiece = {
         id: `piece_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`,
         etat_des_lieux_id: etatId,
         nom_piece: newPieceName.trim(),
@@ -320,12 +281,12 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     }
   };
 
-  const handleSuggestionSelect = (suggestion: string) => {
+  const handleSuggestionSelect = (suggestion) => {
     setSelectedSuggestion(suggestion);
     setNewPieceName(suggestion);
   };
 
-  const handleDeletePiece = async (pieceId: string, pieceName: string) => {
+  const handleDeletePiece = async (pieceId, pieceName) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer la pièce "${pieceName}" et toutes ses données associées (y compris les photos) ? Cette action est irréversible.`)) {
       setIsDeleting(true);
       
@@ -383,7 +344,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     return (
       <div className="space-y-4">
         {fields.map((field) => {
-          const fieldKey = field as keyof PieceFormData;
+          const fieldKey = field;
           return (
             <div key={fieldKey} className="space-y-2">
               <Label htmlFor={fieldKey}>{fieldLabels[field] || field}</Label>
@@ -582,34 +543,34 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
                     onClick={(e) => {e.stopPropagation(); !(isProcessingPhotos || isSaving) && fileInputRef.current?.click();}} 
                     disabled={isProcessingPhotos || isSaving}
                   >
-                  <ImageIcon className="h-4 w-4 mr-2" /> Ajouter des photos
-                </Button>
-                <p className="text-xs text-gray-500 mt-1">Max 5MB par image.</p>
-              </div>
+                    <ImageIcon className="h-4 w-4 mr-2" /> Ajouter des photos
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-1">Max 5MB par image.</p>
+                </div>
 
-              {currentPieceExistingPhotos.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <h4 className="text-sm font-medium text-gray-600">Photos sauvegardées :</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {currentPieceExistingPhotos.map((photo) => (
-                      <div key={photo.id} className="relative border rounded-lg overflow-hidden bg-white shadow-sm group">
-                        <img 
-                          src={photo.url} 
-                          alt={photo.name || `Photo ${selectedPiece.nom_piece}`} 
-                          className="w-full h-28 object-cover" 
-                          onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/150?text=Erreur')} 
-                        />
-                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button 
-                            type="button" 
-                            variant="destructive" 
-                            size="icon" 
-                            onClick={() => handleRemoveExistingPhotoCurrentPiece(photo.id, photo.file_path)} 
-                            className="h-6 w-6 p-0" 
-                            disabled={isProcessingPhotos || isSaving}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
+                {currentPieceExistingPhotos.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <h4 className="text-sm font-medium text-gray-600">Photos sauvegardées :</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {currentPieceExistingPhotos.map((photo) => (
+                        <div key={photo.id} className="relative border rounded-lg overflow-hidden bg-white shadow-sm group">
+                          <img 
+                            src={photo.url} 
+                            alt={photo.name || `Photo ${selectedPiece.nom_piece}`} 
+                            className="w-full h-28 object-cover" 
+                            onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/150?text=Erreur')} 
+                          />
+                          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button 
+                              type="button" 
+                              variant="destructive" 
+                              size="icon" 
+                              onClick={() => handleRemoveExistingPhotoCurrentPiece(photo.id, photo.file_path)} 
+                              className="h-6 w-6 p-0" 
+                              disabled={isProcessingPhotos || isSaving}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
                         </div>
                         <div className="p-2">
                           <Input 
