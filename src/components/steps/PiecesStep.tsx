@@ -105,6 +105,7 @@ const supabaseClient = {
         const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
           method: 'POST',
           headers: {
+            'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           },
           body: formData
@@ -122,6 +123,7 @@ const supabaseClient = {
         const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}`, {
           method: 'DELETE',
           headers: {
+            'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json'
           },
