@@ -746,7 +746,7 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Badge variant="outline" className="px-2 py-1">
-            Relevé de compteurs
+            Relevé des compteurs
           </Badge>
           Relevé des compteurs
           {hasExistingData && (
