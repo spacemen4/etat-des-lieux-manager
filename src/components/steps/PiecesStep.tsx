@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Edit, Trash2, Home, Camera, Upload, Image as ImageIcon, X } from 'lucide-react';
 
-// Configuration Supabase (simulée)
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXB2eXJjdGxoYWd0emtic3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjg1NjYsImV4cCI6MjA2NjYwNDU2Nn0.4APWILaWXOtXCwdFYTk4MDithvZhp55ZJB6PnVn8D1w';
 
@@ -16,12 +15,10 @@ const supabase = {
   storage: {
     from: (bucket) => ({
       upload: async (path, file) => {
-        // Simulation d'upload
         await new Promise(resolve => setTimeout(resolve, 1000));
         return { data: { path }, error: null };
       },
       remove: async (paths) => {
-        // Simulation de suppression
         await new Promise(resolve => setTimeout(resolve, 500));
         return { error: null };
       },
@@ -92,7 +89,6 @@ const getFieldsForPiece = (pieceName) => {
 };
 
 const PiecesStep = ({ etatId = 'demo-etat' }) => {
-  // État local pour gérer les pièces
   const [pieces, setPieces] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPiece, setSelectedPiece] = useState(null);
@@ -103,16 +99,12 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Photo states
   const [currentPieceNewPhotos, setCurrentPieceNewPhotos] = useState([]);
   const [currentPieceExistingPhotos, setCurrentPieceExistingPhotos] = useState([]);
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Fonction pour afficher les notifications
   const showToast = (message, type = 'info') => {
-    // Simuler toast
     console.log(`[${type.toUpperCase()}] ${message}`);
     alert(`${type.toUpperCase()}: ${message}`);
   };
@@ -228,12 +220,10 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
         photos: allPhotos,
       };
 
-      // Mettre à jour la pièce dans l'état local
       setPieces(prev => prev.map(piece => 
         piece.id === selectedPiece.id ? updatedPiece : piece
       ));
 
-      // Mettre à jour la pièce sélectionnée
       setSelectedPiece(updatedPiece);
 
       showToast(`Pièce "${selectedPiece.nom_piece}" sauvegardée.`, 'success');
@@ -263,15 +253,13 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
         photos: []
       };
 
-      // Ajouter la nouvelle pièce à l'état local
       setPieces(prev => [...prev, newPiece]);
 
       showToast(`Pièce "${newPieceName}" créée avec succès`, 'success');
       setNewPieceName('');
       setSelectedSuggestion('');
       setIsCreateDialogOpen(false);
-      
-      // Sélectionner automatiquement la nouvelle pièce
+
       setSelectedPiece(newPiece);
     } catch (error) {
       showToast('Erreur lors de la création de la pièce', 'error');
@@ -303,10 +291,8 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
           }
         }
 
-        // Supprimer la pièce de l'état local
         setPieces(prev => prev.filter(piece => piece.id !== pieceId));
         
-        // Si la pièce supprimée était sélectionnée, désélectionner
         if (selectedPiece && selectedPiece.id === pieceId) {
           setSelectedPiece(null);
         }
@@ -512,10 +498,8 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {/* Formulaire des champs de la pièce */}
               {renderPieceFields()}
 
-              {/* Section Photos */}
               <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
                   <Camera className="h-5 w-5 text-slate-600" />
@@ -571,95 +555,95 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
                             >
                               <X className="h-3 w-3" />
                             </Button>
+                          </div>
+                          <div className="p-2">
+                            <Input 
+                              type="text" 
+                              placeholder="Description" 
+                              value={photo.description || ''} 
+                              onChange={(e) => handleExistingPhotoDescriptionChangeCurrentPiece(photo.id, e.target.value)} 
+                              className="text-xs h-7 w-full" 
+                              disabled={isProcessingPhotos || isSaving}
+                            />
+                            <p className="text-xs text-gray-500 truncate mt-1" title={photo.name}>
+                              {(photo.size / 1024).toFixed(1)} KB <span className="text-green-600">✓</span>
+                            </p>
+                          </div>
                         </div>
-                        <div className="p-2">
-                          <Input 
-                            type="text" 
-                            placeholder="Description" 
-                            value={photo.description || ''} 
-                            onChange={(e) => handleExistingPhotoDescriptionChangeCurrentPiece(photo.id, e.target.value)} 
-                            className="text-xs h-7 w-full" 
-                            disabled={isProcessingPhotos || isSaving}
-                          />
-                          <p className="text-xs text-gray-500 truncate mt-1" title={photo.name}>
-                            {(photo.size / 1024).toFixed(1)} KB <span className="text-green-600">✓</span>
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {currentPieceNewPhotos.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <h4 className="text-sm font-medium text-gray-600">Nouvelles photos :</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {currentPieceNewPhotos.map((photoFile, idx) => (
-                      <div key={`new-piece-${selectedPiece.id}-photo-${idx}`} className="relative border rounded-lg overflow-hidden bg-white shadow-sm group">
-                        <img 
-                          src={URL.createObjectURL(photoFile)} 
-                          alt={photoFile.name} 
-                          className="w-full h-28 object-cover" 
-                        />
-                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button 
-                            type="button" 
-                            variant="destructive" 
-                            size="icon" 
-                            onClick={() => handleRemoveNewPhotoCurrentPiece(idx)} 
-                            className="h-6 w-6 p-0" 
-                            disabled={isProcessingPhotos || isSaving}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <div className="p-2">
-                          <Input 
-                            type="text" 
-                            placeholder="Description" 
-                            value={photoFile.description || ''} 
-                            onChange={(e) => handleNewPhotoDescriptionChangeCurrentPiece(idx, e.target.value)} 
-                            className="text-xs h-7 w-full" 
-                            disabled={isProcessingPhotos || isSaving}
+                {currentPieceNewPhotos.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <h4 className="text-sm font-medium text-gray-600">Nouvelles photos :</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {currentPieceNewPhotos.map((photoFile, idx) => (
+                        <div key={`new-piece-${selectedPiece.id}-photo-${idx}`} className="relative border rounded-lg overflow-hidden bg-white shadow-sm group">
+                          <img 
+                            src={URL.createObjectURL(photoFile)} 
+                            alt={photoFile.name} 
+                            className="w-full h-28 object-cover" 
                           />
-                          <p className="text-xs text-gray-500 truncate mt-1" title={photoFile.name}>
-                            {(photoFile.size / 1024).toFixed(1)} KB <span className="text-orange-500">↯</span>
-                          </p>
+                          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button 
+                              type="button" 
+                              variant="destructive" 
+                              size="icon" 
+                              onClick={() => handleRemoveNewPhotoCurrentPiece(idx)} 
+                              className="h-6 w-6 p-0" 
+                              disabled={isProcessingPhotos || isSaving}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="p-2">
+                            <Input 
+                              type="text" 
+                              placeholder="Description" 
+                              value={photoFile.description || ''} 
+                              onChange={(e) => handleNewPhotoDescriptionChangeCurrentPiece(idx, e.target.value)} 
+                              className="text-xs h-7 w-full" 
+                              disabled={isProcessingPhotos || isSaving}
+                            />
+                            <p className="text-xs text-gray-500 truncate mt-1" title={photoFile.name}>
+                              {(photoFile.size / 1024).toFixed(1)} KB <span className="text-orange-500">↯</span>
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* Commentaires */}
-            <div className="mt-6 space-y-2">
-              <Label htmlFor="commentaires">Commentaires généraux (état à l'entrée)</Label>
-              <Textarea
-                id="commentaires"
-                value={formData.commentaires || ''}
-                onChange={(e) => handleInputChange('commentaires', e.target.value)}
-                placeholder="Ajoutez des commentaires généraux sur cette pièce..."
-                className="min-h-[100px]"
-              />
-            </div>
+              <div className="mt-6 space-y-2">
+                <Label htmlFor="commentaires">Commentaires généraux (état à l'entrée)</Label>
+                <Textarea
+                  id="commentaires"
+                  value={formData.commentaires || ''}
+                  onChange={(e) => handleInputChange('commentaires', e.target.value)}
+                  placeholder="Ajoutez des commentaires généraux sur cette pièce..."
+                  className="min-h-[100px]"
+                />
+              </div>
 
-            <div className="flex gap-2 pt-6 mt-4 border-t">
-              <Button
-                onClick={handleSave}
-                disabled={isSaving || isProcessingPhotos || isDeleting}
-                className="flex-1"
-              >
-                {isSaving || isProcessingPhotos ? 'Sauvegarde...' : `Sauvegarder ${selectedPiece.nom_piece}`}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setSelectedPiece(null)}
-              >
-                Fermer
-              </Button>
+              <div className="flex gap-2 pt-6 mt-4 border-t">
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving || isProcessingPhotos || isDeleting}
+                  className="flex-1"
+                >
+                  {isSaving || isProcessingPhotos ? 'Sauvegarde...' : `Sauvegarder ${selectedPiece.nom_piece}`}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedPiece(null)}
+                >
+                  Fermer
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
