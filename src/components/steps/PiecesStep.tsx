@@ -7,9 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { usePiecesByEtatId, useUpdatePiece, useCreatePiece, useDeletePiece } from '@/hooks/useEtatDesLieux'; // Added useDeletePiece
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, AlertCircle, Home, LogOut, MessageSquare, Check, Camera, Upload, Image as ImageIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertCircle, Home, LogOut, MessageSquare, Check, Camera, Upload, Image as ImageIcon, X } from 'lucide-react';
 
 // Configuration Supabase (simulée)
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
@@ -27,7 +26,6 @@ const supabase = {
           body: formDataBody
         });
         if (!response.ok) throw new Error(`Upload failed: ${response.statusText} (${response.status})`);
-        // const result = await response.json(); // Supabase often returns minimal info on success
         return { data: { path }, error: null };
       },
       remove: async (paths: string[]) => {
@@ -45,6 +43,50 @@ const supabase = {
   }
 };
 
+// Mock hooks pour la démo
+const usePiecesByEtatId = (etatId: string) => {
+  const [pieces, setPieces] = useState([
+    { id: '1', etat_des_lieux_id: etatId, nom_piece: 'Salon', photos: [] },
+    { id: '2', etat_des_lieux_id: etatId, nom_piece: 'Cuisine', photos: [] },
+    { id: '3', etat_des_lieux_id: etatId, nom_piece: 'Chambre 1', photos: [] },
+  ]);
+  
+  return {
+    data: pieces,
+    isLoading: false,
+    error: null,
+    refetch: () => {}
+  };
+};
+
+const useUpdatePiece = () => ({
+  mutate: (data: any, callbacks: any) => {
+    setTimeout(() => {
+      callbacks.onSuccess();
+    }, 1000);
+  },
+  isPending: false
+});
+
+const useCreatePiece = () => ({
+  mutate: (data: any, callbacks: any) => {
+    setTimeout(() => {
+      callbacks.onSuccess();
+    }, 1000);
+  },
+  isPending: false
+});
+
+const useDeletePiece = () => ({
+  mutate: (id: string, callbacks: any) => {
+    setTimeout(() => {
+      callbacks.onSuccess();
+    }, 1000);
+  },
+  isPending: false,
+  variables: null
+});
+
 interface Photo {
   id: string;
   name: string;
@@ -52,7 +94,7 @@ interface Photo {
   type: string;
   url: string;
   description?: string;
-  category: string; // 'pieces'
+  category: string;
   file_path: string;
 }
 
@@ -94,24 +136,75 @@ interface Piece {
 
 interface PieceFormData extends Omit<Partial<Piece>, 'id' | 'etat_des_lieux_id' | 'nom_piece' | 'photos'> {}
 
-const PIECES_TYPES = [ /* ... (garder la liste existante) ... */ ];
-const PIECES_SUGGESTIONS = { /* ... (garder l'objet existant) ... */ };
-const PIECE_FIELD_CONFIG = { /* ... (garder l'objet existant) ... */ };
-const getFieldsForPiece = (pieceName: string) => { /* ... (garder la fonction existante) ... */ };
+interface PiecesStepProps {
+  etatId: string;
+}
 
+const PIECES_TYPES = [
+  'Salon', 'Cuisine', 'Chambre', 'Salle de bain', 'WC', 'Entrée', 'Couloir',
+  'Bureau', 'Dressing', 'Cellier', 'Garage', 'Cave', 'Grenier', 'Balcon',
+  'Terrasse', 'Jardin', 'Buanderie', 'Salle à manger'
+];
 
-// Definitions from the original file - keeping them for brevity in this example
-// const PIECES_TYPES = [ ... ];
-// const PIECES_SUGGESTIONS = { ... };
-// const PIECE_FIELD_CONFIG = { ... };
-// const getFieldsForPiece = (pieceName: string) => { ... };
-// These should be copied from the original file if not already present above. For this diff, assume they are.
+const PIECES_SUGGESTIONS = {
+  'Salon': ['Salon', 'Séjour', 'Salon/Salle à manger'],
+  'Cuisine': ['Cuisine', 'Kitchenette', 'Cuisine équipée'],
+  'Chambre': ['Chambre 1', 'Chambre 2', 'Chambre principale', 'Chambre parentale'],
+  'Salle de bain': ['Salle de bain', 'Salle d\'eau', 'Salle de bain principale'],
+  'WC': ['WC', 'Toilettes', 'WC séparés'],
+  'Entrée': ['Entrée', 'Hall d\'entrée', 'Vestibule'],
+  'Couloir': ['Couloir', 'Dégagement', 'Palier'],
+  'Bureau': ['Bureau', 'Espace de travail', 'Coin bureau'],
+  'Dressing': ['Dressing', 'Penderie', 'Armoire'],
+  'Cellier': ['Cellier', 'Débarras', 'Rangement'],
+  'Garage': ['Garage', 'Parking', 'Box'],
+  'Cave': ['Cave', 'Sous-sol', 'Local technique'],
+  'Grenier': ['Grenier', 'Combles', 'Mansarde'],
+  'Balcon': ['Balcon', 'Loggia', 'Terrasse couverte'],
+  'Terrasse': ['Terrasse', 'Patio', 'Cour'],
+  'Jardin': ['Jardin', 'Espace vert', 'Cour'],
+  'Buanderie': ['Buanderie', 'Lingerie', 'Espace linge'],
+  'Salle à manger': ['Salle à manger', 'Coin repas', 'Espace repas']
+};
+
+const PIECE_FIELD_CONFIG = {
+  'Salon': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'menuiseries', 'chauffage_tuyauterie'],
+  'Cuisine': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'menuiseries', 'eviers_robinetterie', 'meubles_cuisine', 'hotte', 'plaque_cuisson'],
+  'Chambre': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'menuiseries', 'placards', 'chauffage_tuyauterie'],
+  'Salle de bain': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'sanitaires', 'baignoire_douche', 'eviers_robinetterie', 'chauffage_tuyauterie'],
+  'WC': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'sanitaires'],
+  'Entrée': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'menuiseries', 'placards'],
+  'Couloir': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'placards'],
+  'Bureau': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'menuiseries', 'chauffage_tuyauterie'],
+  'Dressing': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'rangements'],
+  'Cellier': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'rangements'],
+  'Garage': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'menuiseries'],
+  'Cave': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie'],
+  'Grenier': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie'],
+  'Balcon': ['revetements_sols', 'murs_menuiseries', 'menuiseries'],
+  'Terrasse': ['revetements_sols', 'murs_menuiseries'],
+  'Jardin': [],
+  'Buanderie': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'eviers_robinetterie', 'rangements'],
+  'Salle à manger': ['revetements_sols', 'murs_menuiseries', 'plafond', 'electricite_plomberie', 'menuiseries', 'chauffage_tuyauterie']
+};
+
+const getFieldsForPiece = (pieceName: string) => {
+  // Trouver le type de pièce basé sur le nom
+  const pieceType = PIECES_TYPES.find(type => 
+    pieceName.toLowerCase().includes(type.toLowerCase()) || 
+    PIECES_SUGGESTIONS[type]?.some(suggestion => 
+      pieceName.toLowerCase().includes(suggestion.toLowerCase())
+    )
+  );
+  
+  return PIECE_FIELD_CONFIG[pieceType || 'Salon'] || [];
+};
 
 const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
   const { data: pieces, isLoading, error, refetch } = usePiecesByEtatId(etatId);
   const updatePieceMutation = useUpdatePiece();
   const createPieceMutation = useCreatePiece();
-  const deletePieceMutation = useDeletePiece(); // Added
+  const deletePieceMutation = useDeletePiece();
 
   const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -119,21 +212,20 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
   const [selectedSuggestion, setSelectedSuggestion] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'entree' | 'sortie'>('entree');
   
-  const [formData, setFormData] = useState<PieceFormData>({}); // Initial state is empty, populated on piece selection
+  const [formData, setFormData] = useState<PieceFormData>({});
 
   // Photo states
   const [currentPieceNewPhotos, setCurrentPieceNewPhotos] = useState<(File & { description?: string })[]>([]);
   const [currentPieceExistingPhotos, setCurrentPieceExistingPhotos] = useState<Photo[]>([]);
-  const [isProcessingPhotos, setIsProcessingPhotos] = useState(false); // For upload state
+  const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
 
   useEffect(() => {
     if (selectedPiece) {
       const { id, etat_des_lieux_id, nom_piece, photos, ...restData } = selectedPiece;
       setFormData(restData);
       setCurrentPieceExistingPhotos(photos || []);
-      setCurrentPieceNewPhotos([]); // Reset new photos when piece changes
+      setCurrentPieceNewPhotos([]);
     } else {
       setFormData({});
       setCurrentPieceExistingPhotos([]);
@@ -145,14 +237,20 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Photo handling functions (specific to current selected piece)
+  // Photo handling functions
   const handleFileSelectCurrentPiece = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || !selectedPiece) return;
     const validFiles: (File & { description?: string })[] = [];
     Array.from(files).forEach(file => {
-      if (file.size > 5 * 1024 * 1024) { toast.error(`Fichier ${file.name} trop volumineux (max 5MB)`); return; }
-      if (!file.type.startsWith('image/')) { toast.error(`Fichier ${file.name} n'est pas une image`); return; }
+      if (file.size > 5 * 1024 * 1024) { 
+        toast.error(`Fichier ${file.name} trop volumineux (max 5MB)`); 
+        return; 
+      }
+      if (!file.type.startsWith('image/')) { 
+        toast.error(`Fichier ${file.name} n'est pas une image`); 
+        return; 
+      }
       const fileWithDesc = file as (File & { description?: string });
       fileWithDesc.description = '';
       validFiles.push(fileWithDesc);
@@ -174,7 +272,6 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     try {
       await supabase.storage.from('etat-des-lieux-photos').remove([filePath]);
       setCurrentPieceExistingPhotos(prev => prev.filter(p => p.id !== photoId));
-      // The change to existing photos will be saved with the main form save
       toast.info('Photo retirée localement. Sauvegardez la pièce pour confirmer.');
     } catch (error) {
       toast.error('Erreur suppression photo stockage.');
@@ -201,9 +298,14 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
         if (uploadError) throw uploadError;
         const { data: publicUrlData } = supabase.storage.from('etat-des-lieux-photos').getPublicUrl(uploadData!.path);
         uploadedResults.push({
-          id: `${timestamp}_${randomId}`, name: photoFile.name, size: photoFile.size, type: photoFile.type,
-          url: publicUrlData.publicUrl, description: photoFile.description || '',
-          category: 'pieces', file_path: uploadData!.path
+          id: `${timestamp}_${randomId}`, 
+          name: photoFile.name, 
+          size: photoFile.size, 
+          type: photoFile.type,
+          url: publicUrlData.publicUrl, 
+          description: photoFile.description || '',
+          category: 'pieces', 
+          file_path: uploadData!.path
         });
       }
       return uploadedResults;
@@ -215,10 +317,9 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     }
   };
 
-
   const handleSave = async () => {
     if (!selectedPiece) return;
-    setIsProcessingPhotos(true); // Indicate general saving might include photo processing
+    setIsProcessingPhotos(true);
 
     try {
       const newlyUploadedPhotos = await _uploadPhotosForCurrentPiece();
@@ -235,10 +336,8 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
       updatePieceMutation.mutate(dataToSave, {
         onSuccess: () => {
           toast.success(`Pièce "${selectedPiece.nom_piece}" sauvegardée.`);
-          setCurrentPieceNewPhotos([]); // Clear new photos for this piece
-          refetch(); // Refetch all pieces to update the list
-          // Optionally, update selectedPiece in state if backend returns the updated object
-          // For now, refetch handles updating the list, and user might re-select
+          setCurrentPieceNewPhotos([]);
+          refetch();
         },
         onError: (error) => {
           console.error('Erreur sauvegarde pièce:', error);
@@ -246,22 +345,83 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
         },
       });
     } catch (error) {
-      // Catch errors from _uploadPhotosForCurrentPiece
       toast.error(`Erreur lors du processus de sauvegarde: ${error instanceof Error ? error.message : "Erreur inconnue"}`);
     } finally {
       setIsProcessingPhotos(false);
     }
   };
 
-  const handleCreatePiece = () => { /* ... (garder la logique existante) ... */ };
-  const handleQuickCreatePiece = (pieceName: string) => { /* ... (garder la logique existante) ... */ };
-  const handleSuggestionSelect = (suggestion: string) => { /* ... (garder la logique existante) ... */ };
-  const copyFromEntreeToSortie = () => { /* ... (garder la logique existante) ... */ };
+  const handleCreatePiece = () => {
+    if (!newPieceName.trim()) {
+      toast.error('Veuillez saisir un nom de pièce');
+      return;
+    }
 
+    const newPiece: Omit<Piece, 'id'> = {
+      etat_des_lieux_id: etatId,
+      nom_piece: newPieceName.trim(),
+      photos: []
+    };
+
+    createPieceMutation.mutate(newPiece, {
+      onSuccess: () => {
+        toast.success(`Pièce "${newPieceName}" créée avec succès`);
+        setNewPieceName('');
+        setSelectedSuggestion('');
+        setIsCreateDialogOpen(false);
+        refetch();
+      },
+      onError: (error) => {
+        toast.error('Erreur lors de la création de la pièce');
+        console.error('Erreur création pièce:', error);
+      },
+    });
+  };
+
+  const handleQuickCreatePiece = (pieceName: string) => {
+    const newPiece: Omit<Piece, 'id'> = {
+      etat_des_lieux_id: etatId,
+      nom_piece: pieceName,
+      photos: []
+    };
+
+    createPieceMutation.mutate(newPiece, {
+      onSuccess: () => {
+        toast.success(`Pièce "${pieceName}" créée avec succès`);
+        refetch();
+      },
+      onError: (error) => {
+        toast.error('Erreur lors de la création de la pièce');
+        console.error('Erreur création pièce:', error);
+      },
+    });
+  };
+
+  const handleSuggestionSelect = (suggestion: string) => {
+    setSelectedSuggestion(suggestion);
+    setNewPieceName(suggestion);
+  };
+
+  const copyFromEntreeToSortie = () => {
+    if (!selectedPiece) return;
+    
+    const entreeFields = getFieldsForPiece(selectedPiece.nom_piece);
+    const newFormData = { ...formData };
+    
+    entreeFields.forEach(field => {
+      const entreeKey = `${field}_entree` as keyof PieceFormData;
+      const sortieKey = `${field}_sortie` as keyof PieceFormData;
+      if (formData[entreeKey]) {
+        newFormData[sortieKey] = formData[entreeKey];
+      }
+    });
+    
+    setFormData(newFormData);
+    toast.info('Données copiées de l\'entrée vers la sortie');
+  };
 
   const handleDeletePiece = async (pieceId: string, pieceName: string) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer la pièce "${pieceName}" et toutes ses données associées (y compris les photos) ? Cette action est irréversible.`)) {
-      // First, delete photos from storage if any
       const pieceToDelete = pieces?.find(p => p.id === pieceId);
       if (pieceToDelete?.photos && pieceToDelete.photos.length > 0) {
         const photoPaths = pieceToDelete.photos.map(p => p.file_path);
@@ -277,7 +437,7 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
       deletePieceMutation.mutate(pieceId, {
         onSuccess: () => {
           toast.success(`Pièce "${pieceName}" supprimée.`);
-          setSelectedPiece(null); // Deselect if it was the selected one
+          setSelectedPiece(null);
           refetch();
         },
         onError: (error) => {
@@ -287,16 +447,72 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
     }
   };
 
+  const renderPieceFields = (suffix: 'entree' | 'sortie') => {
+    if (!selectedPiece) return null;
+    
+    const fields = getFieldsForPiece(selectedPiece.nom_piece);
+    const fieldLabels = {
+      'revetements_sols': 'Revêtements de sols',
+      'murs_menuiseries': 'Murs et menuiseries',
+      'plafond': 'Plafond',
+      'electricite_plomberie': 'Électricité et plomberie',
+      'placards': 'Placards',
+      'sanitaires': 'Sanitaires',
+      'menuiseries': 'Menuiseries',
+      'rangements': 'Rangements',
+      'baignoire_douche': 'Baignoire/Douche',
+      'eviers_robinetterie': 'Éviers et robinetterie',
+      'chauffage_tuyauterie': 'Chauffage et tuyauterie',
+      'meubles_cuisine': 'Meubles de cuisine',
+      'hotte': 'Hotte',
+      'plaque_cuisson': 'Plaque de cuisson'
+    };
 
-  const renderPieceFields = (suffix: 'entree' | 'sortie') => { /* ... (garder la logique existante) ... */ };
+    return (
+      <div className="space-y-4">
+        {fields.map((field) => {
+          const fieldKey = `${field}_${suffix}` as keyof PieceFormData;
+          return (
+            <div key={fieldKey} className="space-y-2">
+              <Label htmlFor={fieldKey}>{fieldLabels[field] || field}</Label>
+              <Textarea
+                id={fieldKey}
+                value={formData[fieldKey] || ''}
+                onChange={(e) => handleInputChange(fieldKey, e.target.value)}
+                placeholder={`Décrivez l'état des ${fieldLabels[field]?.toLowerCase() || field} lors de ${suffix === 'entree' ? 'l\'entrée' : 'la sortie'}`}
+                className="min-h-[80px]"
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
-  // UI Rendering (abbreviated for focus on photo section integration)
-  if (isLoading) { /* ... */ }
-  if (error) { /* ... */ }
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Chargement des pièces...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center text-red-600">
+          <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+          <p>Erreur lors du chargement des pièces</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* ... (Dialog for creating piece - existing code) ... */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -304,37 +520,120 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
             Pièces de l'état des lieux
           </CardTitle>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            {/* ... DialogTrigger and DialogContent for adding new piece ... */}
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter une pièce
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Ajouter une nouvelle pièce</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="piece-name">Nom de la pièce</Label>
+                  <Input
+                    id="piece-name"
+                    value={newPieceName}
+                    onChange={(e) => setNewPieceName(e.target.value)}
+                    placeholder="Ex: Salon, Cuisine, Chambre 1..."
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Ou choisir parmi les suggestions :</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {PIECES_TYPES.map((type) => (
+                      <div key={type} className="space-y-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSuggestionSelect(type)}
+                          className="w-full text-left justify-start"
+                        >
+                          {type}
+                        </Button>
+                        {selectedSuggestion === type && PIECES_SUGGESTIONS[type] && (
+                          <div className="ml-2 space-y-1">
+                            {PIECES_SUGGESTIONS[type].map((suggestion) => (
+                              <Button
+                                key={suggestion}
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSuggestionSelect(suggestion)}
+                                className="w-full text-left justify-start text-xs"
+                              >
+                                {suggestion}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="flex justify-end space-x-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsCreateDialogOpen(false)}
+                  >
+                    Annuler
+                  </Button>
+                  <Button 
+                    onClick={handleCreatePiece}
+                    disabled={!newPieceName.trim() || createPieceMutation.isPending}
+                  >
+                    {createPieceMutation.isPending ? 'Création...' : 'Créer'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
           </Dialog>
         </CardHeader>
         <CardContent>
-          {/* ... (Displaying list of pieces or empty state - existing code) ... */}
-           {!pieces || pieces.length === 0 ? (
+          {!pieces || pieces.length === 0 ? (
             <div className="text-center py-8">
-              {/* ... empty state ... */}
+              <Home className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune pièce ajoutée</h3>
+                            <p className="text-gray-500 mb-4">Commencez par ajouter les pièces de votre état des lieux</p>
+              <div className="grid grid-cols-2 gap-2">
+                {['Salon', 'Cuisine', 'Chambre 1', 'Salle de bain'].map((piece) => (
+                  <Button
+                    key={piece}
+                    variant="outline"
+                    onClick={() => handleQuickCreatePiece(piece)}
+                    className="text-sm"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    {piece}
+                  </Button>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {pieces.map((piece) => (
                 <div key={piece.id} className="flex gap-1">
-                    <Button
+                  <Button
                     variant={selectedPiece?.id === piece.id ? "default" : "outline"}
                     onClick={() => setSelectedPiece(piece)}
                     className="text-sm justify-start flex-grow"
-                    >
+                  >
                     <Edit className="h-3 w-3 mr-2 flex-shrink-0" />
                     <span className="truncate">{piece.nom_piece}</span>
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 flex-shrink-0 text-red-500 hover:text-red-700"
-                        onClick={(e) => { e.stopPropagation(); handleDeletePiece(piece.id, piece.nom_piece);}}
-                        disabled={deletePieceMutation.isPending && deletePieceMutation.variables === piece.id}
-                        title={`Supprimer ${piece.nom_piece}`}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 flex-shrink-0 text-red-500 hover:text-red-700"
+                    onClick={(e) => { e.stopPropagation(); handleDeletePiece(piece.id, piece.nom_piece); }}
+                    disabled={deletePieceMutation.isPending && deletePieceMutation.variables === piece.id}
+                    title={`Supprimer ${piece.nom_piece}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
@@ -346,86 +645,179 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Edit className="h-5 w-5" />
-                    {selectedPiece.nom_piece}
-                </div>
-                 <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeletePiece(selectedPiece.id, selectedPiece.nom_piece)}
-                    className="text-red-500 hover:text-red-700"
-                    disabled={deletePieceMutation.isPending && deletePieceMutation.variables === selectedPiece.id}
-                 >
-                    <Trash2 className="h-4 w-4 mr-1" /> Supprimer cette pièce
-                 </Button>
+              <div className="flex items-center gap-2">
+                <Edit className="h-5 w-5" />
+                {selectedPiece.nom_piece}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDeletePiece(selectedPiece.id, selectedPiece.nom_piece)}
+                className="text-red-500 hover:text-red-700"
+                disabled={deletePieceMutation.isPending && deletePieceMutation.variables === selectedPiece.id}
+              >
+                <Trash2 className="h-4 w-4 mr-1" /> Supprimer cette pièce
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'entree' | 'sortie')}>
-              {/* ... (TabsList and TabsContent for entree/sortie - existing code) ... */}
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="entree">État à l'entrée</TabsTrigger>
+                <TabsTrigger value="sortie">État à la sortie</TabsTrigger>
+              </TabsList>
+              <TabsContent value="entree">
+                {renderPieceFields('entree')}
+              </TabsContent>
+              <TabsContent value="sortie">
+                <div className="space-y-4">
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyFromEntreeToSortie}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Copier depuis l'entrée
+                    </Button>
+                  </div>
+                  {renderPieceFields('sortie')}
+                </div>
+              </TabsContent>
             </Tabs>
 
-            {/* Section Photos for selectedPiece */}
+            {/* Section Photos */}
             <div className="mt-6 p-4 border rounded-lg bg-slate-50 shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                    <Camera className="h-5 w-5 text-slate-600" />
-                    <h3 className="text-lg font-semibold text-slate-700">Photos pour {selectedPiece.nom_piece}</h3>
-                    <Badge variant="secondary">{currentPieceExistingPhotos.length + currentPieceNewPhotos.length} photo(s)</Badge>
-                </div>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors cursor-pointer" onClick={() => !(isProcessingPhotos || updatePieceMutation.isPending) && fileInputRef.current?.click()}>
-                    <input ref={fileInputRef} type="file" multiple accept="image/*" onChange={handleFileSelectCurrentPiece} className="hidden" disabled={isProcessingPhotos || updatePieceMutation.isPending}/>
-                    <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                    <Button type="button" variant="outline" size="sm" onClick={(e) => {e.stopPropagation(); !(isProcessingPhotos || updatePieceMutation.isPending) && fileInputRef.current?.click();}} disabled={isProcessingPhotos || updatePieceMutation.isPending}>
-                        <ImageIcon className="h-4 w-4 mr-2" /> Ajouter des photos
-                    </Button>
-                    <p className="text-xs text-gray-500 mt-1">Max 5MB par image.</p>
-                </div>
+              <div className="flex items-center gap-2 mb-3">
+                <Camera className="h-5 w-5 text-slate-600" />
+                <h3 className="text-lg font-semibold text-slate-700">Photos pour {selectedPiece.nom_piece}</h3>
+                <Badge variant="secondary">{currentPieceExistingPhotos.length + currentPieceNewPhotos.length} photo(s)</Badge>
+              </div>
+              <div 
+                className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors cursor-pointer" 
+                onClick={() => !(isProcessingPhotos || updatePieceMutation.isPending) && fileInputRef.current?.click()}
+              >
+                <input 
+                  ref={fileInputRef} 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  onChange={handleFileSelectCurrentPiece} 
+                  className="hidden" 
+                  disabled={isProcessingPhotos || updatePieceMutation.isPending}
+                />
+                <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={(e) => {e.stopPropagation(); !(isProcessingPhotos || updatePieceMutation.isPending) && fileInputRef.current?.click();}} 
+                  disabled={isProcessingPhotos || updatePieceMutation.isPending}
+                >
+                  <ImageIcon className="h-4 w-4 mr-2" /> Ajouter des photos
+                </Button>
+                <p className="text-xs text-gray-500 mt-1">Max 5MB par image.</p>
+              </div>
 
-                {currentPieceExistingPhotos.length > 0 && (
-                    <div className="mt-4 space-y-2">
-                        <h4 className="text-sm font-medium text-gray-600">Photos sauvegardées :</h4>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                            {currentPieceExistingPhotos.map((photo) => (
-                                <div key={photo.id} className="relative border rounded-lg overflow-hidden bg-white shadow-sm group">
-                                    <img src={photo.url} alt={photo.name || `Photo ${selectedPiece.nom_piece}`} className="w-full h-28 object-cover" onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/150?text=Erreur')} />
-                                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveExistingPhotoCurrentPiece(photo.id, photo.file_path)} className="h-6 w-6 p-0" disabled={isProcessingPhotos || updatePieceMutation.isPending}><X className="h-3 w-3" /></Button>
-                                    </div>
-                                    <div className="p-2">
-                                        <Input type="text" placeholder="Description" value={photo.description || ''} onChange={(e) => handleExistingPhotoDescriptionChangeCurrentPiece(photo.id, e.target.value)} className="text-xs h-7 w-full" disabled={isProcessingPhotos || updatePieceMutation.isPending}/>
-                                        <p className="text-xs text-gray-500 truncate mt-1" title={photo.name}>{(photo.size / 1024).toFixed(1)} KB <span className="text-green-600">✓</span></p>
-                                    </div>
-                                </div>
-                            ))}
+              {currentPieceExistingPhotos.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <h4 className="text-sm font-medium text-gray-600">Photos sauvegardées :</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {currentPieceExistingPhotos.map((photo) => (
+                      <div key={photo.id} className="relative border rounded-lg overflow-hidden bg-white shadow-sm group">
+                        <img 
+                          src={photo.url} 
+                          alt={photo.name || `Photo ${selectedPiece.nom_piece}`} 
+                          className="w-full h-28 object-cover" 
+                          onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/150?text=Erreur')} 
+                        />
+                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            type="button" 
+                            variant="destructive" 
+                            size="icon" 
+                            onClick={() => handleRemoveExistingPhotoCurrentPiece(photo.id, photo.file_path)} 
+                            className="h-6 w-6 p-0" 
+                            disabled={isProcessingPhotos || updatePieceMutation.isPending}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
                         </div>
-                    </div>
-                )}
+                        <div className="p-2">
+                          <Input 
+                            type="text" 
+                            placeholder="Description" 
+                            value={photo.description || ''} 
+                            onChange={(e) => handleExistingPhotoDescriptionChangeCurrentPiece(photo.id, e.target.value)} 
+                            className="text-xs h-7 w-full" 
+                            disabled={isProcessingPhotos || updatePieceMutation.isPending}
+                          />
+                          <p className="text-xs text-gray-500 truncate mt-1" title={photo.name}>
+                            {(photo.size / 1024).toFixed(1)} KB <span className="text-green-600">✓</span>
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                {currentPieceNewPhotos.length > 0 && (
-                    <div className="mt-4 space-y-2">
-                        <h4 className="text-sm font-medium text-gray-600">Nouvelles photos :</h4>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                            {currentPieceNewPhotos.map((photoFile, idx) => (
-                                <div key={`new-piece-${selectedPiece.id}-photo-${idx}`} className="relative border rounded-lg overflow-hidden bg-white shadow-sm group">
-                                    <img src={URL.createObjectURL(photoFile)} alt={photoFile.name} className="w-full h-28 object-cover" />
-                                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveNewPhotoCurrentPiece(idx)} className="h-6 w-6 p-0" disabled={isProcessingPhotos || updatePieceMutation.isPending}><X className="h-3 w-3" /></Button>
-                                    </div>
-                                    <div className="p-2">
-                                        <Input type="text" placeholder="Description" value={photoFile.description || ''} onChange={(e) => handleNewPhotoDescriptionChangeCurrentPiece(idx, e.target.value)} className="text-xs h-7 w-full" disabled={isProcessingPhotos || updatePieceMutation.isPending}/>
-                                        <p className="text-xs text-gray-500 truncate mt-1" title={photoFile.name}>{(photoFile.size / 1024).toFixed(1)} KB <span className="text-orange-500">↯</span></p>
-                                    </div>
-                                </div>
-                            ))}
+              {currentPieceNewPhotos.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <h4 className="text-sm font-medium text-gray-600">Nouvelles photos :</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {currentPieceNewPhotos.map((photoFile, idx) => (
+                      <div key={`new-piece-${selectedPiece.id}-photo-${idx}`} className="relative border rounded-lg overflow-hidden bg-white shadow-sm group">
+                        <img 
+                          src={URL.createObjectURL(photoFile)} 
+                          alt={photoFile.name} 
+                          className="w-full h-28 object-cover" 
+                        />
+                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            type="button" 
+                            variant="destructive" 
+                            size="icon" 
+                            onClick={() => handleRemoveNewPhotoCurrentPiece(idx)} 
+                            className="h-6 w-6 p-0" 
+                            disabled={isProcessingPhotos || updatePieceMutation.isPending}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
                         </div>
-                    </div>
-                )}
+                        <div className="p-2">
+                          <Input 
+                            type="text" 
+                            placeholder="Description" 
+                            value={photoFile.description || ''} 
+                            onChange={(e) => handleNewPhotoDescriptionChangeCurrentPiece(idx, e.target.value)} 
+                            className="text-xs h-7 w-full" 
+                            disabled={isProcessingPhotos || updatePieceMutation.isPending}
+                          />
+                          <p className="text-xs text-gray-500 truncate mt-1" title={photoFile.name}>
+                            {(photoFile.size / 1024).toFixed(1)} KB <span className="text-orange-500">↯</span>
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Commentaires */}
+            <div className="mt-6 space-y-2">
+              <Label htmlFor="commentaires">Commentaires généraux</Label>
+              <Textarea
+                id="commentaires"
+                value={formData.commentaires || ''}
+                onChange={(e) => handleInputChange('commentaires', e.target.value)}
+                placeholder="Ajoutez des commentaires généraux sur cette pièce..."
+                className="min-h-[100px]"
+              />
+            </div>
 
-            {/* ... (Commentaires and Save/Close buttons - existing code) ... */}
-             <div className="flex gap-2 pt-6 mt-4 border-t">
+            <div className="flex gap-2 pt-6 mt-4 border-t">
               <Button
                 onClick={handleSave}
                 disabled={updatePieceMutation.isPending || isProcessingPhotos || deletePieceMutation.isPending}
@@ -447,18 +839,4 @@ const PiecesStep: React.FC<PiecesStepProps> = ({ etatId }) => {
   );
 };
 
-// Make sure to copy PIECES_TYPES, PIECES_SUGGESTIONS, PIECE_FIELD_CONFIG, getFieldsForPiece from the original file
-// For brevity, they are not repeated here but are essential for the component to work.
-// (Assume they are present in the actual file before this export)
-
 export default PiecesStep;
-
-// --- Re-add the const definitions that were in the original file ---
-// (These were outside the component, so they need to be at the top level of the module)
-
-// const PIECES_TYPES = [ ... ]; (Copied from original)
-// const PIECES_SUGGESTIONS = { ... }; (Copied from original)
-// const PIECE_FIELD_CONFIG = { ... }; (Copied from original)
-// const getFieldsForPiece = (pieceName: string) => { ... }; (Copied from original)
-
-// --- End of re-added const definitions ---
