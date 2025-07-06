@@ -35,6 +35,9 @@ export const useEtatDesLieux = () => {
   });
 };
 
+// Since useUpdateEquipementsChauffage uses upsert, useCreateEquipementsChauffage can be an alias or identical.
+export const useCreateEquipementsChauffage = useUpdateEquipementsChauffage;
+
 // Function to fetch all rendez-vous
 export const useRendezVous = () => {
   return useQuery({
@@ -449,7 +452,7 @@ export const useClesByEtatId = (etatId: string) => {
   });
 };
 
-export const useUpdateCles = () => {
+export const useUpdateCle = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -465,6 +468,77 @@ export const useUpdateCles = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['cles', data.etat_des_lieux_id] });
+    },
+  });
+};
+
+export const useCreateCle = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (cle: {
+      etat_des_lieux_id: string;
+      type_cle_badge: string;
+      nombre: number;
+      numero_cle: string;
+      commentaires: string;
+      photos: any[]; // Adjust 'any' to your Photo type if available here
+    }) => {
+      const { data, error } = await supabase
+        .from('cles')
+        .insert(cle)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['cles', data.etat_des_lieux_id] });
+    },
+  });
+};
+
+export const useDeleteCle = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (cleId: string) => {
+      // Fetch the cle to get etat_des_lieux_id for targeted invalidation
+      const { data: cleToDelete, error: fetchError } = await supabase
+        .from('cles')
+        .select('etat_des_lieux_id')
+        .eq('id', cleId)
+        .single();
+
+      if (fetchError) {
+        // Handle case where cle is already deleted or ID is wrong
+        // console.warn(`Could not fetch cle ${cleId} for invalidation:`, fetchError.message);
+        // Proceed with deletion anyway
+      }
+
+      const { data, error } = await supabase
+        .from('cles')
+        .delete()
+        .eq('id', cleId)
+        .select() // To get the deleted record, useful for invalidation if needed
+        .single(); // Assuming delete returns the deleted item or its ID
+
+      if (error) throw error;
+
+      // Return both the deletion result and the fetched etat_des_lieux_id
+      return { deletedData: data, etat_des_lieux_id: cleToDelete?.etat_des_lieux_id };
+    },
+    onSuccess: ({ deletedData, etat_des_lieux_id }) => {
+      if (etat_des_lieux_id) {
+        queryClient.invalidateQueries({ queryKey: ['cles', etat_des_lieux_id] });
+      } else if (deletedData && deletedData.etat_des_lieux_id) {
+        // Fallback if fetching before delete failed but delete response has the ID
+        queryClient.invalidateQueries({ queryKey: ['cles', deletedData.etat_des_lieux_id] });
+      } else {
+        // Broad invalidation if we can't determine the specific etat_des_lieux_id
+        queryClient.invalidateQueries({ queryKey: ['cles'] });
+      }
     },
   });
 };
@@ -505,6 +579,69 @@ export const useUpdatePartiePrivative = () => {
   });
 };
 
+export const useCreatePartiePrivative = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (partie: { // Based on PartiePrivative interface in the component
+      etat_des_lieux_id: string;
+      type_partie: string;
+      etat_entree?: string;
+      etat_sortie: string;
+      numero: string;
+      commentaires: string;
+      photos: any[]; // Adjust 'any' if a shared Photo type becomes available
+    }) => {
+      const { data, error } = await supabase
+        .from('parties_privatives')
+        .insert(partie)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['parties_privatives', data.etat_des_lieux_id] });
+    },
+  });
+};
+
+export const useDeletePartiePrivative = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (partieId: string) => {
+      // Fetch for etat_des_lieux_id for targeted invalidation
+      const { data: partieToDelete, error: fetchError } = await supabase
+        .from('parties_privatives')
+        .select('etat_des_lieux_id')
+        .eq('id', partieId)
+        .single();
+
+      // Proceed with deletion even if fetch fails (e.g., already deleted)
+      const { data, error } = await supabase
+        .from('parties_privatives')
+        .delete()
+        .eq('id', partieId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { deletedData: data, etat_des_lieux_id: partieToDelete?.etat_des_lieux_id };
+    },
+    onSuccess: ({ deletedData, etat_des_lieux_id }) => {
+      if (etat_des_lieux_id) {
+        queryClient.invalidateQueries({ queryKey: ['parties_privatives', etat_des_lieux_id] });
+      } else if (deletedData && deletedData.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ queryKey: ['parties_privatives', deletedData.etat_des_lieux_id] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['parties_privatives'] });
+      }
+    },
+  });
+};
+
 // Autres équipements hooks
 export const useAutresEquipementsByEtatId = (etatId: string) => {
   return useQuery({
@@ -537,6 +674,68 @@ export const useUpdateAutreEquipement = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['autres_equipements', data.etat_des_lieux_id] });
+    },
+  });
+};
+
+export const useCreateAutreEquipement = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (equipement: { // Based on AutreEquipement interface in the component
+      etat_des_lieux_id: string;
+      equipement: string;
+      etat_entree: string;
+      etat_sortie: string;
+      commentaires: string;
+      photos: any[]; // Adjust 'any' if a shared Photo type becomes available
+    }) => {
+      const { data, error } = await supabase
+        .from('autres_equipements')
+        .insert(equipement)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['autres_equipements', data.etat_des_lieux_id] });
+    },
+  });
+};
+
+export const useDeleteAutreEquipement = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (equipementId: string) => {
+      // Fetch for etat_des_lieux_id for targeted invalidation
+      const { data: equipementToDelete, error: fetchError } = await supabase
+        .from('autres_equipements')
+        .select('etat_des_lieux_id')
+        .eq('id', equipementId)
+        .single();
+
+      // Proceed with deletion
+      const { data, error } = await supabase
+        .from('autres_equipements')
+        .delete()
+        .eq('id', equipementId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { deletedData: data, etat_des_lieux_id: equipementToDelete?.etat_des_lieux_id };
+    },
+    onSuccess: ({ deletedData, etat_des_lieux_id }) => {
+      if (etat_des_lieux_id) {
+        queryClient.invalidateQueries({ queryKey: ['autres_equipements', etat_des_lieux_id] });
+      } else if (deletedData && deletedData.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ queryKey: ['autres_equipements', deletedData.etat_des_lieux_id] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['autres_equipements'] });
+      }
     },
   });
 };
@@ -587,6 +786,9 @@ export const useUpdateEquipementsEnergetiques = () => {
     },
   });
 };
+
+// Since useUpdateEquipementsEnergetiques uses upsert, useCreateEquipementsEnergetiques can be an alias or identical.
+export const useCreateEquipementsEnergetiques = useUpdateEquipementsEnergetiques;
 
 // Équipements de chauffage hooks
 export const useEquipementsChauffageByEtatId = (etatId: string) => {
