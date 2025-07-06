@@ -15,7 +15,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseClient = {
   // Fonction pour faire des requêtes à l'API Supabase
   async apiCall(endpoint, options = {}) {
+    console.log('[DEBUG] apiCall: endpoint', endpoint);
     const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+    console.log('[DEBUG] apiCall: url', url);
+    console.log('[DEBUG] apiCall: options', JSON.parse(JSON.stringify(options))); // Deep copy for logging
     const headers = {
       'apikey': SUPABASE_ANON_KEY,
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
@@ -29,8 +32,18 @@ const supabaseClient = {
       headers
     });
 
+    console.log('[DEBUG] apiCall: response status', response.status);
+    console.log('[DEBUG] apiCall: response statusText', response.statusText);
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      let errorData = {};
+      try {
+        errorData = await response.json();
+        console.log('[DEBUG] apiCall: errorData from json()', errorData);
+      } catch (e) {
+        console.log('[DEBUG] apiCall: failed to parse error response as JSON', e);
+        errorData.message = response.statusText; // Fallback message
+      }
       throw new Error(`API Error: ${response.status} - ${errorData.message || response.statusText}`);
     }
 
@@ -73,10 +86,12 @@ const supabaseClient = {
     },
 
     async create(photo) {
+      console.log('[DEBUG] photos.create: photo object', photo);
       const [result] = await supabaseClient.apiCall('photos', {
         method: 'POST',
         body: JSON.stringify(photo)
       });
+      console.log('[DEBUG] photos.create: result', result);
       return result;
     },
 
@@ -345,21 +360,29 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
         const randomId = Math.random().toString(36).substring(2, 15);
         const fileExtension = photoFile.name.split('.').pop();
         const fileName = `${etatId}/pieces/${selectedPiece.id}/${timestamp}_${randomId}.${fileExtension}`;
+        console.log('[DEBUG] _uploadPhotosForCurrentPiece: etatId', etatId);
+        console.log('[DEBUG] _uploadPhotosForCurrentPiece: selectedPiece.id', selectedPiece.id);
+        console.log('[DEBUG] _uploadPhotosForCurrentPiece: generated fileName', fileName);
         
         // Upload vers Supabase Storage
+        console.log('[DEBUG] _uploadPhotosForCurrentPiece: Uploading to Supabase Storage...');
         const { data: uploadData, error: uploadError } = await supabaseClient.storage
           .from('etat-des-lieux-photos')
           .upload(fileName, photoFile);
         
+        console.log('[DEBUG] _uploadPhotosForCurrentPiece: uploadData', uploadData);
+        console.log('[DEBUG] _uploadPhotosForCurrentPiece: uploadError', uploadError);
         if (uploadError) throw uploadError;
         
         // Obtenir l'URL publique
+        console.log('[DEBUG] _uploadPhotosForCurrentPiece: Getting public URL...');
         const { data: publicUrlData } = supabaseClient.storage
           .from('etat-des-lieux-photos')
           .getPublicUrl(uploadData.path);
+        console.log('[DEBUG] _uploadPhotosForCurrentPiece: publicUrlData', publicUrlData);
         
         // Enregistrer les métadonnées en base
-        const photoRecord = await supabaseClient.photos.create({
+        const photoRecordParams = {
           piece_id: selectedPiece.id,
           name: photoFile.name,
           size: photoFile.size,
@@ -368,15 +391,22 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
           description: photoFile.description || '',
           category: 'pieces',
           file_path: uploadData.path
-        });
+        };
+        console.log('[DEBUG] _uploadPhotosForCurrentPiece: photoRecordParams for DB', photoRecordParams);
+
+        const photoRecord = await supabaseClient.photos.create(photoRecordParams);
+        console.log('[DEBUG] _uploadPhotosForCurrentPiece: photoRecord from DB', photoRecord);
         
         uploadedResults.push(photoRecord);
       }
       
+      console.log('[DEBUG] _uploadPhotosForCurrentPiece: All photos processed, uploadedResults:', uploadedResults);
       return uploadedResults;
     } catch (error) {
       console.error('Erreur upload photos:', error);
       showToast(`Erreur upload photos: ${error.message}`, 'error');
+      // Log the error object itself for more details if available
+      console.log('[DEBUG] _uploadPhotosForCurrentPiece: CATCH block error object', error);
       throw error;
     } finally {
       setIsProcessingPhotos(false);
