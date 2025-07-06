@@ -325,20 +325,20 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
     
     const fields = getFieldsForPiece(selectedPiece.nom_piece);
     const fieldLabels = {
-      'revetements_sols': 'Revêtements de sols',
-      'murs_menuiseries': 'Murs et menuiseries',
-      'plafond': 'Plafond',
-      'electricite_plomberie': 'Électricité et plomberie',
-      'placards': 'Placards',
-      'sanitaires': 'Sanitaires',
-      'menuiseries': 'Menuiseries',
-      'rangements': 'Rangements',
-      'baignoire_douche': 'Baignoire/Douche',
-      'eviers_robinetterie': 'Éviers et robinetterie',
-      'chauffage_tuyauterie': 'Chauffage et tuyauterie',
-      'meubles_cuisine': 'Meubles de cuisine',
-      'hotte': 'Hotte',
-      'plaque_cuisson': 'Plaque de cuisson'
+      'revetements_sols': 'Revêtements de sols (état à l\'entrée)',
+      'murs_menuiseries': 'Murs et menuiseries (état à l\'entrée)',
+      'plafond': 'Plafond (état à l\'entrée)',
+      'electricite_plomberie': 'Électricité et plomberie (état à l\'entrée)',
+      'placards': 'Placards (état à l\'entrée)',
+      'sanitaires': 'Sanitaires (état à l\'entrée)',
+      'menuiseries': 'Menuiseries (état à l\'entrée)',
+      'rangements': 'Rangements (état à l\'entrée)',
+      'baignoire_douche': 'Baignoire/Douche (état à l\'entrée)',
+      'eviers_robinetterie': 'Éviers et robinetterie (état à l\'entrée)',
+      'chauffage_tuyauterie': 'Chauffage et tuyauterie (état à l\'entrée)',
+      'meubles_cuisine': 'Meubles de cuisine (état à l\'entrée)',
+      'hotte': 'Hotte (état à l\'entrée)',
+      'plaque_cuisson': 'Plaque de cuisson (état à l\'entrée)'
     };
 
     return (
@@ -379,7 +379,7 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Home className="h-5 w-5" />
-            Pièces de l'état des lieux
+            Pièces de l'état des lieux (état à l'entrée)
           </CardTitle>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
@@ -497,7 +497,7 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Edit className="h-5 w-5" />
-                {selectedPiece.nom_piece}
+                {selectedPiece.nom_piece} (état à l'entrée)
               </div>
               <Button
                 variant="ghost"
@@ -519,7 +519,7 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
               <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
                   <Camera className="h-5 w-5 text-slate-600" />
-                  <h3 className="text-lg font-semibold text-slate-700">Photos pour {selectedPiece.nom_piece}</h3>
+                  <h3 className="text-lg font-semibold text-slate-700">Photos pour {selectedPiece.nom_piece} (état à l'entrée)</h3>
                   <Badge variant="secondary">{currentPieceExistingPhotos.length + currentPieceNewPhotos.length} photo(s)</Badge>
                 </div>
                 <div 
@@ -636,7 +636,7 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
 
             {/* Commentaires */}
             <div className="mt-6 space-y-2">
-              <Label htmlFor="commentaires">Commentaires généraux</Label>
+              <Label htmlFor="commentaires">Commentaires généraux (état à l'entrée)</Label>
               <Textarea
                 id="commentaires"
                 value={formData.commentaires || ''}
