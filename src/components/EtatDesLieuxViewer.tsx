@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { MapPin, User, Building2, Calendar, FileText, X } from 'lucide-react';
+import { MapPin, User, Building2, Calendar, FileText, X, Wrench } from 'lucide-react';
 import { 
   useEtatDesLieuxById, 
   usePiecesByEtatId, 
@@ -122,6 +122,12 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                 <Badge variant={!etatDesLieux.date_sortie ? "default" : "secondary"}>
                   {!etatDesLieux.date_sortie ? "En cours" : "Terminé"}
                 </Badge>
+                {etatDesLieux.travaux_a_faire && (
+                  <Badge variant="destructive" className="flex items-center gap-1">
+                    <Wrench className="h-3 w-3" />
+                    Travaux à prévoir
+                  </Badge>
+                )}
               </div>
             </CardContent>
           </Card>
