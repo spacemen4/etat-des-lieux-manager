@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { MapPin, User, Building2, Calendar, FileText, X, Wrench } from 'lucide-react';
+import { MapPin, User, Building2, Calendar, FileText, X, Wrench, Image } from 'lucide-react';
 import { 
   useEtatDesLieuxById, 
   usePiecesByEtatId, 
@@ -242,6 +242,177 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                   <div>
                     <span className="font-medium">État du ballon d'eau chaude:</span> {equipementsChauffage.ballon_eau_chaude_etat || 'Non renseigné'}
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Photos */}
+          {(
+            (releveCompteurs && (releveCompteurs.photos?.length > 0 || releveCompteurs.photos_electricite?.length > 0 || releveCompteurs.photos_eau?.length > 0 || releveCompteurs.photos_gaz?.length > 0)) ||
+            (cles && cles.some(cle => cle.photos?.length > 0)) ||
+            (partiesPrivatives && partiesPrivatives.some(partie => partie.photos?.length > 0)) ||
+            (autresEquipements && autresEquipements.some(equipement => equipement.photos?.length > 0))
+          ) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Image className="h-4 w-4" />
+                  Photos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {/* Photos des relevés de compteurs */}
+                  {releveCompteurs && (releveCompteurs.photos?.length > 0 || releveCompteurs.photos_electricite?.length > 0 || releveCompteurs.photos_eau?.length > 0 || releveCompteurs.photos_gaz?.length > 0) && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Relevé des compteurs</h3>
+                      <div className="space-y-4">
+                        {releveCompteurs.photos?.length > 0 && (
+                          <div>
+                            <h4 className="font-medium mb-2">Photos générales</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {releveCompteurs.photos.map((photo: any, index: number) => (
+                                <div key={index} className="relative">
+                                  <img 
+                                    src={photo.url || photo.file_url} 
+                                    alt={`Photo générale ${index + 1}`}
+                                    className="w-full h-32 object-cover rounded-lg border"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {releveCompteurs.photos_electricite?.length > 0 && (
+                          <div>
+                            <h4 className="font-medium mb-2">Photos électricité</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {releveCompteurs.photos_electricite.map((photo: any, index: number) => (
+                                <div key={index} className="relative">
+                                  <img 
+                                    src={photo.url || photo.file_url} 
+                                    alt={`Photo électricité ${index + 1}`}
+                                    className="w-full h-32 object-cover rounded-lg border"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {releveCompteurs.photos_eau?.length > 0 && (
+                          <div>
+                            <h4 className="font-medium mb-2">Photos eau</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {releveCompteurs.photos_eau.map((photo: any, index: number) => (
+                                <div key={index} className="relative">
+                                  <img 
+                                    src={photo.url || photo.file_url} 
+                                    alt={`Photo eau ${index + 1}`}
+                                    className="w-full h-32 object-cover rounded-lg border"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {releveCompteurs.photos_gaz?.length > 0 && (
+                          <div>
+                            <h4 className="font-medium mb-2">Photos gaz</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {releveCompteurs.photos_gaz.map((photo: any, index: number) => (
+                                <div key={index} className="relative">
+                                  <img 
+                                    src={photo.url || photo.file_url} 
+                                    alt={`Photo gaz ${index + 1}`}
+                                    className="w-full h-32 object-cover rounded-lg border"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Photos des clés */}
+                  {cles && cles.filter(cle => cle.photos?.length > 0).length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Clés</h3>
+                      <div className="space-y-4">
+                        {cles.filter(cle => cle.photos?.length > 0).map((cle) => (
+                          <div key={cle.id}>
+                            <h4 className="font-medium mb-2">{cle.type_cle_badge}</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {cle.photos.map((photo: any, index: number) => (
+                                <div key={index} className="relative">
+                                  <img 
+                                    src={photo.url || photo.file_url} 
+                                    alt={`Photo ${cle.type_cle_badge} ${index + 1}`}
+                                    className="w-full h-32 object-cover rounded-lg border"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Photos des parties privatives */}
+                  {partiesPrivatives && partiesPrivatives.filter(partie => partie.photos?.length > 0).length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Parties privatives</h3>
+                      <div className="space-y-4">
+                        {partiesPrivatives.filter(partie => partie.photos?.length > 0).map((partie) => (
+                          <div key={partie.id}>
+                            <h4 className="font-medium mb-2">{partie.type_partie} {partie.numero && `- ${partie.numero}`}</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {partie.photos.map((photo: any, index: number) => (
+                                <div key={index} className="relative">
+                                  <img 
+                                    src={photo.url || photo.file_url} 
+                                    alt={`Photo ${partie.type_partie} ${index + 1}`}
+                                    className="w-full h-32 object-cover rounded-lg border"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Photos des autres équipements */}
+                  {autresEquipements && autresEquipements.filter(equipement => equipement.photos?.length > 0).length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Autres équipements</h3>
+                      <div className="space-y-4">
+                        {autresEquipements.filter(equipement => equipement.photos?.length > 0).map((equipement) => (
+                          <div key={equipement.id}>
+                            <h4 className="font-medium mb-2">{equipement.equipement}</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {equipement.photos.map((photo: any, index: number) => (
+                                <div key={index} className="relative">
+                                  <img 
+                                    src={photo.url || photo.file_url} 
+                                    alt={`Photo ${equipement.equipement} ${index + 1}`}
+                                    className="w-full h-32 object-cover rounded-lg border"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
