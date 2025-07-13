@@ -8,18 +8,18 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Stores general information about each property inventory form.
 CREATE TABLE etat_des_lieux (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each 'état des lieux' record.
-    date_entree DATE, -- Date of entry inventory.
-    date_sortie DATE, -- Date of exit inventory.
-    adresse_bien TEXT NOT NULL, -- Address of the property.
-    statut TEXT, -- Status of the inventory (e.g., 'en_cours', 'termine')
-    type_etat_des_lieux TEXT NOT NULL CHECK (type_etat_des_lieux IN ('entree', 'sortie')), -- Type of inventory: entry or exit
-    type_bien TEXT NOT NULL CHECK (type_bien IN ('studio', 't2_t3', 't4_t5', 'inventaire_mobilier', 'bureau', 'local_commercial', 'garage_box', 'pieces_supplementaires')), -- Type of property
-    bailleur_nom TEXT, -- Name of the landlord or their representative.
-    bailleur_adresse TEXT, -- Address of the landlord or their representative.
-    locataire_nom TEXT, -- Name of the tenant(s).
-    locataire_adresse TEXT, -- Address of the tenant(s).
-    rendez_vous_id UUID -- Foreign key linking to the appointment that led to this inventory.
-);
+        date_entree DATE, -- Date of entry inventory.
+            date_sortie DATE, -- Date of exit inventory.
+                adresse_bien TEXT NOT NULL, -- Address of the property.
+                    statut TEXT, -- Status of the inventory (e.g., 'en_cours', 'termine')
+                        type_etat_des_lieux TEXT NOT NULL CHECK (type_etat_des_lieux IN ('entree', 'sortie')), -- Type of inventory: entry or exit
+                            type_bien TEXT NOT NULL CHECK (type_bien IN ('studio', 't2_t3', 't4_t5', 'inventaire_mobilier', 'bureau', 'local_commercial', 'garage_box', 'pieces_supplementaires')), -- Type of property
+                                bailleur_nom TEXT, -- Name of the landlord or their representative.
+                                    bailleur_adresse TEXT, -- Address of the landlord or their representative.
+                                        locataire_nom TEXT, -- Name of the tenant(s).
+                                            locataire_adresse TEXT, -- Address of the tenant(s).
+                                                rendez_vous_id UUID -- Foreign key linking to the appointment that led to this inventory.
+                                                );
 
 -- Table: releve_compteurs
 -- Stores meter readings for electricity, gas, and water.
@@ -207,3 +207,16 @@ CREATE TRIGGER trigger_update_rendez_vous_statut
     AFTER INSERT ON etat_des_lieux
     FOR EACH ROW
     EXECUTE FUNCTION update_rendez_vous_statut();
+
+
+-- Ajout de la colonne pour indiquer s'il y a des travaux à faire (TRUE/FALSE)
+ALTER TABLE etat_des_lieux 
+ADD COLUMN travaux_a_faire BOOLEAN DEFAULT FALSE;
+
+-- Ajout de la colonne pour la description des travaux à faire
+ALTER TABLE etat_des_lieux 
+ADD COLUMN description_travaux TEXT;
+
+-- Ajout d'un commentaire pour documenter les nouvelles colonnes
+COMMENT ON COLUMN etat_des_lieux.travaux_a_faire IS 'Indique si des travaux sont nécessaires suite à l''état des lieux (TRUE/FALSE)';
+COMMENT ON COLUMN etat_des_lieux.description_travaux IS 'Description détaillée des travaux à effectuer (optionnel si travaux_a_faire = TRUE)';
