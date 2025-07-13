@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import FormProgress from '@/components/FormProgress';
@@ -30,16 +32,16 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isValidationChecked, setIsValidationChecked] = useState(false);
   const [initialEtatDesLieux, setInitialEtatDesLieux] = useState<EtatDesLieux | null>(null);
+  const [travauxAFaire, setTravauxAFaire] = useState(false);
+  const [descriptionTravaux, setDescriptionTravaux] = useState('');
 
   const { data: etatData, isLoading: isLoadingEtat, error: errorEtat } = useEtatDesLieuxById(etatId);
 
   useEffect(() => {
     if (etatData) {
       setInitialEtatDesLieux(etatData as EtatDesLieux);
-      // If date_sortie exists and is not today, pre-check the validation box?
-      // Or handle this in the finalization step's UI.
-      // For now, if it's already finalized, let's assume they might want to make changes,
-      // so they'll need to re-check.
+      setTravauxAFaire(etatData.travaux_a_faire || false);
+      setDescriptionTravaux(etatData.description_travaux || '');
     }
   }, [etatData]);
   
@@ -102,7 +104,9 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
       { 
         id: etatId, 
         date_sortie: dateSortieToUpdate, // This will be today if new, or existing if already finalized
-        statut: 'finalise' // Always 'finalise' when this step is completed
+        statut: 'finalise', // Always 'finalise' when this step is completed
+        travaux_a_faire: travauxAFaire,
+        description_travaux: travauxAFaire ? descriptionTravaux : null
       },
       {
         onSuccess: () => {
@@ -167,6 +171,34 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
                   La date de sortie enregistrée restera le <strong className='text-slate-800'>{new Date(initialEtatDesLieux.date_sortie).toLocaleDateString()}</strong>. Pour la modifier, veuillez retourner à l'étape 'Général'.
                 </p>
               )}
+              <div className="space-y-4 border-t pt-4">
+                <h4 className="font-medium text-slate-800">Travaux à réaliser</h4>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    id="travaux"
+                    checked={travauxAFaire}
+                    onCheckedChange={setTravauxAFaire}
+                  />
+                  <Label htmlFor="travaux">
+                    Des travaux sont nécessaires suite à cet état des lieux
+                  </Label>
+                </div>
+
+                {travauxAFaire && (
+                  <div className="space-y-2">
+                    <Label htmlFor="description-travaux">Description des travaux à effectuer</Label>
+                    <Textarea
+                      id="description-travaux"
+                      placeholder="Décrivez en détail les travaux à réaliser..."
+                      value={descriptionTravaux}
+                      onChange={(e) => setDescriptionTravaux(e.target.value)}
+                      className="min-h-[100px]"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="validation"

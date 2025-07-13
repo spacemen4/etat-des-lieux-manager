@@ -10,6 +10,8 @@ export interface EtatDesLieux {
   locataire_nom?: string | null;
   locataire_adresse?: string | null;
   rendez_vous_id?: string | null; // Ajout du champ pour lier à un rendez-vous
+  travaux_a_faire?: boolean | null;
+  description_travaux?: string | null;
 }
 
 export interface ReleveCompteurs {

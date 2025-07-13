@@ -113,6 +113,8 @@ export const useUpdateEtatSortie = () => {
       id: string;
       date_sortie: string | null;
       statut: 'finalise' | 'en_cours';
+      travaux_a_faire?: boolean;
+      description_travaux?: string | null;
     }) => {
       const { id, ...rest } = updates;
       const { data, error } = await supabase
