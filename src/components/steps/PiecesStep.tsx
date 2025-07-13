@@ -14,17 +14,17 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Configuration Supabase réelle
 const supabaseClient = {
   // Fonction pour faire des requêtes à l'API Supabase
-  async apiCall(endpoint, options = {}) {
+  async apiCall(endpoint: string, options: any = {}) {
     console.log('[DEBUG] apiCall: endpoint', endpoint);
     const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
     console.log('[DEBUG] apiCall: url', url);
     console.log('[DEBUG] apiCall: options', JSON.parse(JSON.stringify(options))); // Deep copy for logging
-    const headers = {
+    const headers: Record<string, string> = {
       'apikey': SUPABASE_ANON_KEY,
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       'Content-Type': 'application/json',
       'Prefer': 'return=representation',
-      ...options.headers
+      ...(options.headers || {})
     };
 
     const response = await fetch(url, {
@@ -36,7 +36,7 @@ const supabaseClient = {
     console.log('[DEBUG] apiCall: response statusText', response.statusText);
 
     if (!response.ok) {
-      let errorData = {};
+      let errorData: any = {};
       try {
         errorData = await response.json();
         console.log('[DEBUG] apiCall: errorData from json()', errorData);
@@ -216,7 +216,7 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newPieceName, setNewPieceName] = useState('');
   const [selectedSuggestion, setSelectedSuggestion] = useState('');
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState<any>({});
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -281,7 +281,7 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
     if (!files || !selectedPiece) return;
     
     const validFiles = [];
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach((file: File) => {
       if (file.size > 5 * 1024 * 1024) { 
         showToast(`Fichier ${file.name} trop volumineux (max 5MB)`, 'error'); 
         return; 
@@ -290,7 +290,7 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
         showToast(`Fichier ${file.name} n'est pas une image`, 'error'); 
         return; 
       }
-      const fileWithDesc = file;
+      const fileWithDesc = file as any;
       fileWithDesc.description = '';
       validFiles.push(fileWithDesc);
     });

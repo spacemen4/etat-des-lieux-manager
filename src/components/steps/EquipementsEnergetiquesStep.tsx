@@ -186,7 +186,7 @@ const EquipementsEnergetiquesStep = ({ etatId = "demo-etat-123" }) => {
     const files = event.target.files;
     if (!files) return;
     const validFiles = [];
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach((file: File) => {
       if (file.size > 5 * 1024 * 1024) { 
         showNotification(`Fichier ${file.name} trop volumineux (max 5MB)`, 'error'); 
         return; 

@@ -97,15 +97,15 @@ const MapSelector = ({
       const initialLat = latitude || 48.8566; // Paris par défaut
       const initialLng = longitude || 2.3522;
       
-      const mapInstance = L.map(mapRef.current).setView([initialLat, initialLng], 13);
+      const mapInstance = (L as any).map(mapRef.current).setView([initialLat, initialLng], 13);
       
       // Ajouter les tuiles
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      (L as any).tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
       }).addTo(mapInstance);
 
       // Ajouter le marqueur
-      const markerInstance = L.marker([initialLat, initialLng], {
+      const markerInstance = (L as any).marker([initialLat, initialLng], {
         draggable: true
       }).addTo(mapInstance);
 

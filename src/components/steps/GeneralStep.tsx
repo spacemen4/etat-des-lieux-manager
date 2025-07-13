@@ -59,8 +59,8 @@ interface Photo {
 
 interface EtatDesLieuxFormData {
   adresse_bien: string;
-  type_etat_des_lieux: 'entree' | 'sortie' | '';
-  type_bien: 'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires' | '';
+  type_etat_des_lieux: 'entree' | 'sortie';
+  type_bien: 'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires';
   bailleur_nom: string;
   bailleur_adresse: string;
   locataire_nom: string;
@@ -80,7 +80,7 @@ const GeneralStep: React.FC<GeneralStepProps> = ({ etatId }) => {
   const { mutate: updateEtatDesLieux, isPending: isUpdatingMutation } = useUpdateEtatDesLieux();
 
   const [formData, setFormData] = useState<EtatDesLieuxFormData>({
-    adresse_bien: '', type_etat_des_lieux: '', type_bien: '',
+    adresse_bien: '', type_etat_des_lieux: 'entree', type_bien: 'studio',
     bailleur_nom: '', bailleur_adresse: '', locataire_nom: '', locataire_adresse: '',
     date_entree: '', date_sortie: '', statut: '',
   });

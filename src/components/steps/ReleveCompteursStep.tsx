@@ -357,10 +357,14 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' 
       // Mettre à jour les photos dans la base de données
       const updatedPhotos = releveCompteurs?.photos.filter(photo => photo.id !== photoId) || [];
       
-      const { error: updateError } = await supabase
+      const updateResult = await supabase
         .from('releve_compteurs')
         .update({ photos: updatedPhotos })
-        .eq('id', releveCompteurs?.id);
+        .eq('id', releveCompteurs?.id)
+        .select()
+        .single();
+      
+      const updateError = updateResult.error;
 
       if (updateError) {
         throw updateError;

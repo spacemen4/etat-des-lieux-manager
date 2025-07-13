@@ -9,13 +9,15 @@ interface EtatDesLieuxTypeSelectorProps {
   typeBien: 'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires';
   onTypeEtatDesLieuxChange: (value: 'entree' | 'sortie') => void;
   onTypeBienChange: (value: 'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires') => void;
+  disabled?: boolean;
 }
 
 const EtatDesLieuxTypeSelector: React.FC<EtatDesLieuxTypeSelectorProps> = ({
   typeEtatDesLieux,
   typeBien,
   onTypeEtatDesLieuxChange,
-  onTypeBienChange
+  onTypeBienChange,
+  disabled = false
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -27,6 +29,7 @@ const EtatDesLieuxTypeSelector: React.FC<EtatDesLieuxTypeSelectorProps> = ({
           <RadioGroup 
             value={typeEtatDesLieux} 
             onValueChange={onTypeEtatDesLieuxChange}
+            disabled={disabled}
           >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="entree" id="entree" />
@@ -48,6 +51,7 @@ const EtatDesLieuxTypeSelector: React.FC<EtatDesLieuxTypeSelectorProps> = ({
           <RadioGroup 
             value={typeBien} 
             onValueChange={onTypeBienChange}
+            disabled={disabled}
           >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="studio" id="studio" />
