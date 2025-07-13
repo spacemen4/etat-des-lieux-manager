@@ -289,6 +289,9 @@ const Dashboard = () => {
                         <Badge variant={!etat.date_sortie ? "default" : "secondary"}>
                           {!etat.date_sortie ? "En cours" : "Terminé"}
                         </Badge>
+                        {etat.travaux_a_prevoir && (
+                          <Badge variant="destructive">Travaux à prévoir</Badge>
+                        )}
                       </div>
                       <div className="flex flex-col gap-2 mt-2">
                         {!etat.date_sortie && (
