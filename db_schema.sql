@@ -220,3 +220,35 @@ ADD COLUMN description_travaux TEXT;
 -- Ajout d'un commentaire pour documenter les nouvelles colonnes
 COMMENT ON COLUMN etat_des_lieux.travaux_a_faire IS 'Indique si des travaux sont nécessaires suite à l''état des lieux (TRUE/FALSE)';
 COMMENT ON COLUMN etat_des_lieux.description_travaux IS 'Description détaillée des travaux à effectuer (optionnel si travaux_a_faire = TRUE)';
+
+-- Ajout de la colonne photos à la table autres_equipements
+ALTER TABLE public.autres_equipements 
+ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
+
+-- Ajout de la colonne photos à la table cles
+ALTER TABLE public.cles 
+ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
+
+-- Ajout de la colonne photos à la table equipements_chauffage
+ALTER TABLE public.equipements_chauffage 
+ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
+
+-- Ajout de la colonne photos à la table equipements_energetiques
+ALTER TABLE public.equipements_energetiques 
+ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
+
+-- Ajout de la colonne photos à la table etat_des_lieux
+ALTER TABLE public.etat_des_lieux 
+ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
+
+-- Ajout de la colonne photos à la table parties_privatives
+ALTER TABLE public.parties_privatives 
+ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
+
+-- Ajout de la colonne photos à la table pieces
+ALTER TABLE public.pieces 
+ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
+
+-- Ajout de la colonne photos à la table rendez_vous
+ALTER TABLE public.rendez_vous 
+ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
