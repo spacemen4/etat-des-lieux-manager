@@ -16,62 +16,21 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchUserProfile = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        return user;
-      }
-      return null;
-    } catch (err) {
-      console.error("Failed to fetch user profile:", err);
-      throw err;
-    }
-  };
-
-  const initializeAuth = async () => {
-    try {
-      console.log("Initializing auth...");
-      setLoading(true);
-      setError(null);
-
-      const userProfile = await fetchUserProfile();
-      setUser(userProfile);
-
-    } catch (err) {
-      console.error("Auth initialization error:", err);
-      setError(err);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    console.log("Setting up auth listener...");
-    initializeAuth();
+    setLoading(true);
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      setLoading(false);
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`Auth state changed: ${event}`, session);
+    fetchUser();
 
-      if (event === 'SIGNED_IN' && session?.user) {
-        try {
-          setLoading(true);
-          const userProfile = await fetchUserProfile();
-          setUser(userProfile);
-        } catch (err) {
-          console.error("Error handling SIGNED_IN event:", err);
-          setError(err);
-        } finally {
-          setLoading(false);
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
     });
 
     return () => {
-      console.log("Cleaning up auth listener");
       subscription?.unsubscribe();
     };
   }, []);
