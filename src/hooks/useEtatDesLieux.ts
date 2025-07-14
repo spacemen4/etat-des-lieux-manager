@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useMemo } from 'react';
 
 // Interface pour le relevé compteurs
 interface ReleveCompteurs {
@@ -19,7 +20,7 @@ interface ReleveCompteurs {
   photos_gaz?: any[];
 }
 
-// Function to fetch all états des lieux
+// Fonction pour récupérer tous les états des lieux (simplifiée)
 export const useEtatDesLieux = (userUuid: string) => {
   return useQuery({
     queryKey: ['etats-des-lieux', userUuid],
@@ -41,7 +42,7 @@ export const useEtatDesLieux = (userUuid: string) => {
   });
 };
 
-// Function to fetch all rendez-vous
+// Fonction pour récupérer tous les rendez-vous (simplifiée)
 export const useRendezVous = (userUuid: string) => {
   return useQuery({
     queryKey: ['rendez_vous', userUuid],
@@ -63,9 +64,7 @@ export const useRendezVous = (userUuid: string) => {
   });
 };
 
-import { useMemo } from 'react';
-
-// Hook séparé pour récupérer les relations si nécessaire
+// Hook combiné pour les rendez-vous avec leur état des lieux associé
 export const useRendezVousWithEtat = (userUuid: string) => {
   const { data: rendezVous, isLoading: isLoadingRdv, error: errorRdv } = useRendezVous(userUuid);
   const { data: etatsDesLieux, isLoading: isLoadingEtats, error: errorEtats } = useEtatDesLieux(userUuid);
@@ -79,10 +78,14 @@ export const useRendezVousWithEtat = (userUuid: string) => {
     }));
   }, [rendezVous, etatsDesLieux]);
 
-  return { data: rendezVousWithEtat, isLoading: isLoadingRdv || isLoadingEtats, error: errorRdv || errorEtats };
+  return { 
+    data: rendezVousWithEtat, 
+    isLoading: isLoadingRdv || isLoadingEtats, 
+    error: errorRdv || errorEtats 
+  };
 };
 
-// Function to fetch a single état des lieux by ID
+// Fonction pour récupérer un état des lieux par son ID
 export const useEtatDesLieuxById = (id: string, userUuid: string) => {
   return useQuery({
     queryKey: ['etat_des_lieux', id],
@@ -102,7 +105,7 @@ export const useEtatDesLieuxById = (id: string, userUuid: string) => {
   });
 };
 
-// Function to update an état des lieux
+// Fonction pour mettre à jour un état des lieux
 export const useUpdateEtatDesLieux = () => {
   const queryClient = useQueryClient();
 
@@ -133,12 +136,12 @@ export const useUpdateEtatDesLieux = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['etat_des_lieux', data.id] });
-      queryClient.invalidateQueries({ queryKey: ['etat_des_lieux'] });
+      queryClient.invalidateQueries({ queryKey: ['etats-des-lieux'] });
     },
   });
 };
 
-// Function to update an état des lieux de sortie
+// Fonction pour mettre à jour un état des lieux de sortie
 export const useUpdateEtatSortie = () => {
   const queryClient = useQueryClient();
 
@@ -163,12 +166,12 @@ export const useUpdateEtatSortie = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['etat_des_lieux', data.id] });
-      queryClient.invalidateQueries({ queryKey: ['etat_des_lieux'] });
+      queryClient.invalidateQueries({ queryKey: ['etats-des-lieux'] });
     },
   });
 };
 
-// Function to fetch rendez-vous data
+// Fonction pour récupérer un rendez-vous par son ID
 export const useRendezVousById = (rendezVousId: string | null) => {
   return useQuery({
     queryKey: ['rendez_vous', rendezVousId],
@@ -188,7 +191,7 @@ export const useRendezVousById = (rendezVousId: string | null) => {
   });
 };
 
-// Pieces hooks
+// Fonctions pour les pièces
 export const usePiecesByEtatId = (etatId: string) => {
   return useQuery({
     queryKey: ['pieces', etatId],
@@ -202,6 +205,7 @@ export const usePiecesByEtatId = (etatId: string) => {
       if (error) throw error;
       return data;
     },
+    enabled: !!etatId,
   });
 };
 
@@ -255,14 +259,11 @@ export const useDeletePiece = () => {
 
   return useMutation({
     mutationFn: async (pieceId: string) => {
-      // First, we might need to fetch the piece to get its etat_des_lieux_id if not passed directly
-      // For now, assume we will refetch broadly or the calling component handles this.
-      // Alternatively, the component could pass etat_des_lieux_id if available.
       const { data, error } = await supabase
         .from('pieces')
         .delete()
         .eq('id', pieceId)
-        .select() // To get the deleted record, useful for invalidation if needed
+        .select()
         .single();
 
       if (error) throw error;
@@ -277,16 +278,13 @@ export const useDeletePiece = () => {
       if (data && data.etat_des_lieux_id) {
         queryClient.invalidateQueries({ queryKey: ['pieces', data.etat_des_lieux_id] });
       } else {
-        // Fallback: invalidate all pieces queries if etat_des_lieux_id is not available from the delete response
         queryClient.invalidateQueries({ queryKey: ['pieces'] });
       }
-      // Also, potentially invalidate the main etat_des_lieux list if pieces are part of its details
-      // queryClient.invalidateQueries({ queryKey: ['etat_des_lieux'] });
     },
   });
 };
 
-// Relevé compteurs hooks - ADAPTÉS POUR LA NOUVELLE STRUCTURE
+// Fonctions pour le relevé des compteurs
 export const useReleveCompteursByEtatId = (etatId: string) => {
   return useQuery({
     queryKey: ['releve_compteurs', etatId],
@@ -482,6 +480,7 @@ export const useClesByEtatId = (etatId: string) => {
       if (error) throw error;
       return data;
     },
+    enabled: !!etatId,
   });
 };
 
@@ -515,7 +514,7 @@ export const useCreateCle = () => {
       nombre: number;
       numero_cle: string;
       commentaires: string;
-      photos: any[]; // Adjust 'any' to your Photo type if available here
+      photos: any[];
     }) => {
       const { data, error } = await supabase
         .from('cles')
@@ -554,8 +553,8 @@ export const useDeleteCle = () => {
         .from('cles')
         .delete()
         .eq('id', cleId)
-        .select() // To get the deleted record, useful for invalidation if needed
-        .single(); // Assuming delete returns the deleted item or its ID
+        .select()
+        .single();
 
       if (error) throw error;
 
@@ -569,14 +568,13 @@ export const useDeleteCle = () => {
         // Fallback if fetching before delete failed but delete response has the ID
         queryClient.invalidateQueries({ queryKey: ['cles', deletedData.etat_des_lieux_id] });
       } else {
-        // Broad invalidation if we can't determine the specific etat_des_lieux_id
         queryClient.invalidateQueries({ queryKey: ['cles'] });
       }
     },
   });
 };
 
-// Parties privatives hooks
+// Fonctions pour les parties privatives
 export const usePartiesPrivativesByEtatId = (etatId: string) => {
   return useQuery({
     queryKey: ['parties_privatives', etatId],
@@ -589,6 +587,7 @@ export const usePartiesPrivativesByEtatId = (etatId: string) => {
       if (error) throw error;
       return data;
     },
+    enabled: !!etatId,
   });
 };
 
@@ -616,14 +615,14 @@ export const useCreatePartiePrivative = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (partie: { // Based on PartiePrivative interface in the component
+    mutationFn: async (partie: {
       etat_des_lieux_id: string;
       type_partie: string;
       etat_entree?: string;
       etat_sortie: string;
       numero: string;
       commentaires: string;
-      photos: any[]; // Adjust 'any' if a shared Photo type becomes available
+      photos: any[];
     }) => {
       const { data, error } = await supabase
         .from('parties_privatives')
@@ -675,7 +674,7 @@ export const useDeletePartiePrivative = () => {
   });
 };
 
-// Autres équipements hooks
+// Fonctions pour les autres équipements
 export const useAutresEquipementsByEtatId = (etatId: string) => {
   return useQuery({
     queryKey: ['autres_equipements', etatId],
@@ -688,6 +687,7 @@ export const useAutresEquipementsByEtatId = (etatId: string) => {
       if (error) throw error;
       return data;
     },
+    enabled: !!etatId,
   });
 };
 
@@ -715,13 +715,13 @@ export const useCreateAutreEquipement = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (equipement: { // Based on AutreEquipement interface in the component
+    mutationFn: async (equipement: {
       etat_des_lieux_id: string;
       equipement: string;
       etat_entree: string;
       etat_sortie: string;
       commentaires: string;
-      photos: any[]; // Adjust 'any' if a shared Photo type becomes available
+      photos: any[];
     }) => {
       const { data, error } = await supabase
         .from('autres_equipements')
@@ -773,7 +773,7 @@ export const useDeleteAutreEquipement = () => {
   });
 };
 
-// Équipements énergétiques hooks
+// Fonctions pour les équipements énergétiques
 export const useEquipementsEnergetiquesByEtatId = (etatId: string) => {
   return useQuery({
     queryKey: ['equipements_energetiques', etatId],
@@ -787,6 +787,7 @@ export const useEquipementsEnergetiquesByEtatId = (etatId: string) => {
       if (error && error.code !== 'PGRST116') throw error;
       return data;
     },
+    enabled: !!etatId,
   });
 };
 
@@ -820,7 +821,7 @@ export const useUpdateEquipementsEnergetiques = () => {
   });
 };
 
-// Équipements de chauffage hooks
+// Fonctions pour les équipements de chauffage
 export const useEquipementsChauffageByEtatId = (etatId: string) => {
   return useQuery({
     queryKey: ['equipements_chauffage', etatId],
@@ -834,6 +835,7 @@ export const useEquipementsChauffageByEtatId = (etatId: string) => {
       if (error && error.code !== 'PGRST116') throw error;
       return data;
     },
+    enabled: !!etatId,
   });
 };
 
@@ -868,5 +870,3 @@ export const useUpdateEquipementsChauffage = () => {
     },
   });
 };
-
-// Since useUpdateEquipementsEnergetiques uses upsert, useCreateEquipementsEnerget
