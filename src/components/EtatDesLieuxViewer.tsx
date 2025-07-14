@@ -1,11 +1,10 @@
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { MapPin, User, Building2, Calendar, FileText, X, Wrench, Image } from 'lucide-react';
+import { MapPin, User, Building2, Calendar, FileText, Wrench, Image } from 'lucide-react';
 import { 
   useEtatDesLieuxById, 
   usePiecesByEtatId, 
@@ -53,14 +52,9 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              État des lieux - {etatDesLieux.adresse_bien}
-            </div>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            État des lieux - {etatDesLieux.adresse_bien}
           </DialogTitle>
         </DialogHeader>
 

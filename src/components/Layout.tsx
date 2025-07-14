@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu } from 'lucide-react';
 
 const Layout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -37,10 +37,7 @@ const Layout = () => {
                 <SheetContent side="left" className="w-64 p-4">
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-lg font-bold">Menu</h2>
-                    <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
-                      <X className="h-6 w-6" />
-                      <span className="sr-only">Fermer le menu</span>
-                    </Button>
+                    
                   </div>
                   <nav className="flex flex-col space-y-4">
                     <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="text-slate-600 hover:text-slate-900 py-2 text-base font-medium">
