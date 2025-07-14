@@ -20,45 +20,40 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { user } = session;
-        const { data: userProfile, error } = await supabase
-          .from('utilisateurs')
-          .select('*, organisation:organisations(*)')
-          .eq('id', user.id)
-          .single();
+    setLoading(true);
+    const fetchUser = async (sessionUser) => {
+      const { data: userProfile, error } = await supabase
+        .from('utilisateurs')
+        .select('*, organisation:organisations(*)')
+        .eq('id', sessionUser.id)
+        .single();
 
-        if (userProfile) {
-          setUser(userProfile);
-          setOrganisation(userProfile.organisation);
-        }
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        setUser(null);
+        setOrganisation(null);
+      } else {
+        setUser(userProfile);
+        setOrganisation(userProfile.organisation);
       }
-      setLoading(false);
     };
 
-    getSession();
+    const { data: { session } } = supabase.auth.getSession();
+
+    if (session) {
+      fetchUser(session.user);
+    }
+    setLoading(false);
+
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session) {
-          const { user } = session;
-          const { data: userProfile, error } = await supabase
-            .from('utilisateurs')
-            .select('*, organisation:organisations(*)')
-            .eq('id', user.id)
-            .single();
-
-          if (userProfile) {
-            setUser(userProfile);
-            setOrganisation(userProfile.organisation);
-          }
-        } else {
+        if (event === 'SIGNED_IN' && session) {
+          await fetchUser(session.user);
+        } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setOrganisation(null);
         }
-        setLoading(false);
       }
     );
 
