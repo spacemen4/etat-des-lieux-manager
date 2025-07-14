@@ -1,36 +1,56 @@
-import React from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Layout from "./components/Layout";
-import Index from "./pages/Index";
-import EtatSortie from "./pages/EtatSortie";
-import NotFound from "./pages/NotFound";
-import NewEtatDesLieux from "./pages/NewEtatDesLieux";
-import MonCalendrierPage from "./pages/MonCalendrier"; // Import the new calendar page
+import React from 'react';
+import { AuthProvider, useAuth } from './auth';
+import { LoginForm, SignUpForm, UserProfile, TeamManagement } from './auth';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { DashboardLayout } from './components/layout';
+import { Toaster } from '@/components/ui/sonner';
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+const App = () => {
+  return (
+    <AuthProvider>
+      <Router>
         <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Index />} />
-            <Route path="new-etat-des-lieux" element={<NewEtatDesLieux />} />
-            <Route path="sortie/:id" element={<EtatSortie />} />
-            <Route path="mon-calendrier" element={<MonCalendrierPage />} /> {/* Add route for the calendar page */}
-          </Route>
-          <Route path="*" element={<NotFound />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/*" element={<ProtectedRoute><DashboardRoutes /></ProtectedRoute>} />
         </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+      </Router>
+      <Toaster position="top-center" />
+    </AuthProvider>
+  );
+};
+
+const LoginPage = () => (
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <LoginForm onSuccess={() => window.location.href = '/'} />
+  </div>
 );
+
+const SignUpPage = () => (
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <SignUpForm onSuccess={() => window.location.href = '/login'} />
+  </div>
+);
+
+const DashboardRoutes = () => (
+    <DashboardLayout>
+        <Routes>
+            <Route path="profile" element={<UserProfile />} />
+            <Route path="team" element={<TeamManagement />} />
+            {/* Redirection de la racine du tableau de bord vers le profil */}
+            <Route path="/" element={<Navigate to="profile" replace />} />
+        </Routes>
+    </DashboardLayout>
+);
+
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Chargement...</div>; // Ou un spinner de chargement
+  }
+
+  return user ? children : <Navigate to="/login" replace />;
+};
 
 export default App;
