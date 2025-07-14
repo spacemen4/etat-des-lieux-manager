@@ -2,8 +2,6 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
 import { MapPin, User, Building2, Calendar, FileText, Wrench, Image } from 'lucide-react';
 import { 
   useEtatDesLieuxById, 
