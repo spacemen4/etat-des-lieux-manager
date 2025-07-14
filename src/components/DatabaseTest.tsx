@@ -61,18 +61,7 @@ function DatabaseTest() {
     return <p>No data found in 'etat_des_lieux' table, or table is empty. This is okay if you haven't added any records yet after running the DDL.</p>;
   }
 
-  return (
-    <div>
-      <h2>Database Test: etat_des_lieux (First 5 records)</h2>
-      <ul>
-        {data.map((item) => (
-          <li key={item.id}>
-            <strong>ID:</strong> {item.id}, <strong>Address:</strong> {item.adresse_bien}, <strong>Entry Date:</strong> {item.date_entree || 'N/A'}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+  
 }
 
 export default DatabaseTest;
