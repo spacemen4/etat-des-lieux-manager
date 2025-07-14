@@ -265,28 +265,37 @@ export default function RendezVousCalendar({ userUuid }) {
 
   const fetchRendezVous = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: rdvData, error: rdvError } = await supabase
         .from('rendez_vous')
         .select('*')
         .eq('user_id', userUuid)
         .order('date', { ascending: true });
 
-      if (error) {
-        throw error;
-      }
+      if (rdvError) throw rdvError;
 
-      const formattedData = data?.map(rv => ({
+      // Séparément, charger les états des lieux si nécessaire
+      const { data: edlData, error: edlError } = await supabase
+        .from('etat_des_lieux')
+        .select('id, rendez_vous_id, type_etat_des_lieux, statut')
+        .eq('user_id', userUuid);
+
+      if (edlError) throw edlError;
+
+      const edlMap = new Map(edlData.map(edl => [edl.rendez_vous_id, edl]));
+
+      const formattedData = rdvData?.map(rv => ({
         ...rv,
         date: new Date(rv.date),
-        created_at: new Date(rv.created_at)
+        created_at: new Date(rv.created_at),
+        etat_des_lieux: edlMap.get(rv.id) || null, // Lier les données
       })) || [];
 
       setRendezVous(formattedData);
     } catch (error) {
-      console.error("[ERREUR] Erreur lors du chargement des rendez-vous:", error);
+      console.error("[ERREUR] Erreur lors du chargement des données:", error);
       toast({
-        title: "Erreur",
-        description: "Impossible de charger les rendez-vous",
+        title: "Erreur de chargement",
+        description: "Impossible de charger les données du calendrier.",
         variant: "destructive",
       });
     }
