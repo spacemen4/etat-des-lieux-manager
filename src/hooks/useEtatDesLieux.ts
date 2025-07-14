@@ -20,51 +20,60 @@ interface ReleveCompteurs {
 }
 
 // Function to fetch all états des lieux
-export const useEtatDesLieux = () => {
+export const useEtatDesLieux = (userUuid: string) => {
   return useQuery({
-    queryKey: ['etat_des_lieux'],
+    queryKey: ['etat_des_lieux', userUuid],
     queryFn: async () => {
+      if (!userUuid) return [];
       const { data, error } = await supabase
         .from('etat_des_lieux')
         .select('*, rendez_vous_id')
+        .eq('user_id', userUuid)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data;
     },
+    enabled: !!userUuid,
   });
 };
 
 // Function to fetch all rendez-vous
-export const useRendezVous = () => {
+export const useRendezVous = (userUuid: string) => {
   return useQuery({
-    queryKey: ['rendez_vous'],
+    queryKey: ['rendez_vous', userUuid],
     queryFn: async () => {
+      if (!userUuid) return [];
       const { data, error } = await supabase
         .from('rendez_vous')
         .select('*')
+        .eq('user_id', userUuid)
         .order('date', { ascending: false });
 
       if (error) throw error;
       return data;
     },
+    enabled: !!userUuid,
   });
 };
 
 // Function to fetch a single état des lieux by ID
-export const useEtatDesLieuxById = (id: string) => {
+export const useEtatDesLieuxById = (id: string, userUuid: string) => {
   return useQuery({
     queryKey: ['etat_des_lieux', id],
     queryFn: async () => {
+      if (!userUuid) return null;
       const { data, error } = await supabase
         .from('etat_des_lieux')
         .select('*')
         .eq('id', id)
+        .eq('user_id', userUuid)
         .single();
 
       if (error) throw error;
       return data;
     },
+    enabled: !!id && !!userUuid,
   });
 };
 

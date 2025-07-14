@@ -12,20 +12,24 @@ export const UserProvider = ({ children }) => {
 
     useEffect(() => {
         const fetchEtatsDesLieux = async () => {
-            if (user) {
+            if (user && user.id) {
                 setLoading(true);
                 setUserUuid(user.id);
-                const { data, error } = await supabase
-                    .from('etat_des_lieux')
-                    .select('*')
-                    .eq('user_id', user.id);
+                try {
+                    const { data, error } = await supabase
+                        .from('etat_des_lieux')
+                        .select('*')
+                        .eq('user_id', user.id);
 
-                if (error) {
-                    console.error('Error fetching etats des lieux:', error);
-                } else {
+                    if (error) {
+                        throw error;
+                    }
                     setEtatsDesLieux(data);
+                } catch (error) {
+                    console.error('Error fetching etats des lieux:', error.message);
+                } finally {
+                    setLoading(false);
                 }
-                setLoading(false);
             }
         };
 
