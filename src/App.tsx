@@ -24,15 +24,34 @@ const App = () => {
   );
 };
 
+import { AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
 const AuthRoutes = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, error } = useAuth();
   
+  console.log("AuthRoutes render - user:", user, "loading:", loading, "error:", error);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p>Chargement...</p>
+          {error && <p className="text-red-500 mt-2">Erreur: {error.message}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center p-6 max-w-md">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Erreur de chargement</h2>
+          <p className="text-red-500 mb-4">{error.message}</p>
+          <Button onClick={() => window.location.reload()}>Réessayer</Button>
         </div>
       </div>
     );

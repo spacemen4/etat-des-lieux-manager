@@ -15,115 +15,113 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [organisation, setOrganisation] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    let mounted = true;
+  const fetchUserProfile = async (authUser) => {
+    try {
+      console.log("Fetching user profile for:", authUser.id);
+      const { data: userProfile, error: profileError } = await supabase
+        .from('utilisateurs')
+        .select('*, organisation:organisations(*)')
+        .eq('id', authUser.id)
+        .single();
 
-    const fetchUserProfile = async (authUser) => {
-      try {
-        const { data: userProfile, error } = await supabase
-          .from('utilisateurs')
-          .select('*, organisation:organisations(*)')
-          .eq('id', authUser.id)
-          .single();
+      console.log("Profile data:", userProfile, "Error:", profileError);
 
-        if (error) {
-          console.error("Erreur lors de la récupération du profil utilisateur:", error);
-          if (mounted) {
-            setUser(null);
-            setOrganisation(null);
-          }
-        } else {
-          if (mounted) {
-            setUser(userProfile);
-            setOrganisation(userProfile?.organisation);
-          }
-        }
-      } catch (error) {
-        console.error("Erreur lors de la récupération du profil:", error);
-        if (mounted) {
-          setUser(null);
-          setOrganisation(null);
-        }
+      if (profileError) {
+        console.error("Profile error:", profileError);
+        throw profileError;
       }
-    };
 
-    const initializeAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Error getting session:", error);
-          if (mounted) {
-            setUser(null);
-            setOrganisation(null);
-            setLoading(false);
-          }
-          return;
-        }
+      return userProfile;
+    } catch (err) {
+      console.error("Failed to fetch user profile:", err);
+      throw err;
+    }
+  };
 
-        if (session?.user) {
-          await fetchUserProfile(session.user);
-        } else {
-          if (mounted) {
-            setUser(null);
-            setOrganisation(null);
-          }
-        }
-      } catch (error) {
-        console.error("Erreur lors de l'initialisation de l'auth:", error);
-        if (mounted) {
-          setUser(null);
-          setOrganisation(null);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+  const initializeAuth = async () => {
+    try {
+      console.log("Initializing auth...");
+      setLoading(true);
+      setError(null);
+
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log("Session:", session, "Error:", sessionError);
+
+      if (sessionError) {
+        throw sessionError;
       }
-    };
 
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`Auth event: ${event}`);
-      
-      if (!mounted) return;
-
-      if (event === 'SIGNED_IN' && session?.user) {
-        setLoading(true);
-        await fetchUserProfile(session.user);
-        setLoading(false);
-      } else if (event === 'SIGNED_OUT') {
+      if (session?.user) {
+        console.log("User is signed in:", session.user);
+        const userProfile = await fetchUserProfile(session.user);
+        setUser(userProfile);
+        setOrganisation(userProfile?.organisation);
+      } else {
+        console.log("No active session");
         setUser(null);
         setOrganisation(null);
-        setLoading(false);
       }
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const signOut = async () => {
-    setLoading(true);
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error("Erreur lors de la déconnexion:", error);
+    } catch (err) {
+      console.error("Auth initialization error:", err);
+      setError(err);
+      setUser(null);
+      setOrganisation(null);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    console.log("Setting up auth listener...");
+    initializeAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`Auth state changed: ${event}`, session);
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        try {
+          setLoading(true);
+          const userProfile = await fetchUserProfile(session.user);
+          setUser(userProfile);
+          setOrganisation(userProfile?.organisation);
+        } catch (err) {
+          console.error("Error handling SIGNED_IN event:", err);
+          setError(err);
+        } finally {
+          setLoading(false);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setOrganisation(null);
+      }
+    });
+
+    return () => {
+      console.log("Cleaning up auth listener");
+      subscription?.unsubscribe();
+    };
+  }, []);
+
   const value = {
     user,
     organisation,
     loading,
-    signOut,
+    error,
+    signOut: async () => {
+      try {
+        setLoading(true);
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.error("Sign out error:", err);
+      } finally {
+        setLoading(false);
+      }
+    },
   };
+
+  console.log("AuthProvider render - state:", { user, loading, error });
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
