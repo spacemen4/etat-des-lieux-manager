@@ -20,8 +20,25 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    const getUserProfile = async (user) => {
+    const fetchSession = async () => {
+      setLoading(true);
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Error getting session:", error);
+        setLoading(false);
+        return;
+      }
+
+      if (session) {
+        await fetchUserProfile(session.user);
+      } else {
+        setUser(null);
+        setOrganisation(null);
+      }
+      setLoading(false);
+    };
+
+    const fetchUserProfile = async (user) => {
       const { data: userProfile, error } = await supabase
         .from('utilisateurs')
         .select('*, organisation:organisations(*)')
@@ -30,37 +47,25 @@ export const AuthProvider = ({ children }) => {
 
       if (error) {
         console.error("Erreur lors de la récupération du profil utilisateur:", error);
-        return null;
+        setUser(null);
+        setOrganisation(null);
+      } else {
+        setUser(userProfile);
+        setOrganisation(userProfile?.organisation);
       }
-      return userProfile;
     };
 
-    const handleAuthChange = async (event, session) => {
+    fetchSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log(`Auth event: ${event}`);
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-        if (session) {
-          const userProfile = await getUserProfile(session.user);
-          setUser(userProfile);
-          setOrganisation(userProfile?.organisation);
-        }
+      if (event === 'SIGNED_IN' && session) {
+        await fetchUserProfile(session.user);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setOrganisation(null);
       }
-      setLoading(false);
-    };
-
-    // Gérer la session initiale
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        const userProfile = getUserProfile(session.user);
-        setUser(userProfile);
-        setOrganisation(userProfile?.organisation);
-      }
-      setLoading(false);
     });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(handleAuthChange);
 
     return () => {
       authListener.subscription.unsubscribe();
