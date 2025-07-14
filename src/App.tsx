@@ -5,7 +5,12 @@ import { LoginForm, SignUpForm, UserProfile, TeamManagement } from './auth';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { DashboardLayout } from './components/layout';
 import { Toaster } from '@/components/ui/sonner';
-import Home from './pages/Home';
+
+// Import des pages
+import Index from './pages/Index';
+import NewEtatDesLieux from './pages/NewEtatDesLieux';
+import EtatSortie from './pages/EtatSortie';
+import MonCalendrierPage from './pages/MonCalendrierPage';
 
 const App = () => {
   return (
@@ -22,7 +27,7 @@ const App = () => {
 
 const AuthRoutes = () => {
   const { user, loading } = useAuth();
-
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -30,7 +35,7 @@ const AuthRoutes = () => {
       </div>
     );
   }
-
+  
   return (
     <Routes>
       {!user ? (
@@ -41,7 +46,10 @@ const AuthRoutes = () => {
         </>
       ) : (
         <Route path="/" element={<DashboardLayout><Outlet /></DashboardLayout>}>
-          <Route index element={<Home />} />
+          <Route index element={<Index />} />
+          <Route path="new-etat-des-lieux" element={<NewEtatDesLieux />} />
+          <Route path="sortie/:id" element={<EtatSortie />} />
+          <Route path="mon-calendrier" element={<MonCalendrierPage />} />
           <Route path="profile" element={<UserProfile />} />
           <Route path="team" element={<TeamManagement />} />
           <Route path="*" element={<Navigate to="/" replace />} />
