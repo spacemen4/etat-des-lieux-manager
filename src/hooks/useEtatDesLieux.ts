@@ -46,11 +46,21 @@ export const useRendezVous = (userUuid: string) => {
       if (!userUuid) return [];
       const { data, error } = await supabase
         .from('rendez_vous')
-        .select('*')
+        .select(`
+          *,
+          etat_des_lieux:etat_des_lieux_id (
+            id,
+            type_etat_des_lieux,
+            statut
+          )
+        `)
         .eq('user_id', userUuid)
         .order('date', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching rendez-vous:', error);
+        throw error;
+      }
       return data;
     },
     enabled: !!userUuid,
