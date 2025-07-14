@@ -267,27 +267,28 @@ export default function RendezVousCalendar({ userUuid }) {
     try {
       const { data: rdvData, error: rdvError } = await supabase
         .from('rendez_vous')
-        .select('*')
+        .select(`
+          *,
+          etat_des_lieux!fk_rendez_vous_etat_des_lieux (
+            id,
+            type_etat_des_lieux,
+            statut
+          )
+        `)
         .eq('user_id', userUuid)
         .order('date', { ascending: true });
 
-      if (rdvError) throw rdvError;
-
-      // Séparément, charger les états des lieux si nécessaire
-      const { data: edlData, error: edlError } = await supabase
-        .from('etat_des_lieux')
-        .select('id, rendez_vous_id, type_etat_des_lieux, statut')
-        .eq('user_id', userUuid);
-
-      if (edlError) throw edlError;
-
-      const edlMap = new Map(edlData.map(edl => [edl.rendez_vous_id, edl]));
+      if (rdvError) {
+        // Log the detailed error to the console for debugging
+        console.error("Error fetching rendez-vous:", rdvError);
+        throw rdvError;
+      }
 
       const formattedData = rdvData?.map(rv => ({
         ...rv,
         date: new Date(rv.date),
         created_at: new Date(rv.created_at),
-        etat_des_lieux: edlMap.get(rv.id) || null, // Lier les données
+        // The 'etat_des_lieux' data is now directly embedded in the response
       })) || [];
 
       setRendezVous(formattedData);
