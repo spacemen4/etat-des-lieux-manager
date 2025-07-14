@@ -18,7 +18,7 @@ export const UserProvider = ({ children }) => {
                 const { data, error } = await supabase
                     .from('etats_des_lieux')
                     .select('*')
-                    .eq('user_id', user.id);
+                    .eq('created_by', user.id);
 
                 if (error) {
                     console.error('Error fetching etats des lieux:', error);
