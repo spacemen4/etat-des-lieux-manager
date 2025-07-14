@@ -68,32 +68,34 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 mb-2">
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">
             Tableau de bord
           </h2>
-          <p className="text-slate-600">
+          <p className="text-slate-600 text-sm sm:text-base">
             Gérez vos états des lieux d'entrée et de sortie
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button asChild className="bg-green-600 hover:bg-green-700">
-            <a href="/new-etat-des-lieux?type=entree" className="flex items-center gap-2">
+        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+          <Button asChild className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-initial">
+            <a href="/new-etat-des-lieux?type=entree" className="flex items-center justify-center gap-2">
               <LogIn className="h-4 w-4" />
-              État d'entrée
+              <span className="hidden sm:inline">État d'entrée</span>
+              <span className="sm:hidden">Entrée</span>
             </a>
           </Button>
-          <Button asChild className="bg-blue-600 hover:bg-blue-700">
-            <a href="/new-etat-des-lieux?type=sortie" className="flex items-center gap-2">
+          <Button asChild className="bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-initial">
+            <a href="/new-etat-des-lieux?type=sortie" className="flex items-center justify-center gap-2">
               <LogOut className="h-4 w-4" />
-              État de sortie
+              <span className="hidden sm:inline">État de sortie</span>
+              <span className="sm:hidden">Sortie</span>
             </a>
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total des biens</CardTitle>
@@ -102,7 +104,7 @@ const Dashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{etatsDesLieux?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
-              États des lieux enregistrés
+              États des lieux
             </p>
           </CardContent>
         </Card>
@@ -128,7 +130,7 @@ const Dashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{etatsTermines.length}</div>
             <p className="text-xs text-muted-foreground">
-              États des lieux finalisés
+              États finalisés
             </p>
           </CardContent>
         </Card>
@@ -156,36 +158,36 @@ const Dashboard = () => {
           <div className="grid gap-4">
             {rendezVousPlanifies.map((rdv) => (
               <Card key={rdv.id} className="hover:shadow-md transition-shadow border-orange-200">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-2">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                    <div className="space-y-2 flex-grow">
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-orange-500" />
                         <h4 className="font-semibold text-slate-900">
                           {rdv.description || 'Rendez-vous état des lieux'}
                         </h4>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 text-sm">
                         <MapPin className="h-4 w-4 text-slate-500" />
                         <span className="text-slate-600">
                           {rdv.adresse} {rdv.code_postal && `, ${rdv.code_postal}`} {rdv.ville}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 text-sm">
                         <User className="h-4 w-4 text-slate-500" />
                         <span className="text-slate-600">{rdv.nom_contact}</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 text-sm">
                         <Building2 className="h-4 w-4 text-slate-500" />
                         <span className="text-slate-600">{getTypeBienLabel(rdv.type_bien)}</span>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-slate-500">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-sm text-slate-500 pt-2">
                         <span>Date: {new Date(rdv.date).toLocaleDateString()}</span>
                         <span>Heure: {rdv.heure}</span>
                         {rdv.duree && <span>Durée: {rdv.duree}</span>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-col">
+                    <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
                       <div className="flex gap-2">
                         <Badge variant="outline" className="border-orange-500 text-orange-700">
                           {rdv.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}
@@ -194,13 +196,13 @@ const Dashboard = () => {
                           Planifié
                         </Badge>
                       </div>
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex w-full sm:w-auto mt-2">
                         <Button 
                           size="sm" 
                           asChild
-                          className="bg-orange-600 hover:bg-orange-700"
+                          className="bg-orange-600 hover:bg-orange-700 w-full"
                         >
-                          <a href={`/new-etat-des-lieux?type=${rdv.type_etat_des_lieux}&rdv=${rdv.id}`} className="flex items-center gap-1">
+                          <a href={`/new-etat-des-lieux?type=${rdv.type_etat_des_lieux}&rdv=${rdv.id}`} className="flex items-center justify-center gap-1">
                             <FileText className="h-3 w-3" />
                             Faire l'état des lieux
                           </a>
@@ -216,19 +218,15 @@ const Dashboard = () => {
       )}
 
       <div>
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-2">
           <h3 className="text-xl font-semibold text-slate-900">
             États des lieux récents
           </h3>
-          {etatsEnCours.length > 0 ? (
-            <div className="text-sm text-slate-600">
-              Sélectionnez un bien en cours pour faire l'état de sortie ou d'entrée
-            </div>
-          ) : (
-            <div className="text-sm text-slate-600">
-              Aucun bien en cours de location
-            </div>
-          )}
+          <p className="text-sm text-slate-600">
+            {etatsEnCours.length > 0
+              ? "Sélectionnez un bien pour voir le détail ou faire une sortie"
+              : "Aucun bien en cours de location"}
+          </p>
         </div>
 
         {etatsDesLieux?.length === 0 ? (
@@ -243,24 +241,24 @@ const Dashboard = () => {
           <div className="grid gap-4">
             {etatsDesLieux?.map((etat) => (
               <Card key={etat.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleViewEtat(etat.id)}>
-                  <CardContent className="p-6">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-2">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                    <div className="space-y-2 flex-grow">
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-slate-500" />
                         <h4 className="font-semibold text-slate-900">
                           {etat.adresse_bien}
                         </h4>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 text-sm">
                         <User className="h-4 w-4 text-slate-500" />
                         <span className="text-slate-600">{etat.locataire_nom || 'Non renseigné'}</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 text-sm">
                         <Building2 className="h-4 w-4 text-slate-500" />
                         <span className="text-slate-600">{getTypeBienLabel(etat.type_bien)}</span>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-slate-500">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-sm text-slate-500 pt-2">
                         {etat.date_entree && (
                           <span>Entrée: {new Date(etat.date_entree).toLocaleDateString()}</span>
                         )}
@@ -272,17 +270,17 @@ const Dashboard = () => {
                         const rdvAssocie = rendezVous?.find(rdv => rdv.id === etat.rendez_vous_id);
                         if (rdvAssocie) {
                           return (
-                            <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+                            <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
                               <Clock className="h-3 w-3" />
-                              <span>Lié au RDV ({rdvAssocie.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}) du {new Date(rdvAssocie.date).toLocaleDateString()} à {rdvAssocie.heure}</span>
+                              <span>Lié au RDV du {new Date(rdvAssocie.date).toLocaleDateString()}</span>
                             </div>
                           );
                         }
                         return null;
                       })()}
                     </div>
-                    <div className="flex items-center gap-2 flex-col">
-                      <div className="flex gap-2">
+                    <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
+                      <div className="flex gap-2 flex-wrap">
                         <Badge variant={etat.type_etat_des_lieux === 'entree' ? "default" : "secondary"}>
                           {etat.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}
                         </Badge>
@@ -290,10 +288,10 @@ const Dashboard = () => {
                           {!etat.date_sortie ? "En cours" : "Terminé"}
                         </Badge>
                         {etat.travaux_a_faire && (
-                          <Badge variant="destructive">Travaux à prévoir</Badge>
+                          <Badge variant="destructive">Travaux</Badge>
                         )}
                       </div>
-                      <div className="flex flex-col gap-2 mt-2">
+                      <div className="flex flex-col gap-2 mt-2 w-full sm:w-auto">
                         {!etat.date_sortie && (
                           <Button 
                             size="sm" 
@@ -301,9 +299,9 @@ const Dashboard = () => {
                             className="bg-blue-600 hover:bg-blue-700"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <a href={`/sortie/${etat.id}`} className="flex items-center gap-1">
-                              {etat.type_etat_des_lieux === 'entree' ? <LogIn className="h-3 w-3" /> : <LogOut className="h-3 w-3" />}
-                              {etat.type_etat_des_lieux === 'entree' ? "État d'entrée" : "État de sortie"}
+                            <a href={`/sortie/${etat.id}`} className="flex items-center justify-center gap-1">
+                              <LogOut className="h-3 w-3" />
+                              Faire la sortie
                             </a>
                           </Button>
                         )}
@@ -315,8 +313,9 @@ const Dashboard = () => {
                             className="border-slate-400 hover:bg-slate-100 text-slate-700"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <a href={`/sortie/${etat.id}`} className="flex items-center gap-1">
-                              <FileText className="h-3 w-3" /> Reprendre et modifier l'état des lieux
+                            <a href={`/sortie/${etat.id}`} className="flex items-center justify-center gap-1">
+                              <FileText className="h-3 w-3" />
+                              Modifier
                             </a>
                           </Button>
                         )}
