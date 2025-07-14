@@ -219,3 +219,430 @@ CREATE TRIGGER trigger_update_rendez_vous_statut
     AFTER INSERT ON etat_des_lieux
     FOR EACH ROW
     EXECUTE FUNCTION update_rendez_vous_statut();
+
+-- Extension du schéma existant pour supporter multi-utilisateurs et organisations
+-- Compatible avec Supabase et authentification intégrée
+
+-- Enable necessary extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Table: organisations
+-- Gère les entreprises/organisations qui peuvent avoir plusieurs utilisateurs
+CREATE TABLE organisations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nom TEXT NOT NULL,
+    adresse TEXT,
+    telephone TEXT,
+    email TEXT,
+    siret TEXT,
+    logo_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    active BOOLEAN DEFAULT TRUE
+);
+
+-- Table: utilisateurs (profils utilisateurs)
+-- Étend les informations d'authentification Supabase
+CREATE TABLE utilisateurs (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    prenom TEXT NOT NULL,
+    nom TEXT NOT NULL,
+    telephone TEXT,
+    organisation_id UUID REFERENCES organisations(id) ON DELETE SET NULL,
+    role TEXT NOT NULL DEFAULT 'utilisateur' CHECK (role IN ('super_admin', 'admin_organisation', 'utilisateur')),
+    statut TEXT NOT NULL DEFAULT 'actif' CHECK (statut IN ('actif', 'inactif', 'en_attente')),
+    avatar_url TEXT,
+    preferences JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    last_login TIMESTAMPTZ,
+    -- Métadonnées pour la gestion
+    created_by UUID REFERENCES utilisateurs(id),
+    activated_by UUID REFERENCES utilisateurs(id),
+    activated_at TIMESTAMPTZ
+);
+
+-- Table: invitations
+-- Gère les invitations d'utilisateurs dans une organisation
+CREATE TABLE invitations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organisation_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'utilisateur' CHECK (role IN ('admin_organisation', 'utilisateur')),
+    invite_par UUID NOT NULL REFERENCES utilisateurs(id),
+    token TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    accepted_at TIMESTAMPTZ,
+    accepted_by UUID REFERENCES utilisateurs(id),
+    created_at TIMESTAMPTZ DEFAULT now(),
+    statut TEXT DEFAULT 'en_attente' CHECK (statut IN ('en_attente', 'accepte', 'expire', 'revoque'))
+);
+
+-- Table: permissions_partage
+-- Gère les permissions de partage entre utilisateurs
+CREATE TABLE permissions_partage (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    etat_des_lieux_id UUID NOT NULL REFERENCES etat_des_lieux(id) ON DELETE CASCADE,
+    utilisateur_id UUID NOT NULL REFERENCES utilisateurs(id) ON DELETE CASCADE,
+    permission TEXT NOT NULL CHECK (permission IN ('lecture', 'ecriture', 'admin')),
+    accorde_par UUID NOT NULL REFERENCES utilisateurs(id),
+    created_at TIMESTAMPTZ DEFAULT now(),
+    expires_at TIMESTAMPTZ,
+    UNIQUE(etat_des_lieux_id, utilisateur_id)
+);
+
+-- Modification de la table etat_des_lieux existante
+-- Ajout des colonnes pour multi-utilisateurs
+ALTER TABLE etat_des_lieux ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES utilisateurs(id);
+ALTER TABLE etat_des_lieux ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES utilisateurs(id);
+ALTER TABLE etat_des_lieux ADD COLUMN IF NOT EXISTS organisation_id UUID REFERENCES organisations(id);
+ALTER TABLE etat_des_lieux ADD COLUMN IF NOT EXISTS visibilite TEXT DEFAULT 'prive' CHECK (visibilite IN ('prive', 'organisation', 'public'));
+ALTER TABLE etat_des_lieux ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
+ALTER TABLE etat_des_lieux ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+
+-- Modification de la table rendez_vous existante
+ALTER TABLE rendez_vous ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES utilisateurs(id);
+ALTER TABLE rendez_vous ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES utilisateurs(id);
+ALTER TABLE rendez_vous ADD COLUMN IF NOT EXISTS organisation_id UUID REFERENCES organisations(id);
+ALTER TABLE rendez_vous ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+
+-- Table: audit_log
+-- Traçabilité des actions importantes
+CREATE TABLE audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    table_name TEXT NOT NULL,
+    record_id UUID NOT NULL,
+    action TEXT NOT NULL CHECK (action IN ('INSERT', 'UPDATE', 'DELETE')),
+    old_values JSONB,
+    new_values JSONB,
+    utilisateur_id UUID REFERENCES utilisateurs(id),
+    organisation_id UUID REFERENCES organisations(id),
+    created_at TIMESTAMPTZ DEFAULT now(),
+    ip_address INET,
+    user_agent TEXT
+);
+
+-- Indexes pour les performances
+CREATE INDEX idx_utilisateurs_organisation ON utilisateurs(organisation_id);
+CREATE INDEX idx_utilisateurs_email ON utilisateurs(email);
+CREATE INDEX idx_utilisateurs_statut ON utilisateurs(statut);
+CREATE INDEX idx_etat_des_lieux_created_by ON etat_des_lieux(created_by);
+CREATE INDEX idx_etat_des_lieux_organisation ON etat_des_lieux(organisation_id);
+CREATE INDEX idx_etat_des_lieux_visibilite ON etat_des_lieux(visibilite);
+CREATE INDEX idx_rendez_vous_created_by ON rendez_vous(created_by);
+CREATE INDEX idx_rendez_vous_organisation ON rendez_vous(organisation_id);
+CREATE INDEX idx_permissions_partage_user ON permissions_partage(utilisateur_id);
+CREATE INDEX idx_permissions_partage_etat ON permissions_partage(etat_des_lieux_id);
+CREATE INDEX idx_invitations_email ON invitations(email);
+CREATE INDEX idx_invitations_token ON invitations(token);
+CREATE INDEX idx_audit_log_user ON audit_log(utilisateur_id);
+CREATE INDEX idx_audit_log_table_record ON audit_log(table_name, record_id);
+
+-- Fonction pour gérer les timestamps automatiquement
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers pour updated_at
+CREATE TRIGGER trigger_utilisateurs_updated_at
+    BEFORE UPDATE ON utilisateurs
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_organisations_updated_at
+    BEFORE UPDATE ON organisations
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_etat_des_lieux_updated_at
+    BEFORE UPDATE ON etat_des_lieux
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_rendez_vous_updated_at
+    BEFORE UPDATE ON rendez_vous
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Fonction pour l'audit automatique
+CREATE OR REPLACE FUNCTION audit_trigger_function()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        INSERT INTO audit_log (table_name, record_id, action, old_values, utilisateur_id)
+        VALUES (TG_TABLE_NAME, OLD.id, TG_OP, row_to_json(OLD), 
+                COALESCE(current_setting('app.current_user_id', true)::uuid, null));
+        RETURN OLD;
+    ELSIF TG_OP = 'UPDATE' THEN
+        INSERT INTO audit_log (table_name, record_id, action, old_values, new_values, utilisateur_id)
+        VALUES (TG_TABLE_NAME, NEW.id, TG_OP, row_to_json(OLD), row_to_json(NEW),
+                COALESCE(current_setting('app.current_user_id', true)::uuid, null));
+        RETURN NEW;
+    ELSIF TG_OP = 'INSERT' THEN
+        INSERT INTO audit_log (table_name, record_id, action, new_values, utilisateur_id)
+        VALUES (TG_TABLE_NAME, NEW.id, TG_OP, row_to_json(NEW),
+                COALESCE(current_setting('app.current_user_id', true)::uuid, null));
+        RETURN NEW;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers d'audit pour les tables principales
+CREATE TRIGGER audit_etat_des_lieux
+    AFTER INSERT OR UPDATE OR DELETE ON etat_des_lieux
+    FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
+
+CREATE TRIGGER audit_utilisateurs
+    AFTER INSERT OR UPDATE OR DELETE ON utilisateurs
+    FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
+
+CREATE TRIGGER audit_organisations
+    AFTER INSERT OR UPDATE OR DELETE ON organisations
+    FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
+
+-- Fonction pour vérifier les permissions
+CREATE OR REPLACE FUNCTION check_etat_lieux_permission(
+    p_etat_des_lieux_id UUID,
+    p_utilisateur_id UUID,
+    p_permission TEXT DEFAULT 'lecture'
+) RETURNS BOOLEAN AS $$
+DECLARE
+    v_etat_record RECORD;
+    v_user_record RECORD;
+    v_permission_exists BOOLEAN := FALSE;
+BEGIN
+    -- Récupérer les infos de l'état des lieux
+    SELECT * INTO v_etat_record 
+    FROM etat_des_lieux 
+    WHERE id = p_etat_des_lieux_id;
+    
+    -- Récupérer les infos utilisateur
+    SELECT * INTO v_user_record 
+    FROM utilisateurs 
+    WHERE id = p_utilisateur_id;
+    
+    -- Super admin a tous les droits
+    IF v_user_record.role = 'super_admin' THEN
+        RETURN TRUE;
+    END IF;
+    
+    -- Propriétaire a tous les droits
+    IF v_etat_record.created_by = p_utilisateur_id THEN
+        RETURN TRUE;
+    END IF;
+    
+    -- Admin organisation a tous les droits sur les documents de son organisation
+    IF v_user_record.role = 'admin_organisation' 
+       AND v_user_record.organisation_id = v_etat_record.organisation_id THEN
+        RETURN TRUE;
+    END IF;
+    
+    -- Vérifier visibilité organisation
+    IF v_etat_record.visibilite = 'organisation' 
+       AND v_user_record.organisation_id = v_etat_record.organisation_id THEN
+        RETURN TRUE;
+    END IF;
+    
+    -- Vérifier permissions explicites
+    SELECT EXISTS(
+        SELECT 1 FROM permissions_partage 
+        WHERE etat_des_lieux_id = p_etat_des_lieux_id 
+        AND utilisateur_id = p_utilisateur_id
+        AND (expires_at IS NULL OR expires_at > now())
+        AND (
+            permission = 'admin' OR 
+            (p_permission = 'lecture' AND permission IN ('lecture', 'ecriture', 'admin')) OR
+            (p_permission = 'ecriture' AND permission IN ('ecriture', 'admin'))
+        )
+    ) INTO v_permission_exists;
+    
+    RETURN v_permission_exists;
+END;
+$$ LANGUAGE plpgsql;
+
+-- RLS (Row Level Security) pour Supabase
+ALTER TABLE organisations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE utilisateurs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE etat_des_lieux ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rendez_vous ENABLE ROW LEVEL SECURITY;
+ALTER TABLE permissions_partage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
+
+-- Politiques RLS pour utilisateurs
+CREATE POLICY "Users can view their own profile" ON utilisateurs
+    FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can update their own profile" ON utilisateurs
+    FOR UPDATE USING (auth.uid() = id);
+
+CREATE POLICY "Admin can manage org users" ON utilisateurs
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM utilisateurs u 
+            WHERE u.id = auth.uid() 
+            AND (u.role = 'super_admin' OR 
+                 (u.role = 'admin_organisation' AND u.organisation_id = utilisateurs.organisation_id))
+        )
+    );
+
+-- Politiques RLS pour organisations
+CREATE POLICY "Users can view their organization" ON organisations
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM utilisateurs u 
+            WHERE u.id = auth.uid() 
+            AND u.organisation_id = organisations.id
+        )
+    );
+
+CREATE POLICY "Admin can manage organizations" ON organisations
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM utilisateurs u 
+            WHERE u.id = auth.uid() 
+            AND (u.role = 'super_admin' OR 
+                 (u.role = 'admin_organisation' AND u.organisation_id = organisations.id))
+        )
+    );
+
+-- Politiques RLS pour etat_des_lieux
+CREATE POLICY "Users can manage their own etat_des_lieux" ON etat_des_lieux
+    FOR ALL USING (
+        check_etat_lieux_permission(id, auth.uid(), 'ecriture')
+    );
+
+CREATE POLICY "Users can view accessible etat_des_lieux" ON etat_des_lieux
+    FOR SELECT USING (
+        check_etat_lieux_permission(id, auth.uid(), 'lecture')
+    );
+
+-- Politiques similaires pour les autres tables...
+CREATE POLICY "Users can manage their rendez_vous" ON rendez_vous
+    FOR ALL USING (
+        auth.uid() = created_by OR
+        EXISTS (
+            SELECT 1 FROM utilisateurs u 
+            WHERE u.id = auth.uid() 
+            AND (u.role = 'super_admin' OR 
+                 (u.role = 'admin_organisation' AND u.organisation_id = rendez_vous.organisation_id))
+        )
+    );
+
+-- Fonction pour créer une nouvelle organisation avec admin
+CREATE OR REPLACE FUNCTION create_organisation_with_admin(
+    p_nom_organisation TEXT,
+    p_adresse_organisation TEXT,
+    p_email_admin TEXT,
+    p_prenom_admin TEXT,
+    p_nom_admin TEXT,
+    p_telephone_admin TEXT DEFAULT NULL
+) RETURNS UUID AS $$
+DECLARE
+    v_organisation_id UUID;
+    v_admin_id UUID;
+BEGIN
+    -- Créer l'organisation
+    INSERT INTO organisations (nom, adresse, email)
+    VALUES (p_nom_organisation, p_adresse_organisation, p_email_admin)
+    RETURNING id INTO v_organisation_id;
+    
+    -- Créer le profil admin (l'utilisateur doit déjà exister dans auth.users)
+    INSERT INTO utilisateurs (id, email, prenom, nom, telephone, organisation_id, role, statut)
+    VALUES (
+        auth.uid(), 
+        p_email_admin, 
+        p_prenom_admin, 
+        p_nom_admin, 
+        p_telephone_admin, 
+        v_organisation_id, 
+        'admin_organisation', 
+        'actif'
+    )
+    RETURNING id INTO v_admin_id;
+    
+    RETURN v_organisation_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Fonction pour inviter un utilisateur
+CREATE OR REPLACE FUNCTION invite_user_to_organisation(
+    p_organisation_id UUID,
+    p_email TEXT,
+    p_role TEXT DEFAULT 'utilisateur'
+) RETURNS UUID AS $$
+DECLARE
+    v_invitation_id UUID;
+    v_token TEXT;
+    v_inviter_id UUID := auth.uid();
+BEGIN
+    -- Vérifier que l'inviteur a les droits
+    IF NOT EXISTS (
+        SELECT 1 FROM utilisateurs 
+        WHERE id = v_inviter_id 
+        AND organisation_id = p_organisation_id 
+        AND role IN ('admin_organisation', 'super_admin')
+    ) THEN
+        RAISE EXCEPTION 'Insufficient permissions to invite users';
+    END IF;
+    
+    -- Générer un token unique
+    v_token := encode(gen_random_bytes(32), 'hex');
+    
+    -- Créer l'invitation
+    INSERT INTO invitations (organisation_id, email, role, invite_par, token, expires_at)
+    VALUES (
+        p_organisation_id, 
+        p_email, 
+        p_role, 
+        v_inviter_id, 
+        v_token, 
+        now() + interval '7 days'
+    )
+    RETURNING id INTO v_invitation_id;
+    
+    RETURN v_invitation_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Vues utiles pour l'application
+CREATE OR REPLACE VIEW v_etat_des_lieux_with_permissions AS
+SELECT 
+    e.*,
+    u.prenom || ' ' || u.nom as created_by_name,
+    o.nom as organisation_name,
+    CASE 
+        WHEN e.created_by = auth.uid() THEN 'owner'
+        WHEN EXISTS (
+            SELECT 1 FROM permissions_partage p 
+            WHERE p.etat_des_lieux_id = e.id 
+            AND p.utilisateur_id = auth.uid()
+            AND p.permission = 'admin'
+        ) THEN 'admin'
+        WHEN EXISTS (
+            SELECT 1 FROM permissions_partage p 
+            WHERE p.etat_des_lieux_id = e.id 
+            AND p.utilisateur_id = auth.uid()
+            AND p.permission = 'ecriture'
+        ) THEN 'write'
+        ELSE 'read'
+    END as user_permission
+FROM etat_des_lieux e
+LEFT JOIN utilisateurs u ON e.created_by = u.id
+LEFT JOIN organisations o ON e.organisation_id = o.id
+WHERE check_etat_lieux_permission(e.id, auth.uid(), 'lecture');
+
+-- Commentaires sur les nouvelles colonnes
+COMMENT ON COLUMN etat_des_lieux.created_by IS 'Utilisateur qui a créé cet état des lieux';
+COMMENT ON COLUMN etat_des_lieux.organisation_id IS 'Organisation propriétaire de cet état des lieux';
+COMMENT ON COLUMN etat_des_lieux.visibilite IS 'Niveau de visibilité: prive, organisation, public';
+COMMENT ON COLUMN utilisateurs.role IS 'Rôle: super_admin, admin_organisation, utilisateur';
+COMMENT ON COLUMN utilisateurs.statut IS 'Statut: actif, inactif, en_attente';
+COMMENT ON TABLE permissions_partage IS 'Gère les permissions de partage entre utilisateurs';
+COMMENT ON TABLE invitations IS 'Gère les invitations d''utilisateurs dans les organisations';
+COMMENT ON TABLE audit_log IS 'Journal d''audit pour tracer les actions importantes';
