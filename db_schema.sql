@@ -8,18 +8,21 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Stores general information about each property inventory form.
 CREATE TABLE etat_des_lieux (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each 'état des lieux' record.
-        date_entree DATE, -- Date of entry inventory.
-            date_sortie DATE, -- Date of exit inventory.
-                adresse_bien TEXT NOT NULL, -- Address of the property.
-                    statut TEXT, -- Status of the inventory (e.g., 'en_cours', 'termine')
-                        type_etat_des_lieux TEXT NOT NULL CHECK (type_etat_des_lieux IN ('entree', 'sortie')), -- Type of inventory: entry or exit
-                            type_bien TEXT NOT NULL CHECK (type_bien IN ('studio', 't2_t3', 't4_t5', 'inventaire_mobilier', 'bureau', 'local_commercial', 'garage_box', 'pieces_supplementaires')), -- Type of property
-                                bailleur_nom TEXT, -- Name of the landlord or their representative.
-                                    bailleur_adresse TEXT, -- Address of the landlord or their representative.
-                                        locataire_nom TEXT, -- Name of the tenant(s).
-                                            locataire_adresse TEXT, -- Address of the tenant(s).
-                                                rendez_vous_id UUID -- Foreign key linking to the appointment that led to this inventory.
-                                                );
+    date_entree DATE, -- Date of entry inventory.
+    date_sortie DATE, -- Date of exit inventory.
+    adresse_bien TEXT NOT NULL, -- Address of the property.
+    statut TEXT, -- Status of the inventory (e.g., 'en_cours', 'termine')
+    type_etat_des_lieux TEXT NOT NULL CHECK (type_etat_des_lieux IN ('entree', 'sortie')), -- Type of inventory: entry or exit
+    type_bien TEXT NOT NULL CHECK (type_bien IN ('studio', 't2_t3', 't4_t5', 'inventaire_mobilier', 'bureau', 'local_commercial', 'garage_box', 'pieces_supplementaires')), -- Type of property
+    bailleur_nom TEXT, -- Name of the landlord or their representative.
+    bailleur_adresse TEXT, -- Address of the landlord or their representative.
+    locataire_nom TEXT, -- Name of the tenant(s).
+    locataire_adresse TEXT, -- Address of the tenant(s).
+    rendez_vous_id UUID, -- Foreign key linking to the appointment that led to this inventory.
+    travaux_a_faire BOOLEAN DEFAULT FALSE, -- Indicates if work is needed following the inventory (TRUE/FALSE).
+    description_travaux TEXT, -- Detailed description of work to be done (optional if travaux_a_faire = TRUE).
+    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with the inventory.
+);
 
 -- Table: releve_compteurs
 -- Stores meter readings for electricity, gas, and water.
@@ -48,7 +51,8 @@ CREATE TABLE equipements_energetiques (
     date_dpe DATE, -- Date of the DPE.
     presence_panneaux_solaires BOOLEAN, -- Indicates presence of solar panels.
     type_isolation TEXT, -- Type of insulation (e.g., 'interieure', 'exterieure', 'combles').
-    commentaires TEXT -- Comments and observations about energy equipment.
+    commentaires TEXT, -- Comments and observations about energy equipment.
+    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with energy equipment.
 );
 
 -- Table: equipements_chauffage
@@ -65,7 +69,8 @@ CREATE TABLE equipements_chauffage (
     thermostat_etat TEXT, -- Condition of the thermostat.
     pompe_a_chaleur_present BOOLEAN, -- Indicates presence of a heat pump.
     pompe_a_chaleur_etat TEXT, -- Condition of the heat pump.
-    commentaires TEXT -- Comments and observations about heating equipment.
+    commentaires TEXT, -- Comments and observations about heating equipment.
+    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with heating equipment.
 );
 
 -- Table: cles
@@ -76,7 +81,8 @@ CREATE TABLE cles (
     type_cle_badge TEXT, -- Type of key or badge (e.g., 'clé porte entrée', 'clé boîte aux lettres', 'bip portail', 'badge immeuble').
     nombre INTEGER, -- Number of keys/badges of this type.
     numero_cle TEXT, -- Key number or reference.
-    commentaires TEXT -- Additional comments about the keys/badges.
+    commentaires TEXT, -- Additional comments about the keys/badges.
+    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with keys/badges.
 );
 
 -- Table: parties_privatives
@@ -88,7 +94,8 @@ CREATE TABLE parties_privatives (
     etat_entree TEXT, -- Condition at entry.
     etat_sortie TEXT, -- Condition at exit.
     numero TEXT, -- Number or identifier for the private area (e.g., parking spot number).
-    commentaires TEXT -- Additional comments about the private area.
+    commentaires TEXT, -- Additional comments about the private area.
+    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with private areas.
 );
 
 -- Table: autres_equipements
@@ -99,7 +106,8 @@ CREATE TABLE autres_equipements (
     equipement TEXT NOT NULL, -- Name of the equipment (e.g., 'Sonnette / Interphone', 'Boîte aux lettres', 'Internet', 'Alarme', 'Détecteur de fumée', 'VMC', 'Cheminée', 'Piscine', 'Jacuzzi', 'Sauna', 'Portail électrique', 'Volets roulants électriques', 'Store banne').
     etat_entree TEXT, -- Condition at entry.
     etat_sortie TEXT, -- Condition at exit.
-    commentaires TEXT -- Additional comments about the equipment.
+    commentaires TEXT, -- Additional comments about the equipment.
+    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with other equipment.
 );
 
 -- Table: pieces
@@ -136,7 +144,8 @@ CREATE TABLE pieces (
     hotte_sortie TEXT, -- Condition of hood at exit.
     plaque_cuisson_entree TEXT, -- Condition of hob at entry.
     plaque_cuisson_sortie TEXT, -- Condition of hob at exit.
-    commentaires TEXT -- Additional comments for the room.
+    commentaires TEXT, -- Additional comments for the room.
+    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with room elements.
 );
 
 -- Table: rendez_vous
@@ -160,7 +169,8 @@ CREATE TABLE rendez_vous (
     type_bien TEXT, -- Type of property (e.g., "studio", "t2-t3", "local").
     created_at TIMESTAMPTZ DEFAULT now(), -- Timestamp of when the appointment was created.
     statut TEXT DEFAULT 'planifie' CHECK (statut IN ('planifie', 'realise', 'annule', 'reporte')), -- Status of the appointment.
-    etat_des_lieux_id UUID -- Reference to the inventory created from this appointment.
+    etat_des_lieux_id UUID, -- Reference to the inventory created from this appointment.
+    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with the appointment.
 );
 
 -- Add foreign key constraints after table creation to avoid circular dependency issues
@@ -174,6 +184,8 @@ FOREIGN KEY (etat_des_lieux_id) REFERENCES etat_des_lieux(id);
 
 -- Add comments for documentation
 COMMENT ON COLUMN etat_des_lieux.rendez_vous_id IS 'Référence vers le rendez-vous qui a donné lieu à cet état des lieux';
+COMMENT ON COLUMN etat_des_lieux.travaux_a_faire IS 'Indique si des travaux sont nécessaires suite à l''état des lieux (TRUE/FALSE)';
+COMMENT ON COLUMN etat_des_lieux.description_travaux IS 'Description détaillée des travaux à effectuer (optionnel si travaux_a_faire = TRUE)';
 COMMENT ON COLUMN rendez_vous.statut IS 'Statut du rendez-vous: planifie, realise, annule, reporte';
 COMMENT ON COLUMN rendez_vous.etat_des_lieux_id IS 'Référence vers l''état des lieux créé suite à ce rendez-vous';
 COMMENT ON COLUMN equipements_energetiques.commentaires IS 'Commentaires et observations sur les équipements énergétiques';
@@ -207,48 +219,3 @@ CREATE TRIGGER trigger_update_rendez_vous_statut
     AFTER INSERT ON etat_des_lieux
     FOR EACH ROW
     EXECUTE FUNCTION update_rendez_vous_statut();
-
-
--- Ajout de la colonne pour indiquer s'il y a des travaux à faire (TRUE/FALSE)
-ALTER TABLE etat_des_lieux 
-ADD COLUMN travaux_a_faire BOOLEAN DEFAULT FALSE;
-
--- Ajout de la colonne pour la description des travaux à faire
-ALTER TABLE etat_des_lieux 
-ADD COLUMN description_travaux TEXT;
-
--- Ajout d'un commentaire pour documenter les nouvelles colonnes
-COMMENT ON COLUMN etat_des_lieux.travaux_a_faire IS 'Indique si des travaux sont nécessaires suite à l''état des lieux (TRUE/FALSE)';
-COMMENT ON COLUMN etat_des_lieux.description_travaux IS 'Description détaillée des travaux à effectuer (optionnel si travaux_a_faire = TRUE)';
-
--- Ajout de la colonne photos à la table autres_equipements
-ALTER TABLE public.autres_equipements 
-ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
-
--- Ajout de la colonne photos à la table cles
-ALTER TABLE public.cles 
-ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
-
--- Ajout de la colonne photos à la table equipements_chauffage
-ALTER TABLE public.equipements_chauffage 
-ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
-
--- Ajout de la colonne photos à la table equipements_energetiques
-ALTER TABLE public.equipements_energetiques 
-ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
-
--- Ajout de la colonne photos à la table etat_des_lieux
-ALTER TABLE public.etat_des_lieux 
-ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
-
--- Ajout de la colonne photos à la table parties_privatives
-ALTER TABLE public.parties_privatives 
-ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
-
--- Ajout de la colonne photos à la table pieces
-ALTER TABLE public.pieces 
-ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
-
--- Ajout de la colonne photos à la table rendez_vous
-ALTER TABLE public.rendez_vous 
-ADD COLUMN photos jsonb NULL DEFAULT '[]'::jsonb;
