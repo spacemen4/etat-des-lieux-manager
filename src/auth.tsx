@@ -5,11 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Users, Building, UserPlus, Shield, Mail, Phone, MapPin, Settings, LogOut, Crown, UserCheck, User } from 'lucide-react';
-import { supabase } from './lib/supabase'; // Assurez-vous que le chemin est correct
+import { supabase } from './lib/supabase';
 
 // Contexte d'authentification
 const AuthContext = createContext(null);
@@ -20,72 +17,124 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSession = async () => {
-      setLoading(true);
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Error getting session:", error);
-        setLoading(false);
-        return;
-      }
+    let mounted = true;
 
-      if (session) {
-        await fetchUserProfile(session.user);
-      } else {
-        setUser(null);
-        setOrganisation(null);
-      }
-      setLoading(false);
-    };
+    const fetchUserProfile = async (authUser) => {
+      try {
+        const { data: userProfile, error } = await supabase
+          .from('utilisateurs')
+          .select('*, organisation:organisations(*)')
+          .eq('id', authUser.id)
+          .single();
 
-    const fetchUserProfile = async (user) => {
-      const { data: userProfile, error } = await supabase
-        .from('utilisateurs')
-        .select('*, organisation:organisations(*)')
-        .eq('id', user.id)
-        .single();
-
-      if (error) {
-        console.error("Erreur lors de la récupération du profil utilisateur:", error);
-        setUser(null);
-        setOrganisation(null);
-      } else {
-        setUser(userProfile);
-        setOrganisation(userProfile?.organisation);
+        if (error) {
+          console.error("Erreur lors de la récupération du profil utilisateur:", error);
+          if (mounted) {
+            setUser(null);
+            setOrganisation(null);
+          }
+        } else {
+          if (mounted) {
+            setUser(userProfile);
+            setOrganisation(userProfile?.organisation);
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération du profil:", error);
+        if (mounted) {
+          setUser(null);
+          setOrganisation(null);
+        }
       }
     };
 
-    fetchSession();
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error getting session:", error);
+          if (mounted) {
+            setUser(null);
+            setOrganisation(null);
+            setLoading(false);
+          }
+          return;
+        }
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session?.user) {
+          await fetchUserProfile(session.user);
+        } else {
+          if (mounted) {
+            setUser(null);
+            setOrganisation(null);
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de l'initialisation de l'auth:", error);
+        if (mounted) {
+          setUser(null);
+          setOrganisation(null);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log(`Auth event: ${event}`);
-      if (event === 'SIGNED_IN' && session) {
+      
+      if (!mounted) return;
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        setLoading(true);
         await fetchUserProfile(session.user);
+        setLoading(false);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setOrganisation(null);
+        setLoading(false);
       }
     });
 
     return () => {
-      authListener.subscription.unsubscribe();
+      mounted = false;
+      subscription.unsubscribe();
     };
   }, []);
+
+  const signOut = async () => {
+    setLoading(true);
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const value = {
     user,
     organisation,
     loading,
-    signOut: () => supabase.auth.signOut(),
+    signOut,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
-
 
 // Composant LoginForm
 export const LoginForm = ({ onSuccess }) => {
@@ -98,10 +147,15 @@ export const LoginForm = ({ onSuccess }) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      onSuccess();
+      
+      // Attendre un peu pour laisser le temps à l'état d'authentification de se mettre à jour
+      setTimeout(() => {
+        onSuccess?.();
+      }, 100);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -150,6 +204,7 @@ export const SignUpForm = ({ onSuccess }) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
+        
         try {
             const { data: { user }, error } = await supabase.auth.signUp({
                 email,
@@ -162,8 +217,8 @@ export const SignUpForm = ({ onSuccess }) => {
                 }
             });
             if (error) throw error;
-            // The user profile will be created by a trigger in Supabase
-            onSuccess();
+            
+            onSuccess?.();
         } catch (error) {
             setError(error.message);
         } finally {
@@ -247,7 +302,7 @@ export const UserProfile = () => {
 // Composant TeamManagement
 export const TeamManagement = () => {
     const { organisation } = useAuth();
-    // Logique pour gérer les membres de l'équipe
+    
     return (
         <Card>
             <CardHeader>
@@ -263,5 +318,4 @@ export const TeamManagement = () => {
 
 export {
   AuthContext,
-  // Le reste est déjà exporté
 };
