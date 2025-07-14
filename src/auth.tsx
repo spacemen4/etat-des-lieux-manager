@@ -48,6 +48,7 @@ export const AuthProvider = ({ children }) => {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+
         if (event === 'SIGNED_IN' && session) {
           await fetchUser(session.user);
         } else if (event === 'SIGNED_OUT') {
