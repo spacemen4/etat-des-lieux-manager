@@ -6,22 +6,17 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, MapPin, User, FileText, Loader2, Building2, Plus, LogIn, LogOut, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { useEtatDesLieux, useRendezVous } from '@/hooks/useEtatDesLieux';
 import EtatDesLieuxViewer from './EtatDesLieuxViewer';
+import { useUser } from '@/context/UserContext';
 
 const Dashboard = () => {
-  const { data: etatsDesLieux, isLoading: isLoadingEtats, error: errorEtats } = useEtatDesLieux();
-  const { data: rendezVous, isLoading: isLoadingRdv, error: errorRdv } = useRendezVous();
+  const { userUuid } = useUser();
+  const { data: etatsDesLieux, isLoading: isLoadingEtats, error: errorEtats } = useEtatDesLieux(userUuid);
+  const { data: rendezVous, isLoading: isLoadingRdv, error: errorRdv } = useRendezVous(userUuid);
   const [selectedEtatId, setSelectedEtatId] = useState<string | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   const isLoading = isLoadingEtats || isLoadingRdv;
   const error = errorEtats || errorRdv;
-
-  useEffect(() => {
-    if (userUuid) {
-      // Les hooks useEtatDesLieux et useRendezVous sont déjà dépendants de userUuid,
-      // donc les données seront re-fetchées automatiquement quand userUuid changera.
-    }
-  }, [userUuid]);
 
   if (isLoading) {
     return (
