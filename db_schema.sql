@@ -483,12 +483,72 @@ CREATE POLICY "Users can update their own profile" ON utilisateurs
 
 CREATE POLICY "Admin can manage org users" ON utilisateurs
     FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM utilisateurs u 
-            WHERE u.id = auth.uid() 
-            AND (u.role = 'super_admin' OR 
-                 (u.role = 'admin_organisation' AND u.organisation_id = utilisateurs.organisation_id))
+      (
+        (
+          SELECT
+            utilisateurs_1.role
+          FROM
+            utilisateurs utilisateurs_1
+          WHERE
+            (utilisateurs_1.id = auth.uid())
+        ) = 'super_admin' :: text
+      )
+      OR (
+        (
+          (
+            SELECT
+              utilisateurs_1.role
+            FROM
+              utilisateurs utilisateurs_1
+            WHERE
+              (utilisateurs_1.id = auth.uid())
+          ) = 'admin_organisation' :: text
         )
+        AND (
+          (
+            SELECT
+              utilisateurs_1.organisation_id
+            FROM
+              utilisateurs utilisateurs_1
+            WHERE
+              (utilisateurs_1.id = auth.uid())
+          ) = utilisateurs.organisation_id
+        )
+      )
+    )
+    WITH CHECK (
+      (
+        (
+          SELECT
+            utilisateurs_1.role
+          FROM
+            utilisateurs utilisateurs_1
+          WHERE
+            (utilisateurs_1.id = auth.uid())
+        ) = 'super_admin' :: text
+      )
+      OR (
+        (
+          (
+            SELECT
+              utilisateurs_1.role
+            FROM
+              utilisateurs utilisateurs_1
+            WHERE
+              (utilisateurs_1.id = auth.uid())
+          ) = 'admin_organisation' :: text
+        )
+        AND (
+          (
+            SELECT
+              utilisateurs_1.organisation_id
+            FROM
+              utilisateurs utilisateurs_1
+            WHERE
+              (utilisateurs_1.id = auth.uid())
+          ) = utilisateurs.organisation_id
+        )
+      )
     );
 
 -- Politiques RLS pour organisations
