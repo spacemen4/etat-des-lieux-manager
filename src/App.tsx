@@ -10,7 +10,7 @@ import { Toaster } from '@/components/ui/sonner';
 import Index from './pages/Index';
 import NewEtatDesLieux from './pages/NewEtatDesLieux';
 import EtatSortie from './pages/EtatSortie';
-import MonCalendrierPage from './pages/MonCalendrierPage';
+import MonCalendrierPage from './pages/MonCalendrier';
 
 const App = () => {
   return (
