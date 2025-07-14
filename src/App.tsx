@@ -6,8 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Index from "./pages/Index";
-import NewSortie from "./pages/NewSortie";
-import DatabaseTest from "./components/DatabaseTest"; // Import the test component
 import EtatSortie from "./pages/EtatSortie";
 import NotFound from "./pages/NotFound";
 import NewEtatDesLieux from "./pages/NewEtatDesLieux";
@@ -23,7 +21,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout />}>
-            <Route index element={<><DatabaseTest /><Index /></>} />
+            <Route index element={<Index />} />
             <Route path="new-etat-des-lieux" element={<NewEtatDesLieux />} />
             <Route path="sortie/:id" element={<EtatSortie />} />
             <Route path="mon-calendrier" element={<MonCalendrierPage />} /> {/* Add route for the calendar page */}
