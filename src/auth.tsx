@@ -21,35 +21,6 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     console.log("AuthProvider: useEffect setup");
-    const getSession = async () => {
-      console.log("AuthProvider: getSession called");
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("AuthProvider: session data", session);
-      if (session) {
-        const { user } = session;
-        console.log("AuthProvider: user from session", user);
-        const { data: userProfile, error } = await supabase
-          .from('utilisateurs')
-          .select('*, organisation:organisations(*)')
-          .eq('id', user.id)
-          .single();
-
-        console.log("AuthProvider: userProfile from db", userProfile);
-        if (error) {
-          console.error("AuthProvider: error fetching user profile", error);
-        }
-
-        if (userProfile) {
-          console.log("AuthProvider: setting user and organisation");
-          setUser(userProfile);
-          setOrganisation(userProfile.organisation);
-        }
-      }
-      console.log("AuthProvider: setting loading to false");
-      setLoading(false);
-    };
-
-    getSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -95,7 +66,7 @@ export const AuthProvider = ({ children }) => {
     signOut: () => supabase.auth.signOut(),
   };
 
-  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
