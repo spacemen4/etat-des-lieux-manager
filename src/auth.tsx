@@ -260,6 +260,20 @@ export const UserProfile = () => {
   );
 };
 
+// Placeholder for TeamManagement component
+export const TeamManagement = () => {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Gestion de l'équipe</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p>La fonctionnalité de gestion de l'équipe est en cours de développement.</p>
+      </CardContent>
+    </Card>
+  );
+};
+
 export {
   AuthContext,
 };
