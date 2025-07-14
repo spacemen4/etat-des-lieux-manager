@@ -1,21 +1,25 @@
 import React from 'react';
 import { AuthProvider, useAuth } from './auth';
+import { UserProvider } from './context/UserContext';
 import { LoginForm, SignUpForm, UserProfile, TeamManagement } from './auth';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { DashboardLayout } from './components/layout';
 import { Toaster } from '@/components/ui/sonner';
+import Home from './pages/Home';
 
 const App = () => {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/*" element={<ProtectedRoute><DashboardRoutes /></ProtectedRoute>} />
-        </Routes>
-      </Router>
-      <Toaster position="top-center" />
+      <UserProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignUpPage />} />
+            <Route path="/*" element={<ProtectedRoute><DashboardRoutes /></ProtectedRoute>} />
+          </Routes>
+        </Router>
+        <Toaster position="top-center" />
+      </UserProvider>
     </AuthProvider>
   );
 };
@@ -37,8 +41,7 @@ const DashboardRoutes = () => (
         <Routes>
             <Route path="profile" element={<UserProfile />} />
             <Route path="team" element={<TeamManagement />} />
-            {/* Redirection de la racine du tableau de bord vers le profil */}
-            <Route path="/" element={<Navigate to="profile" replace />} />
+            <Route path="/*" element={<Home />} />
         </Routes>
     </DashboardLayout>
 );

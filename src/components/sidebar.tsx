@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Building, Users, UserCheck, LogOut } from 'lucide-react';
+import { Building, Users, UserCheck, LogOut, Home, FilePlus, Calendar } from 'lucide-react';
 import { useAuth } from '../auth'; // Assurez-vous que le chemin est correct
 import { Button } from '@/components/ui/button';
 
@@ -8,6 +8,9 @@ export const Sidebar = () => {
   const location = useLocation();
 
   const navItems = [
+    { path: '/', icon: Home, label: 'Accueil' },
+    { path: '/new-etat-des-lieux', icon: FilePlus, label: 'Nouvel état des lieux' },
+    { path: '/mon-calendrier', icon: Calendar, label: 'Mon calendrier' },
     { path: '/profile', icon: UserCheck, label: 'Profil' },
     { path: '/team', icon: Users, label: 'Équipe' }
   ];
