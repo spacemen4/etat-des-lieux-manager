@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import FormProgress from '@/components/FormProgress';
 import { useEtatDesLieuxById, useUpdateEtatSortie } from '@/hooks/useEtatDesLieux';
 import type { EtatDesLieux } from '@/types/etatDesLieux';
+import { useUser } from '@/context/UserContext';
 
 
 // Import des composants d'étapes
@@ -29,13 +30,14 @@ interface EtatSortieFormProps {
 
 const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
   const navigate = useNavigate();
+  const { userUuid } = useUser();
   const [currentStep, setCurrentStep] = useState(0);
   const [isValidationChecked, setIsValidationChecked] = useState(false);
   const [initialEtatDesLieux, setInitialEtatDesLieux] = useState<EtatDesLieux | null>(null);
   const [travauxAFaire, setTravauxAFaire] = useState(false);
   const [descriptionTravaux, setDescriptionTravaux] = useState('');
 
-  const { data: etatData, isLoading: isLoadingEtat, error: errorEtat } = useEtatDesLieuxById(etatId);
+  const { data: etatData, isLoading: isLoadingEtat, error: errorEtat } = useEtatDesLieuxById(etatId, userUuid);
 
   useEffect(() => {
     if (etatData) {
@@ -106,7 +108,8 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
         date_sortie: dateSortieToUpdate, // This will be today if new, or existing if already finalized
         statut: 'finalise', // Always 'finalise' when this step is completed
         travaux_a_faire: travauxAFaire,
-        description_travaux: travauxAFaire ? descriptionTravaux : null
+        description_travaux: travauxAFaire ? descriptionTravaux : null,
+        user_id: userUuid
       },
       {
         onSuccess: () => {

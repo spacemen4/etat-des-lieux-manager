@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Save, Calendar, MapPin, User, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import EtatDesLieuxTypeSelector from '@/components/EtatDesLieuxTypeSelector';
+import { useUser } from '@/context/UserContext';
 
 interface RendezVous {
   id: string;
@@ -70,6 +71,7 @@ const mapRdvTypeBienToFormTypeBien = (rdvTypeBien: string): 'studio' | 't2_t3' |
 const NewEtatDesLieux = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { userUuid } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [typeEtatDesLieux, setTypeEtatDesLieux] = useState<'entree' | 'sortie'>('entree');
   const [typeBien, setTypeBien] = useState<'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires'>('studio');
@@ -149,6 +151,7 @@ const NewEtatDesLieux = () => {
     try {
       // Créer l'état des lieux
       const etatDesLieuxData = {
+        user_id: userUuid,
         type_etat_des_lieux: typeEtatDesLieux,
         type_bien: typeBien,
         date_entree: formData.date_entree || null,
@@ -162,7 +165,7 @@ const NewEtatDesLieux = () => {
       };
 
       const { data, error } = await supabase
-        .from('etat_des_lieux')
+        .from('etats_des_lieux')
         .insert([etatDesLieuxData])
         .select()
         .single();

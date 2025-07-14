@@ -3,6 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useUser } from '@/context/UserContext';
 
 interface EtatDesLieuxTypeSelectorProps {
   typeEtatDesLieux: 'entree' | 'sortie';
@@ -19,6 +20,7 @@ const EtatDesLieuxTypeSelector: React.FC<EtatDesLieuxTypeSelectorProps> = ({
   onTypeBienChange,
   disabled = false
 }) => {
+  const { userUuid } = useUser();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card>
