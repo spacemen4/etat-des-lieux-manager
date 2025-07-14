@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/sonner';
 import Home from './pages/Home';
 
 const App = () => {
+  console.log("App component rendering");
   return (
     <AuthProvider>
       <UserProvider>
@@ -36,24 +37,35 @@ const SignUpPage = () => (
   </div>
 );
 
-const DashboardRoutes = () => (
-    <DashboardLayout>
-        <Routes>
-            <Route path="profile" element={<UserProfile />} />
-            <Route path="team" element={<TeamManagement />} />
-            <Route path="/*" element={<Home />} />
-        </Routes>
-    </DashboardLayout>
-);
+const DashboardRoutes = () => {
+    console.log("DashboardRoutes component rendering");
+    return (
+        <DashboardLayout>
+            <Routes>
+                <Route path="profile" element={<UserProfile />} />
+                <Route path="team" element={<TeamManagement />} />
+                <Route path="/*" element={<Home />} />
+            </Routes>
+        </DashboardLayout>
+    );
+};
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
+  console.log("ProtectedRoute: user", user, "loading", loading);
 
   if (loading) {
+    console.log("ProtectedRoute: loading");
     return <div>Chargement...</div>; // Ou un spinner de chargement
   }
 
-  return user ? children : <Navigate to="/login" replace />;
+  if (!user) {
+    console.log("ProtectedRoute: no user, redirecting to login");
+    return <Navigate to="/login" replace />;
+  }
+
+  console.log("ProtectedRoute: user authenticated, rendering children");
+  return children;
 };
 
 export default App;
