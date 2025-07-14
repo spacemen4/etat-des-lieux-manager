@@ -13,27 +13,16 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [organisation, setOrganisation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchUserProfile = async (authUser) => {
+  const fetchUserProfile = async () => {
     try {
-      console.log("Fetching user profile for:", authUser.id);
-      const { data: userProfile, error: profileError } = await supabase
-        .from('utilisateurs')
-        .select('*, organisation:organisations(*)')
-        .eq('id', authUser.id)
-        .single();
-
-      console.log("Profile data:", userProfile, "Error:", profileError);
-
-      if (profileError) {
-        console.error("Profile error:", profileError);
-        throw profileError;
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        return user;
       }
-
-      return userProfile;
+      return null;
     } catch (err) {
       console.error("Failed to fetch user profile:", err);
       throw err;
@@ -46,28 +35,13 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log("Session:", session, "Error:", sessionError);
+      const userProfile = await fetchUserProfile();
+      setUser(userProfile);
 
-      if (sessionError) {
-        throw sessionError;
-      }
-
-      if (session?.user) {
-        console.log("User is signed in:", session.user);
-        const userProfile = await fetchUserProfile(session.user);
-        setUser(userProfile);
-        setOrganisation(userProfile?.organisation);
-      } else {
-        console.log("No active session");
-        setUser(null);
-        setOrganisation(null);
-      }
     } catch (err) {
       console.error("Auth initialization error:", err);
       setError(err);
       setUser(null);
-      setOrganisation(null);
     } finally {
       setLoading(false);
     }
@@ -83,9 +57,8 @@ export const AuthProvider = ({ children }) => {
       if (event === 'SIGNED_IN' && session?.user) {
         try {
           setLoading(true);
-          const userProfile = await fetchUserProfile(session.user);
+          const userProfile = await fetchUserProfile();
           setUser(userProfile);
-          setOrganisation(userProfile?.organisation);
         } catch (err) {
           console.error("Error handling SIGNED_IN event:", err);
           setError(err);
@@ -94,7 +67,6 @@ export const AuthProvider = ({ children }) => {
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
-        setOrganisation(null);
       }
     });
 
@@ -106,7 +78,6 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
-    organisation,
     loading,
     error,
     signOut: async () => {
@@ -259,7 +230,7 @@ export const SignUpForm = ({ onSuccess }) => {
 
 // Composant UserProfile
 export const UserProfile = () => {
-  const { user, organisation } = useAuth();
+  const { user } = useAuth();
 
   if (!user) return <div>Chargement...</div>;
 
@@ -276,42 +247,17 @@ export const UserProfile = () => {
             <User className="w-10 h-10 text-gray-500" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">{user.prenom} {user.nom}</h2>
+            <h2 className="text-xl font-semibold">{user.user_metadata.prenom} {user.user_metadata.nom}</h2>
             <p className="text-sm text-gray-500">{user.email}</p>
-            <Badge>{user.role}</Badge>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center gap-2"><Mail className="w-4 h-4" /> {user.email}</div>
-          <div className="flex items-center gap-2"><Phone className="w-4 h-4" /> {user.telephone || 'Non renseigné'}</div>
+          <div className="flex items-center gap-2"><Phone className="w-4 h-4" /> {user.phone || 'Non renseigné'}</div>
         </div>
-        {organisation && (
-          <div className="border-t pt-4">
-            <h3 className="font-semibold flex items-center gap-2"><Building /> Organisation</h3>
-            <p>{organisation.nom}</p>
-            <p className="text-sm text-gray-500">{organisation.adresse}</p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
-};
-
-// Composant TeamManagement
-export const TeamManagement = () => {
-    const { organisation } = useAuth();
-    
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Gestion de l'équipe</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p>Organisation: {organisation?.nom}</p>
-                {/* Ici, vous ajouteriez la liste des membres, les invitations, etc. */}
-            </CardContent>
-        </Card>
-    );
 };
 
 export {

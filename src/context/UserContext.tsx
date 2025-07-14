@@ -16,7 +16,7 @@ export const UserProvider = ({ children }) => {
                 setLoading(true);
                 setUserUuid(user.id);
                 const { data, error } = await supabase
-                    .from('etats_des_lieux')
+                    .from('etat_des_lieux')
                     .select('*')
                     .eq('user_id', user.id);
 
