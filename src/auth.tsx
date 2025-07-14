@@ -20,66 +20,41 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log("AuthProvider: useEffect setup");
-    const getSession = async () => {
-      console.log("AuthProvider: getSession called");
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("AuthProvider: session data", session);
-      if (session) {
-        const { user } = session;
-        console.log("AuthProvider: user from session", user);
-        const { data: userProfile, error } = await supabase
-          .from('utilisateurs')
-          .select('*, organisation:organisations(*)')
-          .eq('id', user.id)
-          .single();
+    setLoading(true);
+    const fetchUser = async (sessionUser) => {
+      const { data: userProfile, error } = await supabase
+        .from('utilisateurs')
+        .select('*, organisation:organisations(*)')
+        .eq('id', sessionUser.id)
+        .single();
 
-        console.log("AuthProvider: userProfile from db", userProfile);
-        if (error) {
-          console.error("AuthProvider: error fetching user profile", error);
-        }
-
-        if (userProfile) {
-          console.log("AuthProvider: setting user and organisation");
-          setUser(userProfile);
-          setOrganisation(userProfile.organisation);
-        }
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        setUser(null);
+        setOrganisation(null);
+      } else {
+        setUser(userProfile);
+        setOrganisation(userProfile.organisation);
       }
-      console.log("AuthProvider: setting loading to false");
-      setLoading(false);
     };
 
-    getSession();
+    const { data: { session } } = supabase.auth.getSession();
+
+    if (session) {
+      fetchUser(session.user);
+    }
+    setLoading(false);
+
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("AuthProvider: onAuthStateChange event", event, "session", session);
-        if (session) {
-          const { user } = session;
-          console.log("AuthProvider: user from auth change", user);
-          const { data: userProfile, error } = await supabase
-            .from('utilisateurs')
-            .select('*, organisation:organisations(*)')
-            .eq('id', user.id)
-            .single();
 
-          console.log("AuthProvider: userProfile from db on auth change", userProfile);
-          if (error) {
-            console.error("AuthProvider: error fetching user profile on auth change", error);
-          }
-
-          if (userProfile) {
-            console.log("AuthProvider: setting user and organisation on auth change");
-            setUser(userProfile);
-            setOrganisation(userProfile.organisation);
-          }
-        } else {
-          console.log("AuthProvider: no session, setting user and organisation to null");
+        if (event === 'SIGNED_IN' && session) {
+          await fetchUser(session.user);
+        } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setOrganisation(null);
         }
-        console.log("AuthProvider: setting loading to false on auth change");
-        setLoading(false);
       }
     );
 
