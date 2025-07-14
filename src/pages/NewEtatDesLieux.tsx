@@ -165,7 +165,7 @@ const NewEtatDesLieux = () => {
       };
 
       const { data, error } = await supabase
-        .from('etats_des_lieux')
+        .from('etat_des_lieux')
         .insert([etatDesLieuxData])
         .select()
         .single();
