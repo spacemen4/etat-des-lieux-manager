@@ -22,17 +22,20 @@ interface ReleveCompteurs {
 // Function to fetch all états des lieux
 export const useEtatDesLieux = (userUuid: string) => {
   return useQuery({
-    queryKey: ['etat_des_lieux', userUuid],
+    queryKey: ['etats-des-lieux', userUuid],
     queryFn: async () => {
       if (!userUuid) return [];
       const { data, error } = await supabase
         .from('etat_des_lieux')
-        .select('*, rendez_vous_id')
+        .select('*')
         .eq('user_id', userUuid)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Error fetching etats des lieux:', error);
+        throw error;
+      }
+      return data || [];
     },
     enabled: !!userUuid,
   });
@@ -46,25 +49,37 @@ export const useRendezVous = (userUuid: string) => {
       if (!userUuid) return [];
       const { data, error } = await supabase
         .from('rendez_vous')
-        .select(`
-          *,
-          etat_des_lieux:etat_des_lieux_id (
-            id,
-            type_etat_des_lieux,
-            statut
-          )
-        `)
+        .select('*')
         .eq('user_id', userUuid)
-        .order('date', { ascending: false });
+        .order('date', { ascending: true });
 
       if (error) {
         console.error('Error fetching rendez-vous:', error);
         throw error;
       }
-      return data;
+      return data || [];
     },
     enabled: !!userUuid,
   });
+};
+
+import { useMemo } from 'react';
+
+// Hook séparé pour récupérer les relations si nécessaire
+export const useRendezVousWithEtat = (userUuid: string) => {
+  const { data: rendezVous, isLoading: isLoadingRdv, error: errorRdv } = useRendezVous(userUuid);
+  const { data: etatsDesLieux, isLoading: isLoadingEtats, error: errorEtats } = useEtatDesLieux(userUuid);
+
+  const rendezVousWithEtat = useMemo(() => {
+    if (!rendezVous || !etatsDesLieux) return [];
+
+    return rendezVous.map(rdv => ({
+      ...rdv,
+      etat_des_lieux: etatsDesLieux.find(etat => etat.rendez_vous_id === rdv.id)
+    }));
+  }, [rendezVous, etatsDesLieux]);
+
+  return { data: rendezVousWithEtat, isLoading: isLoadingRdv || isLoadingEtats, error: errorRdv || errorEtats };
 };
 
 // Function to fetch a single état des lieux by ID
