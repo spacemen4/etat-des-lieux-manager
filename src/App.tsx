@@ -52,19 +52,19 @@ const DashboardRoutes = () => {
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  console.log("ProtectedRoute: user", user, "loading", loading);
 
   if (loading) {
-    console.log("ProtectedRoute: loading");
-    return <div>Chargement...</div>; // Ou un spinner de chargement
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Chargement...</div>
+      </div>
+    );
   }
 
   if (!user) {
-    console.log("ProtectedRoute: no user, redirecting to login");
     return <Navigate to="/login" replace />;
   }
 
-  console.log("ProtectedRoute: user authenticated, rendering children");
   return children;
 };
 

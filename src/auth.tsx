@@ -20,39 +20,47 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log("AuthProvider: useEffect setup");
+    setLoading(true);
+    const getUserProfile = async (user) => {
+      const { data: userProfile, error } = await supabase
+        .from('utilisateurs')
+        .select('*, organisation:organisations(*)')
+        .eq('id', user.id)
+        .single();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("AuthProvider: onAuthStateChange event", event, "session", session);
-        if (session) {
-          const { user } = session;
-          console.log("AuthProvider: user from auth change", user);
-          const { data: userProfile, error } = await supabase
-            .from('utilisateurs')
-            .select('*, organisation:organisations(*)')
-            .eq('id', user.id)
-            .single();
-
-          console.log("AuthProvider: userProfile from db on auth change", userProfile);
-          if (error) {
-            console.error("AuthProvider: error fetching user profile on auth change", error);
-          }
-
-          if (userProfile) {
-            console.log("AuthProvider: setting user and organisation on auth change");
-            setUser(userProfile);
-            setOrganisation(userProfile.organisation);
-          }
-        } else {
-          console.log("AuthProvider: no session, setting user and organisation to null");
-          setUser(null);
-          setOrganisation(null);
-        }
-        console.log("AuthProvider: setting loading to false on auth change");
-        setLoading(false);
+      if (error) {
+        console.error("Erreur lors de la récupération du profil utilisateur:", error);
+        return null;
       }
-    );
+      return userProfile;
+    };
+
+    const handleAuthChange = async (event, session) => {
+      console.log(`Auth event: ${event}`);
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        if (session) {
+          const userProfile = await getUserProfile(session.user);
+          setUser(userProfile);
+          setOrganisation(userProfile?.organisation);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setOrganisation(null);
+      }
+      setLoading(false);
+    };
+
+    // Gérer la session initiale
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        const userProfile = getUserProfile(session.user);
+        setUser(userProfile);
+        setOrganisation(userProfile?.organisation);
+      }
+      setLoading(false);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(handleAuthChange);
 
     return () => {
       authListener.subscription.unsubscribe();
