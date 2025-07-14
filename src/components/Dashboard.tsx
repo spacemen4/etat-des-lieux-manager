@@ -289,7 +289,7 @@ const Dashboard = () => {
                         <Badge variant={!etat.date_sortie ? "default" : "secondary"}>
                           {!etat.date_sortie ? "En cours" : "Terminé"}
                         </Badge>
-                        {etat.travaux_a_prevoir && (
+                        {etat.travaux_a_faire && (
                           <Badge variant="destructive">Travaux à prévoir</Badge>
                         )}
                       </div>
