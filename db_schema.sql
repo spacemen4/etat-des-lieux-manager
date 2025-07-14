@@ -250,3 +250,137 @@ CREATE POLICY "Users can view their own rendez_vous" ON rendez_vous
     FOR SELECT USING (
         auth.uid() = user_id
     );
+
+-- First, ensure the auth.users reference exists (this is a Supabase-specific table)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Add user_id columns if they don't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'etat_des_lieux' AND column_name = 'user_id') THEN
+        ALTER TABLE etat_des_lieux ADD COLUMN user_id UUID;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'rendez_vous' AND column_name = 'user_id') THEN
+        ALTER TABLE rendez_vous ADD COLUMN user_id UUID;
+    END IF;
+END $$;
+
+-- Add organization_id columns if you want to support multiple organizations
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'etat_des_lieux' AND column_name = 'organization_id') THEN
+        ALTER TABLE etat_des_lieux ADD COLUMN organization_id UUID;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'rendez_vous' AND column_name = 'organization_id') THEN
+        ALTER TABLE rendez_vous ADD COLUMN organization_id UUID;
+    END IF;
+END $$;
+
+-- Enable Row Level Security
+ALTER TABLE etat_des_lieux ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rendez_vous ENABLE ROW LEVEL SECURITY;
+ALTER TABLE releve_compteurs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE equipements_energetiques ENABLE ROW LEVEL SECURITY;
+ALTER TABLE equipements_chauffage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE parties_privatives ENABLE ROW LEVEL SECURITY;
+ALTER TABLE autres_equipements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pieces ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for etat_des_lieux
+CREATE POLICY "Enable access to user's own etat_des_lieux" ON etat_des_lieux
+    FOR ALL USING (
+        auth.uid() = user_id
+    );
+
+-- Create policies for rendez_vous
+CREATE POLICY "Enable access to user's own rendez_vous" ON rendez_vous
+    FOR ALL USING (
+        auth.uid() = user_id
+    );
+
+-- Create policies for all related tables to ensure users can only access their own data
+CREATE POLICY "Enable access to user's own releve_compteurs" ON releve_compteurs
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM etat_des_lieux 
+            WHERE etat_des_lieux.id = releve_compteurs.etat_des_lieux_id 
+            AND etat_des_lieux.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Enable access to user's own equipements_energetiques" ON equipements_energetiques
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM etat_des_lieux 
+            WHERE etat_des_lieux.id = equipements_energetiques.etat_des_lieux_id 
+            AND etat_des_lieux.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Enable access to user's own equipements_chauffage" ON equipements_chauffage
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM etat_des_lieux 
+            WHERE etat_des_lieux.id = equipements_chauffage.etat_des_lieux_id 
+            AND etat_des_lieux.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Enable access to user's own cles" ON cles
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM etat_des_lieux 
+            WHERE etat_des_lieux.id = cles.etat_des_lieux_id 
+            AND etat_des_lieux.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Enable access to user's own parties_privatives" ON parties_privatives
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM etat_des_lieux 
+            WHERE etat_des_lieux.id = parties_privatives.etat_des_lieux_id 
+            AND etat_des_lieux.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Enable access to user's own autres_equipements" ON autres_equipements
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM etat_des_lieux 
+            WHERE etat_des_lieux.id = autres_equipements.etat_des_lieux_id 
+            AND etat_des_lieux.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Enable access to user's own pieces" ON pieces
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM etat_des_lieux 
+            WHERE etat_des_lieux.id = pieces.etat_des_lieux_id 
+            AND etat_des_lieux.user_id = auth.uid()
+        )
+    );
+
+-- Create a function to automatically set the user_id when a new record is inserted
+CREATE OR REPLACE FUNCTION public.set_user_id()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.user_id = auth.uid();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create triggers to automatically set user_id on insert
+CREATE TRIGGER set_etat_des_lieux_user_id
+BEFORE INSERT ON etat_des_lieux
+FOR EACH ROW
+EXECUTE FUNCTION set_user_id();
+
+CREATE TRIGGER set_rendez_vous_user_id
+BEFORE INSERT ON rendez_vous
+FOR EACH ROW
+EXECUTE FUNCTION set_user_id();
