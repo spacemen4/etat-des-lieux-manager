@@ -124,6 +124,9 @@ export const LoginForm = ({ onSuccess }) => {
             {loading ? 'Connexion...' : 'Se connecter'}
           </Button>
         </form>
+        <div className="mt-4 text-center text-sm">
+          <p>Vous n'avez pas de compte ? <a href="/signup" className="underline">Inscrivez-vous</a></p>
+        </div>
       </CardContent>
     </Card>
   );
