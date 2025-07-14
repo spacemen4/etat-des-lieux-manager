@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,13 @@ const Dashboard = () => {
 
   const isLoading = isLoadingEtats || isLoadingRdv;
   const error = errorEtats || errorRdv;
+
+  useEffect(() => {
+    if (userUuid) {
+      // Les hooks useEtatDesLieux et useRendezVous sont déjà dépendants de userUuid,
+      // donc les données seront re-fetchées automatiquement quand userUuid changera.
+    }
+  }, [userUuid]);
 
   if (isLoading) {
     return (

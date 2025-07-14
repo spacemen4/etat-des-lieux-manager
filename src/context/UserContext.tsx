@@ -8,11 +8,13 @@ export const UserProvider = ({ children }) => {
     const { user } = useAuth();
     const [etatsDesLieux, setEtatsDesLieux] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [userUuid, setUserUuid] = useState(null);
 
     useEffect(() => {
         const fetchEtatsDesLieux = async () => {
             if (user) {
                 setLoading(true);
+                setUserUuid(user.id);
                 const { data, error } = await supabase
                     .from('etats_des_lieux')
                     .select('*')
@@ -33,6 +35,7 @@ export const UserProvider = ({ children }) => {
     const value = {
         etatsDesLieux,
         loading,
+        userUuid,
     };
 
     return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

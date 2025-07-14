@@ -198,7 +198,7 @@ const MapSelector = ({
   );
 };
 
-export default function RendezVousCalendar() {
+export default function RendezVousCalendar({ userUuid }) {
   console.log("[RENDEZVOUS] Initialisation du composant");
   
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -237,8 +237,10 @@ export default function RendezVousCalendar() {
 
   useEffect(() => {
     checkSupabaseConnection();
-    fetchRendezVous();
-  }, []);
+    if (userUuid) {
+      fetchRendezVous();
+    }
+  }, [userUuid]);
 
   const checkSupabaseConnection = async () => {
     try {
@@ -266,6 +268,7 @@ export default function RendezVousCalendar() {
       const { data, error } = await supabase
         .from('rendez_vous')
         .select('*')
+        .eq('user_id', userUuid)
         .order('date', { ascending: true });
 
       if (error) {
@@ -338,7 +341,8 @@ export default function RendezVousCalendar() {
       type_etat_des_lieux: typeEtatDesLieux,
       type_bien: typeBien,
       statut: statut,
-      created_at: new Date()
+      created_at: new Date(),
+      user_id: userUuid
     };
 
     try {
