@@ -503,7 +503,7 @@ export const useDeletePhotoFromReleveCompteurs = () => {
   });
 };
 
-// Clés hooks
+// Fonctions pour les clés
 export const useClesByEtatId = (etatId: string) => {
   return useQuery({
     queryKey: ['cles', etatId],
@@ -520,14 +520,14 @@ export const useClesByEtatId = (etatId: string) => {
   });
 };
 
-export const useUpdateCle = () => {
+export const useCreateCle = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (cle: any) => {
       const { data, error } = await supabase
         .from('cles')
-        .upsert(cle)
+        .insert(cle)
         .select()
         .single();
 
@@ -540,21 +540,16 @@ export const useUpdateCle = () => {
   });
 };
 
-export const useCreateCle = () => {
+export const useUpdateCle = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (cle: {
-      etat_des_lieux_id: string;
-      type_cle_badge: string;
-      nombre: number;
-      numero_cle: string;
-      commentaires: string;
-      photos: any[];
-    }) => {
+    mutationFn: async (cle: any) => {
+      const { id, ...rest } = cle;
       const { data, error } = await supabase
         .from('cles')
-        .insert(cle)
+        .update(rest)
+        .eq('id', id)
         .select()
         .single();
 
@@ -572,19 +567,6 @@ export const useDeleteCle = () => {
 
   return useMutation({
     mutationFn: async (cleId: string) => {
-      // Fetch the cle to get etat_des_lieux_id for targeted invalidation
-      const { data: cleToDelete, error: fetchError } = await supabase
-        .from('cles')
-        .select('etat_des_lieux_id')
-        .eq('id', cleId)
-        .single();
-
-      if (fetchError) {
-        // Handle case where cle is already deleted or ID is wrong
-        // console.warn(`Could not fetch cle ${cleId} for invalidation:`, fetchError.message);
-        // Proceed with deletion anyway
-      }
-
       const { data, error } = await supabase
         .from('cles')
         .delete()
@@ -593,16 +575,11 @@ export const useDeleteCle = () => {
         .single();
 
       if (error) throw error;
-
-      // Return both the deletion result and the fetched etat_des_lieux_id
-      return { deletedData: data, etat_des_lieux_id: cleToDelete?.etat_des_lieux_id };
+      return data;
     },
-    onSuccess: ({ deletedData, etat_des_lieux_id }) => {
-      if (etat_des_lieux_id) {
-        queryClient.invalidateQueries({ queryKey: ['cles', etat_des_lieux_id] });
-      } else if (deletedData && deletedData.etat_des_lieux_id) {
-        // Fallback if fetching before delete failed but delete response has the ID
-        queryClient.invalidateQueries({ queryKey: ['cles', deletedData.etat_des_lieux_id] });
+    onSuccess: (data) => {
+      if (data && data.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ queryKey: ['cles', data.etat_des_lieux_id] });
       } else {
         queryClient.invalidateQueries({ queryKey: ['cles'] });
       }
@@ -627,14 +604,14 @@ export const usePartiesPrivativesByEtatId = (etatId: string) => {
   });
 };
 
-export const useUpdatePartiePrivative = () => {
+export const useCreatePartiePrivative = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (partie: any) => {
       const { data, error } = await supabase
         .from('parties_privatives')
-        .upsert(partie)
+        .insert(partie)
         .select()
         .single();
 
@@ -647,22 +624,16 @@ export const useUpdatePartiePrivative = () => {
   });
 };
 
-export const useCreatePartiePrivative = () => {
+export const useUpdatePartiePrivative = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (partie: {
-      etat_des_lieux_id: string;
-      type_partie: string;
-      etat_entree?: string;
-      etat_sortie: string;
-      numero: string;
-      commentaires: string;
-      photos: any[];
-    }) => {
+    mutationFn: async (partie: any) => {
+      const { id, ...rest } = partie;
       const { data, error } = await supabase
         .from('parties_privatives')
-        .insert(partie)
+        .update(rest)
+        .eq('id', id)
         .select()
         .single();
 
@@ -680,14 +651,6 @@ export const useDeletePartiePrivative = () => {
 
   return useMutation({
     mutationFn: async (partieId: string) => {
-      // Fetch for etat_des_lieux_id for targeted invalidation
-      const { data: partieToDelete, error: fetchError } = await supabase
-        .from('parties_privatives')
-        .select('etat_des_lieux_id')
-        .eq('id', partieId)
-        .single();
-
-      // Proceed with deletion even if fetch fails (e.g., already deleted)
       const { data, error } = await supabase
         .from('parties_privatives')
         .delete()
@@ -696,13 +659,11 @@ export const useDeletePartiePrivative = () => {
         .single();
 
       if (error) throw error;
-      return { deletedData: data, etat_des_lieux_id: partieToDelete?.etat_des_lieux_id };
+      return data;
     },
-    onSuccess: ({ deletedData, etat_des_lieux_id }) => {
-      if (etat_des_lieux_id) {
-        queryClient.invalidateQueries({ queryKey: ['parties_privatives', etat_des_lieux_id] });
-      } else if (deletedData && deletedData.etat_des_lieux_id) {
-        queryClient.invalidateQueries({ queryKey: ['parties_privatives', deletedData.etat_des_lieux_id] });
+    onSuccess: (data) => {
+      if (data && data.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ queryKey: ['parties_privatives', data.etat_des_lieux_id] });
       } else {
         queryClient.invalidateQueries({ queryKey: ['parties_privatives'] });
       }
@@ -727,14 +688,14 @@ export const useAutresEquipementsByEtatId = (etatId: string) => {
   });
 };
 
-export const useUpdateAutreEquipement = () => {
+export const useCreateAutreEquipement = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (equipement: any) => {
       const { data, error } = await supabase
         .from('autres_equipements')
-        .upsert(equipement)
+        .insert(equipement)
         .select()
         .single();
 
@@ -747,21 +708,16 @@ export const useUpdateAutreEquipement = () => {
   });
 };
 
-export const useCreateAutreEquipement = () => {
+export const useUpdateAutreEquipement = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (equipement: {
-      etat_des_lieux_id: string;
-      equipement: string;
-      etat_entree: string;
-      etat_sortie: string;
-      commentaires: string;
-      photos: any[];
-    }) => {
+    mutationFn: async (equipement: any) => {
+      const { id, ...rest } = equipement;
       const { data, error } = await supabase
         .from('autres_equipements')
-        .insert(equipement)
+        .update(rest)
+        .eq('id', id)
         .select()
         .single();
 
@@ -779,14 +735,6 @@ export const useDeleteAutreEquipement = () => {
 
   return useMutation({
     mutationFn: async (equipementId: string) => {
-      // Fetch for etat_des_lieux_id for targeted invalidation
-      const { data: equipementToDelete, error: fetchError } = await supabase
-        .from('autres_equipements')
-        .select('etat_des_lieux_id')
-        .eq('id', equipementId)
-        .single();
-
-      // Proceed with deletion
       const { data, error } = await supabase
         .from('autres_equipements')
         .delete()
@@ -795,13 +743,11 @@ export const useDeleteAutreEquipement = () => {
         .single();
 
       if (error) throw error;
-      return { deletedData: data, etat_des_lieux_id: equipementToDelete?.etat_des_lieux_id };
+      return data;
     },
-    onSuccess: ({ deletedData, etat_des_lieux_id }) => {
-      if (etat_des_lieux_id) {
-        queryClient.invalidateQueries({ queryKey: ['autres_equipements', etat_des_lieux_id] });
-      } else if (deletedData && deletedData.etat_des_lieux_id) {
-        queryClient.invalidateQueries({ queryKey: ['autres_equipements', deletedData.etat_des_lieux_id] });
+    onSuccess: (data) => {
+      if (data && data.etat_des_lieux_id) {
+        queryClient.invalidateQueries({ queryKey: ['autres_equipements', data.etat_des_lieux_id] });
       } else {
         queryClient.invalidateQueries({ queryKey: ['autres_equipements'] });
       }
@@ -827,36 +773,6 @@ export const useEquipementsEnergetiquesByEtatId = (etatId: string) => {
   });
 };
 
-export const useUpdateEquipementsEnergetiques = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (equipements: {
-      etat_des_lieux_id: string;
-      chauffage_type: string;
-      eau_chaude_type: string;
-      dpe_classe: string;
-      ges_classe: string;
-      date_dpe: string;
-      presence_panneaux_solaires: boolean;
-      type_isolation: string;
-      commentaires: string;
-    }) => {
-      const { data, error } = await supabase
-        .from('equipements_energetiques')
-        .upsert(equipements)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['equipements_energetiques', data.etat_des_lieux_id] });
-    },
-  });
-};
-
 // Fonctions pour les équipements de chauffage
 export const useEquipementsChauffageByEtatId = (etatId: string) => {
   return useQuery({
@@ -872,37 +788,5 @@ export const useEquipementsChauffageByEtatId = (etatId: string) => {
       return data;
     },
     enabled: !!etatId,
-  });
-};
-
-export const useUpdateEquipementsChauffage = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (equipements: {
-      etat_des_lieux_id: string;
-      chaudiere_etat: string;
-      chaudiere_date_dernier_entretien: string;
-      ballon_eau_chaude_etat: string;
-      radiateurs_nombre: number;
-      radiateurs_etat: string;
-      thermostat_present: boolean;
-      thermostat_etat: string;
-      pompe_a_chaleur_present: boolean;
-      pompe_a_chaleur_etat: string;
-      commentaires: string;
-    }) => {
-      const { data, error } = await supabase
-        .from('equipements_chauffage')
-        .upsert(equipements)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['equipements_chauffage', data.etat_des_lieux_id] });
-    },
   });
 };

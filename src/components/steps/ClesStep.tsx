@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useClesByEtatId, useCreateCle, useUpdateCle, useDeleteCle } from '@/hooks/useEtatDesLieux';
 import { toast } from 'sonner';
 import { Plus, Trash2, Camera, X, Upload, Image as ImageIcon, KeyRound } from 'lucide-react';
+import type { StepRef } from '../EtatSortieForm';
 
 // Configuration Supabase (simulée, adaptez avec votre vraie configuration)
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
@@ -66,7 +67,7 @@ interface ClesStepProps {
   etatId: string;
 }
 
-const ClesStep: React.FC<ClesStepProps> = ({ etatId }) => {
+const ClesStep = forwardRef<StepRef, ClesStepProps>(({ etatId }, ref) => {
   const { data: clesData, refetch, isLoading: isLoadingData } = useClesByEtatId(etatId);
   const createCleMutation = useCreateCle();
   const updateCleMutation = useUpdateCle();
@@ -77,6 +78,11 @@ const ClesStep: React.FC<ClesStepProps> = ({ etatId }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+  // Exposer la fonction de sauvegarde via useImperativeHandle
+  useImperativeHandle(ref, () => ({
+    saveData: handleSave
+  }));
 
   useEffect(() => {
     if (clesData) {
@@ -400,6 +406,8 @@ const ClesStep: React.FC<ClesStepProps> = ({ etatId }) => {
       </CardContent>
     </Card>
   );
-};
+});
+
+ClesStep.displayName = 'ClesStep';
 
 export default ClesStep;

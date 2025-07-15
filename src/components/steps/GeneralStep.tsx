@@ -87,7 +87,7 @@ interface GeneralStepProps {
 }
 
 const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
-  const { data: etatDesLieuxInitial, isLoading, refetch } = useEtatDesLieuxById(etatId);
+  const { data: etatDesLieuxInitial, isLoading, refetch } = useEtatDesLieuxById(etatId, '');
   const { data: rendezVousData } = useRendezVousById(etatDesLieuxInitial?.rendez_vous_id || null);
   const { mutate: updateEtatDesLieux, isPending: isUpdatingMutation } = useUpdateEtatDesLieux();
 

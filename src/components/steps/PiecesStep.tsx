@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Edit, Trash2, Home, Camera, Upload, Image as ImageIcon, X } from 'lucide-react';
+import type { StepRef } from '../EtatSortieForm';
 
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXB2eXJjdGxoYWd0emtic3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjg1NjYsImV4cCI6MjA2NjYwNDU2Nn0.4APWILaWXOtXCwdFYTk4MDithvZhp55ZJB6PnVn8D1w';
@@ -209,7 +210,7 @@ const getFieldsForPiece = (pieceName) => {
   return PIECE_FIELD_CONFIG[pieceType || 'Salon'] || [];
 };
 
-const PiecesStep = ({ etatId = 'demo-etat' }) => {
+const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-etat' }, ref) => {
   const [pieces, setPieces] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPiece, setSelectedPiece] = useState(null);
@@ -224,6 +225,15 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
   const [currentPieceExistingPhotos, setCurrentPieceExistingPhotos] = useState([]);
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Exposer la fonction de sauvegarde via useImperativeHandle
+  useImperativeHandle(ref, () => ({
+    saveData: async () => {
+      if (selectedPiece) {
+        await handleSave();
+      }
+    }
+  }));
 
   const showToast = (message, type = 'info') => {
     console.log(`[${type.toUpperCase()}] ${message}`);
@@ -871,6 +881,8 @@ const PiecesStep = ({ etatId = 'demo-etat' }) => {
       )}
     </div>
   );
-};
+});
+
+PiecesStep.displayName = 'PiecesStep';
 
 export default PiecesStep;

@@ -140,8 +140,7 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
         date_sortie: dateSortieToUpdate, // This will be today if new, or existing if already finalized
         statut: 'finalise', // Always 'finalise' when this step is completed
         travaux_a_faire: travauxAFaire,
-        description_travaux: travauxAFaire ? descriptionTravaux : null,
-        user_id: userUuid
+        description_travaux: travauxAFaire ? descriptionTravaux : null
       },
       {
         onSuccess: () => {

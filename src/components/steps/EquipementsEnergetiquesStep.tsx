@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Camera, X, Upload, Image, Leaf, Wind } from 'lucide-react';
+import type { StepRef } from '../EtatSortieForm';
 
 // Configuration Supabase simulée
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
@@ -68,8 +69,7 @@ const supabase = {
   })
 };
 
-// Composant principal
-const EquipementsEnergetiquesStep = ({ etatId = "demo-etat-123" }) => {
+const EquipementsEnergetiquesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = "demo-etat-123" }, ref) => {
   const [formData, setFormData] = useState({
     chauffage_type: '',
     eau_chaude_type: '',
@@ -87,6 +87,11 @@ const EquipementsEnergetiquesStep = ({ etatId = "demo-etat-123" }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [equipementsEnergetiquesData, setEquipementsEnergetiquesData] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Exposer la fonction de sauvegarde via useImperativeHandle
+  useImperativeHandle(ref, () => ({
+    saveData: handleSave
+  }));
 
   // Simulation du hook useEquipementsEnergetiquesByEtatId
   const fetchEquipementsEnergetiques = async (etatId) => {
@@ -566,6 +571,8 @@ const EquipementsEnergetiquesStep = ({ etatId = "demo-etat-123" }) => {
       </div>
     </div>
   );
-};
+});
+
+EquipementsEnergetiquesStep.displayName = 'EquipementsEnergetiquesStep';
 
 export default EquipementsEnergetiquesStep;

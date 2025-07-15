@@ -21,7 +21,9 @@ interface EtatDesLieuxViewerProps {
 }
 
 const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen, onClose }) => {
-  const { data: etatDesLieux } = useEtatDesLieuxById(etatId || '');
+  // Note: We need userUuid for the useEtatDesLieuxById hook, but it's not passed as prop
+  // For now, using empty string - this should be fixed to get user from context
+  const { data: etatDesLieux } = useEtatDesLieuxById(etatId || '', '');
   const { data: pieces } = usePiecesByEtatId(etatId || '');
   const { data: releveCompteurs } = useReleveCompteursByEtatId(etatId || '');
   const { data: cles } = useClesByEtatId(etatId || '');

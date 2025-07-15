@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Camera, X, Upload, Image as ImageIcon, Flame } from 'lucide-react';
+import type { StepRef } from '../EtatSortieForm';
 
 // Configuration Supabase (simulée, adaptez avec votre vraie configuration)
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
@@ -128,7 +129,7 @@ interface EquipementsChauffageStepProps {
   etatId: string;
 }
 
-const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ etatId }) => {
+const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepProps>(({ etatId }, ref) => {
   const toast = useToast();
   
   // État local pour simuler les données
@@ -153,6 +154,11 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Exposer la fonction de sauvegarde via useImperativeHandle
+  useImperativeHandle(ref, () => ({
+    saveData: handleSave
+  }));
 
   // Simulation du chargement des données
   useEffect(() => {
@@ -647,6 +653,8 @@ const EquipementsChauffageStep: React.FC<EquipementsChauffageStepProps> = ({ eta
       </CardContent>
     </Card>
   );
-};
+});
+
+EquipementsChauffageStep.displayName = 'EquipementsChauffageStep';
 
 export default EquipementsChauffageStep;

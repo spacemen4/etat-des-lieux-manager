@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAutresEquipementsByEtatId, useUpdateAutreEquipement, useCreateAutreEquipement, useDeleteAutreEquipement } from '@/hooks/useEtatDesLieux';
 import { toast } from 'sonner';
 import { Plus, Trash2, Camera, X, Upload, Image as ImageIcon } from 'lucide-react';
+import type { StepRef } from '../EtatSortieForm';
 
 // Configuration Supabase (simulée, adaptez avec votre vraie configuration)
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
@@ -67,7 +68,7 @@ interface AutresEquipementsStepProps {
   etatId: string;
 }
 
-const AutresEquipementsStep: React.FC<AutresEquipementsStepProps> = ({ etatId }) => {
+const AutresEquipementsStep = forwardRef<StepRef, AutresEquipementsStepProps>(({ etatId }, ref) => {
   const { data: autresEquipementsData, refetch, isLoading: isLoadingData } = useAutresEquipementsByEtatId(etatId);
   const createAutreEquipementMutation = useCreateAutreEquipement();
   const updateAutreEquipementMutation = useUpdateAutreEquipement();
@@ -79,6 +80,11 @@ const AutresEquipementsStep: React.FC<AutresEquipementsStepProps> = ({ etatId })
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+  // Exposer la fonction de sauvegarde via useImperativeHandle
+  useImperativeHandle(ref, () => ({
+    saveData: handleSave
+  }));
 
   useEffect(() => {
     if (autresEquipementsData) {
@@ -502,6 +508,8 @@ const AutresEquipementsStep: React.FC<AutresEquipementsStepProps> = ({ etatId })
       </CardContent>
     </Card>
   );
-};
+});
+
+AutresEquipementsStep.displayName = 'AutresEquipementsStep';
 
 export default AutresEquipementsStep;
