@@ -306,12 +306,21 @@ const Dashboard = () => {
                           <Button 
                             size="sm" 
                             asChild
-                            className="bg-blue-600 hover:bg-blue-700"
+                            className={etat.type_etat_des_lieux === 'entree' ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"}
                             onClick={(e) => e.stopPropagation()}
                           >
                             <a href={`/sortie/${etat.id}`} className="flex items-center justify-center gap-1">
-                              <LogOut className="h-3 w-3" />
-                              Faire la sortie
+                              {etat.type_etat_des_lieux === 'entree' ? (
+                                <>
+                                  <LogIn className="h-3 w-3" />
+                                  Faire l'entrée
+                                </>
+                              ) : (
+                                <>
+                                  <LogOut className="h-3 w-3" />
+                                  Faire la sortie
+                                </>
+                              )}
                             </a>
                           </Button>
                         )}
