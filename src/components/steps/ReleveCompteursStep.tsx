@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Zap, Flame, Droplets, User, Camera, X, Upload, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import type { StepRef } from '../EtatSortieForm';
 
 // Configuration Supabase - REMPLACEZ PAR VOS VRAIES VALEURS
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
@@ -177,7 +178,7 @@ interface ReleveCompteursStepProps {
   etatId: string;
 }
 
-const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' }) => {
+const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ etatId = '1' }, ref) => {
   console.log('[ReleveCompteursStep] Render - etatId:', etatId);
   
   const [releveCompteurs, setReleveCompteurs] = useState<ReleveCompteurs | null>(null);
@@ -208,6 +209,11 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' 
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Exposer la fonction de sauvegarde via useImperativeHandle
+  useImperativeHandle(ref, () => ({
+    saveData: handleSave
+  }));
 
   // Fonction pour charger les données
   const loadData = async () => {
@@ -1010,6 +1016,8 @@ const ReleveCompteursStep: React.FC<ReleveCompteursStepProps> = ({ etatId = '1' 
       </CardContent>
     </Card>
   );
-};
+});
+
+ReleveCompteursStep.displayName = 'ReleveCompteursStep';
 
 export default ReleveCompteursStep;
