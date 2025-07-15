@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,11 @@ import FormProgress from '@/components/FormProgress';
 import { useEtatDesLieuxById, useUpdateEtatSortie } from '@/hooks/useEtatDesLieux';
 import type { EtatDesLieux } from '@/types/etatDesLieux';
 import { useUser } from '@/context/UserContext';
+
+// Interface pour les étapes qui supportent la sauvegarde automatique
+export interface StepRef {
+  saveData: () => Promise<void>;
+}
 
 
 // Import des composants d'étapes
@@ -36,6 +41,14 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
   const [initialEtatDesLieux, setInitialEtatDesLieux] = useState<EtatDesLieux | null>(null);
   const [travauxAFaire, setTravauxAFaire] = useState(false);
   const [descriptionTravaux, setDescriptionTravaux] = useState('');
+  const [isSavingStep, setIsSavingStep] = useState(false);
+  
+  // Références pour les étapes qui supportent la sauvegarde automatique
+  const stepRefs = useRef<(StepRef | null)[]>([]);
+  
+  const setStepRef = (index: number, ref: StepRef | null) => {
+    stepRefs.current[index] = ref;
+  };
 
   const { data: etatData, isLoading: isLoadingEtat, error: errorEtat } = useEtatDesLieuxById(etatId, userUuid);
 
@@ -68,8 +81,27 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
   
   const updateEtatSortieMutation = useUpdateEtatSortie();
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < steps.length - 1) {
+      // Sauvegarder les données de l'étape actuelle avant de passer à la suivante
+      const currentStepRef = stepRefs.current[currentStep];
+      if (currentStepRef && currentStepRef.saveData) {
+        try {
+          setIsSavingStep(true);
+          console.log(`[STEP ${currentStep}] Sauvegarde des données avant passage à l'étape suivante`);
+          await currentStepRef.saveData();
+          console.log(`[STEP ${currentStep}] Données sauvegardées avec succès`);
+          toast.success(`Étape ${currentStep + 1} sauvegardée avec succès`);
+        } catch (error) {
+          console.error(`[STEP ${currentStep}] Erreur lors de la sauvegarde:`, error);
+          toast.error(`Erreur lors de la sauvegarde de l'étape ${currentStep + 1}. Veuillez réessayer.`);
+          setIsSavingStep(false);
+          return; // Ne pas changer d'étape si la sauvegarde échoue
+        } finally {
+          setIsSavingStep(false);
+        }
+      }
+      
       setCurrentStep(currentStep + 1);
     }
   };
@@ -131,28 +163,28 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
   const renderStepContent = () => {
     switch (currentStep) {
       case 0: // Général
-        return <GeneralStep etatId={etatId} />;
+        return <GeneralStep etatId={etatId} ref={(ref) => setStepRef(0, ref)} />;
       
       case 1: // Relevé des compteurs
-        return <ReleveCompteursStep etatId={etatId} />;
+        return <ReleveCompteursStep etatId={etatId} ref={(ref) => setStepRef(1, ref)} />;
       
       case 2: // Pièces
-        return <PiecesStep etatId={etatId} />;
+        return <PiecesStep etatId={etatId} ref={(ref) => setStepRef(2, ref)} />;
       
       case 3: // Clés
-        return <ClesStep etatId={etatId} />;
+        return <ClesStep etatId={etatId} ref={(ref) => setStepRef(3, ref)} />;
       
       case 4: // Parties privatives
-        return <PartiesPrivativesStep etatId={etatId} />;
+        return <PartiesPrivativesStep etatId={etatId} ref={(ref) => setStepRef(4, ref)} />;
       
       case 5: // Autres équipements
-        return <AutresEquipementsStep etatId={etatId} />;
+        return <AutresEquipementsStep etatId={etatId} ref={(ref) => setStepRef(5, ref)} />;
       
       case 6: // Équipements énergétiques
-        return <EquipementsEnergetiquesStep etatId={etatId} />;
+        return <EquipementsEnergetiquesStep etatId={etatId} ref={(ref) => setStepRef(6, ref)} />;
       
       case 7: // Équipements de chauffage
-        return <EquipementsChauffageStep etatId={etatId} />;
+        return <EquipementsChauffageStep etatId={etatId} ref={(ref) => setStepRef(7, ref)} />;
       
       case 8: // Finalisation
         return (
@@ -291,9 +323,18 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
         </Button>
         
         {currentStep < steps.length - 1 ? (
-          <Button onClick={handleNext}>
-            Suivant
-            <ArrowRight className="h-4 w-4 ml-2" />
+          <Button onClick={handleNext} disabled={isSavingStep}>
+            {isSavingStep ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Sauvegarde...
+              </>
+            ) : (
+              <>
+                Suivant
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </>
+            )}
           </Button>
         ) : null}
       </div>
