@@ -22,20 +22,46 @@ interface ReleveCompteurs {
 
 // Fonction pour récupérer tous les états des lieux (simplifiée)
 export const useEtatDesLieux = (userUuid: string) => {
+  console.log('[HOOK] useEtatDesLieux called with userUuid:', userUuid);
+  
   return useQuery({
     queryKey: ['etats-des-lieux', userUuid],
     queryFn: async () => {
-      if (!userUuid) return [];
-      const { data, error } = await supabase
+      console.log('[HOOK] useEtatDesLieux queryFn executing for userUuid:', userUuid);
+      if (!userUuid) {
+        console.log('[HOOK] useEtatDesLieux - no userUuid, returning empty array');
+        return [];
+      }
+      
+      console.log('[HOOK] useEtatDesLieux - making database query');
+      
+      // Première tentative : requête normale
+      let { data, error } = await supabase
         .from('etat_des_lieux')
         .select('*')
         .eq('user_id', userUuid)
         .order('created_at', { ascending: false });
 
+      // Si erreur de stack overflow, essayer une requête plus simple
+      if (error && error.code === '54001') {
+        console.log('[HOOK] useEtatDesLieux - Stack overflow detected, trying simplified query');
+        
+        // Essayer sans order by
+        const result = await supabase
+          .from('etat_des_lieux')
+          .select('*')
+          .eq('user_id', userUuid);
+          
+        data = result.data;
+        error = result.error;
+      }
+
       if (error) {
-        console.error('Error fetching etats des lieux:', error);
+        console.error('[HOOK] useEtatDesLieux - Error fetching etats des lieux:', error);
         throw error;
       }
+      
+      console.log('[HOOK] useEtatDesLieux - Success, data:', data);
       return data || [];
     },
     enabled: !!userUuid,
@@ -44,10 +70,18 @@ export const useEtatDesLieux = (userUuid: string) => {
 
 // Fonction pour récupérer tous les rendez-vous (simplifiée)
 export const useRendezVous = (userUuid: string) => {
+  console.log('[HOOK] useRendezVous called with userUuid:', userUuid);
+  
   return useQuery({
     queryKey: ['rendez_vous', userUuid],
     queryFn: async () => {
-      if (!userUuid) return [];
+      console.log('[HOOK] useRendezVous queryFn executing for userUuid:', userUuid);
+      if (!userUuid) {
+        console.log('[HOOK] useRendezVous - no userUuid, returning empty array');
+        return [];
+      }
+      
+      console.log('[HOOK] useRendezVous - making database query');
       const { data, error } = await supabase
         .from('rendez_vous')
         .select('*')
@@ -55,9 +89,11 @@ export const useRendezVous = (userUuid: string) => {
         .order('date', { ascending: true });
 
       if (error) {
-        console.error('Error fetching rendez-vous:', error);
+        console.error('[HOOK] useRendezVous - Error fetching rendez-vous:', error);
         throw error;
       }
+      
+      console.log('[HOOK] useRendezVous - Success, data:', data);
       return data || [];
     },
     enabled: !!userUuid,

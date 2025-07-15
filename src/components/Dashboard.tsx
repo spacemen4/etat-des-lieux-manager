@@ -10,13 +10,21 @@ import { useUser } from '@/context/UserContext';
 
 const Dashboard = () => {
   const { userUuid } = useUser();
+  console.log('[DASHBOARD] userUuid:', userUuid);
+  
   const { data: etatsDesLieux, isLoading: isLoadingEtats, error: errorEtats } = useEtatDesLieux(userUuid);
+  console.log('[DASHBOARD] etatsDesLieux:', etatsDesLieux, 'isLoadingEtats:', isLoadingEtats, 'errorEtats:', errorEtats);
+  
   const { data: rendezVous, isLoading: isLoadingRdv, error: errorRdv } = useRendezVous(userUuid);
+  console.log('[DASHBOARD] rendezVous:', rendezVous, 'isLoadingRdv:', isLoadingRdv, 'errorRdv:', errorRdv);
+  
   const [selectedEtatId, setSelectedEtatId] = useState<string | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   const isLoading = isLoadingEtats || isLoadingRdv;
   const error = errorEtats || errorRdv;
+  
+  console.log('[DASHBOARD] Final state - isLoading:', isLoading, 'error:', error);
 
   if (isLoading) {
     return (

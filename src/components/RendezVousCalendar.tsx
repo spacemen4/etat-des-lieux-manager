@@ -31,6 +31,7 @@ interface RendezVous {
   created_at?: Date;
   statut?: string;
   etat_des_lieux_id?: string;
+  user_id?: string;
 }
 
 interface ValidationErrors {
@@ -334,7 +335,6 @@ export default function RendezVousCalendar({ userUuid }) {
     const finalDate = date || new Date();
 
     const nouveauRendezVous: RendezVous = {
-      id: Date.now().toString(),
       date: finalDate,
       heure: heure.trim(),
       duree: duree.trim() || undefined,
