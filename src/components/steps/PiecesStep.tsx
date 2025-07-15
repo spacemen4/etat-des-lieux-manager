@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Edit, Trash2, Home, Camera, Upload, Image as ImageIcon, X } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
+import { supabase } from '@/lib/supabase';
 
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXB2eXJjdGxoYWd0emtic3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjg1NjYsImV4cCI6MjA2NjYwNDU2Nn0.4APWILaWXOtXCwdFYTk4MDithvZhp55ZJB6PnVn8D1w';
@@ -59,32 +60,45 @@ const supabaseClient = {
   // Opérations sur les pièces
   pieces: {
     async fetchAll(etatId) {
-      // Assuming pieces table might have a 'photos' column as JSONB
-      return await supabaseClient.apiCall(`pieces?etat_des_lieux_id=eq.${etatId}&select=*,photos`);
+      const { data, error } = await supabase
+        .from('pieces')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId);
+      
+      if (error) throw error;
+      return data || [];
     },
 
     async create(piece) {
-      // Ensure 'photos' is part of the piece object if it's being created with photos
-      const [result] = await supabaseClient.apiCall('pieces', {
-        method: 'POST',
-        body: JSON.stringify(piece)
-      });
-      return result;
+      const { data, error } = await supabase
+        .from('pieces')
+        .insert(piece)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
     },
 
     async update(id, updates) {
-      // Ensure 'photos' is part of the updates object if photos are being changed
-      const [result] = await supabaseClient.apiCall(`pieces?id=eq.${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(updates)
-      });
-      return result;
+      const { data, error } = await supabase
+        .from('pieces')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
     },
 
     async delete(id) {
-      await supabaseClient.apiCall(`pieces?id=eq.${id}`, {
-        method: 'DELETE'
-      });
+      const { error } = await supabase
+        .from('pieces')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
     }
   },
 
