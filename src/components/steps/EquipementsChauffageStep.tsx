@@ -7,96 +7,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Camera, X, Upload, Image as ImageIcon, Flame } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 import type { StepRef } from '../EtatSortieForm';
-
-// Configuration Supabase (simulée, adaptez avec votre vraie configuration)
-const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXB2eXJjdGxoYWd0emtic3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjg1NjYsImV4cCI6MjA2NjYwNDU2Nn0.4APWILaWXOtXCwdFYTk4MDithvZhp55ZJB6PnVn8D1w';
-
-// Simulation des hooks directement dans le composant
-const useToast = () => ({
-  success: (message: string) => console.log('✅ Success:', message),
-  error: (message: string) => console.error('❌ Error:', message),
-  info: (message: string) => console.info('ℹ️ Info:', message),
-});
-
-const supabase = {
-  storage: {
-    from: (bucket: string) => ({
-      upload: async (path: string, file: File) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
-          method: 'POST',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-          body: formData
-        });
-        if (!response.ok) throw new Error(`Upload failed: ${response.statusText} (${response.status})`);
-        return { data: { path }, error: null };
-      },
-      remove: async (paths: string[]) => {
-        const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}`, {
-          method: 'DELETE',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prefixes: paths })
-        });
-        return { error: response.ok ? null : new Error('Delete failed') };
-      },
-      getPublicUrl: (path: string) => ({
-        data: { publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}` }
-      })
-    })
-  },
-  from: (table: string) => ({
-    select: (columns: string) => ({
-      eq: (column: string, value: any) => ({
-        single: async () => {
-          // Simulation de la récupération des données
-          const mockData = {
-            id: 'mock-id',
-            etat_des_lieux_id: value,
-            chaudiere_etat: 'Bon état',
-            chaudiere_date_dernier_entretien: '2024-01-15',
-            ballon_eau_chaude_etat: 'Correct',
-            radiateurs_nombre: 5,
-            radiateurs_etat: 'Bon état général',
-            thermostat_present: true,
-            thermostat_etat: 'Programmable, récent',
-            pompe_a_chaleur_present: false,
-            pompe_a_chaleur_etat: '',
-            commentaires: 'Entretien annuel à prévoir',
-            photos: []
-          };
-          
-          // Simule une absence de données pour les nouveaux états
-          if (Math.random() > 0.5) {
-            return { data: null, error: { code: 'PGRST116' } };
-          }
-          
-          return { data: mockData, error: null };
-        }
-      })
-    }),
-    upsert: (data: any) => ({
-      select: () => ({
-        single: async () => {
-          // Simulation de la sauvegarde
-          console.log('💾 Sauvegarde simulée:', data);
-          return { data: { ...data, id: data.id || 'new-id' }, error: null };
-        }
-      })
-    }),
-    insert: (data: any) => ({
-      select: () => ({
-        single: async () => {
-          // Simulation de la création
-          console.log('➕ Création simulée:', data);
-          return { data: { ...data, id: 'new-id' }, error: null };
-        }
-      })
-    })
-  })
-};
 
 interface Photo {
   id: string;
@@ -130,7 +43,7 @@ interface EquipementsChauffageStepProps {
 }
 
 const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepProps>(({ etatId }, ref) => {
-  const toast = useToast();
+  const { toast } = useToast();
   
   // État local pour simuler les données
   const [isLoading, setIsLoading] = useState(true);
@@ -203,7 +116,11 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
         }
       } catch (error) {
         console.error('Erreur lors du chargement des données:', error);
-        toast.error('Erreur lors du chargement des données');
+        toast({
+          title: "Erreur",
+          description: "Erreur lors du chargement des données",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }
@@ -225,11 +142,19 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
     const validFiles: (File & { description?: string })[] = [];
     Array.from(files).forEach(file => {
       if (file.size > 5 * 1024 * 1024) {
-        toast.error(`Fichier ${file.name} trop volumineux (max 5MB)`);
+        toast({
+          title: "Erreur",
+          description: `Fichier ${file.name} trop volumineux (max 5MB)`,
+          variant: "destructive"
+        });
         return;
       }
       if (!file.type.startsWith('image/')) {
-        toast.error(`Fichier ${file.name} n'est pas une image`);
+        toast({
+          title: "Erreur",
+          description: `Fichier ${file.name} n'est pas une image`,
+          variant: "destructive"
+        });
         return;
       }
       const fileWithDesc = file as (File & { description?: string });
@@ -251,9 +176,16 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
     try {
       await supabase.storage.from('etat-des-lieux-photos').remove([filePath]);
       setExistingPhotos(prev => prev.filter(p => p.id !== photoId));
-      toast.info('Photo retirée localement. Sauvegardez pour confirmer.');
+      toast({
+        title: "Photo retirée",
+        description: "Photo retirée localement. Sauvegardez pour confirmer."
+      });
     } catch (error) {
-      toast.error('Erreur suppression photo du stockage.');
+      toast({
+        title: "Erreur",
+        description: "Erreur suppression photo du stockage.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -297,7 +229,11 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
       }
       return uploadedResults;
     } catch (error) {
-      toast.error(`Erreur upload: ${error instanceof Error ? error.message : 'Inconnue'}`);
+      toast({
+        title: "Erreur",
+        description: `Erreur upload: ${error instanceof Error ? error.message : 'Inconnue'}`,
+        variant: "destructive"
+      });
       throw error;
     } finally {
       setUploadingPhotos(false);
@@ -306,7 +242,11 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
 
   const handleSave = async () => {
     if (!etatId) {
-      toast.error('ID de l\'état des lieux manquant.');
+      toast({
+        title: "Erreur",
+        description: "ID de l'état des lieux manquant.",
+        variant: "destructive"
+      });
       return;
     }
     
@@ -350,9 +290,16 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
 
       setEquipementsChauffageData(savedData);
       setNewPhotos([]);
-      toast.success('Équipements de chauffage sauvegardés !');
+      toast({
+        title: "Succès",
+        description: "Équipements de chauffage sauvegardés !"
+      });
     } catch (error) {
-      toast.error(`Erreur sauvegarde: ${error instanceof Error ? error.message : 'Détails dans console'}`);
+      toast({
+        title: "Erreur",
+        description: `Erreur sauvegarde: ${error instanceof Error ? error.message : 'Détails dans console'}`,
+        variant: "destructive"
+      });
       console.error('Erreur de sauvegarde:', error);
     } finally {
       setIsSaving(false);
