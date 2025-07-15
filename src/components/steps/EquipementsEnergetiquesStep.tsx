@@ -1,73 +1,7 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Camera, X, Upload, Image, Leaf, Wind } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
-
-// Configuration Supabase simulée
-const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXB2eXJjdGxoYWd0emtic3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjg1NjYsImV4cCI6MjA2NjYwNDU2Nn0.4APWILaWXOtXCwdFYTk4MDithvZhp55ZJB6PnVn8D1w';
-
-// Supabase client simulé
-const supabase = {
-  storage: {
-    from: (bucket) => ({
-      upload: async (path, file) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
-          method: 'POST',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-          body: formData
-        });
-        if (!response.ok) throw new Error(`Upload failed: ${response.statusText} (${response.status})`);
-        return { data: { path }, error: null };
-      },
-      remove: async (paths) => {
-        const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}`, {
-          method: 'DELETE',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prefixes: paths })
-        });
-        return { error: response.ok ? null : new Error('Delete failed') };
-      },
-      getPublicUrl: (path) => ({
-        data: { publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}` }
-      })
-    })
-  },
-  from: (table) => ({
-    select: (columns) => ({
-      eq: (column, value) => ({
-        single: async () => {
-          const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${column}=eq.${value}&select=${columns}`, {
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-          });
-          if (!response.ok && response.status !== 404) throw new Error('Fetch failed');
-          const data = await response.json();
-          return { data: data.length > 0 ? data[0] : null, error: data.length === 0 ? { code: 'PGRST116' } : null };
-        }
-      })
-    }),
-    upsert: (data) => ({
-      select: () => ({
-        single: async () => {
-          const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-            method: 'POST',
-            headers: { 
-              'apikey': SUPABASE_ANON_KEY, 
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=representation'
-            },
-            body: JSON.stringify(data)
-          });
-          if (!response.ok) throw new Error('Upsert failed');
-          const result = await response.json();
-          return { data: Array.isArray(result) ? result[0] : result, error: null };
-        }
-      })
-    })
-  })
-};
+import { supabase } from '@/lib/supabase';
 
 const EquipementsEnergetiquesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = "demo-etat-123" }, ref) => {
   const [formData, setFormData] = useState({
@@ -93,18 +27,22 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, { etatId?: string }>(({ 
     saveData: handleSave
   }));
 
-  // Simulation du hook useEquipementsEnergetiquesByEtatId
+  // Hook pour récupérer les équipements énergétiques
   const fetchEquipementsEnergetiques = async (etatId) => {
     setIsLoading(true);
     try {
-      const result = await supabase
+      const { data, error } = await supabase
         .from('equipements_energetiques')
         .select('*')
         .eq('etat_des_lieux_id', etatId)
         .single();
       
-      setEquipementsEnergetiquesData(result.data);
-      return result.data;
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+      
+      setEquipementsEnergetiquesData(data);
+      return data;
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
       return null;
@@ -113,34 +51,39 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, { etatId?: string }>(({ 
     }
   };
 
-  // Simulation du hook useUpdateEquipementsEnergetiques
+  // Hook pour mettre à jour les équipements énergétiques
   const updateEquipementsEnergetiques = async (equipements) => {
     try {
-      const result = await supabase
+      const { data, error } = await supabase
         .from('equipements_energetiques')
-        .upsert(equipements)
+        .update(equipements)
+        .eq('id', equipements.id)
         .select()
         .single();
       
-      setEquipementsEnergetiquesData(result.data);
-      return result.data;
+      if (error) throw error;
+      
+      setEquipementsEnergetiquesData(data);
+      return data;
     } catch (error) {
       console.error('Erreur lors de la mise à jour:', error);
       throw error;
     }
   };
 
-  // Simulation du hook useCreateEquipementsEnergetiques
+  // Hook pour créer les équipements énergétiques
   const createEquipementsEnergetiques = async (equipements) => {
     try {
-      const result = await supabase
+      const { data, error } = await supabase
         .from('equipements_energetiques')
-        .upsert(equipements)
+        .insert(equipements)
         .select()
         .single();
       
-      setEquipementsEnergetiquesData(result.data);
-      return result.data;
+      if (error) throw error;
+      
+      setEquipementsEnergetiquesData(data);
+      return data;
     } catch (error) {
       console.error('Erreur lors de la création:', error);
       throw error;
