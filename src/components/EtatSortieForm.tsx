@@ -28,6 +28,8 @@ import PartiesPrivativesStep from '@/components/steps/PartiesPrivativesStep';
 import AutresEquipementsStep from '@/components/steps/AutresEquipementsStep';
 import EquipementsEnergetiquesStep from '@/components/steps/EquipementsEnergetiquesStep';
 import EquipementsChauffageStep from '@/components/steps/EquipementsChauffageStep';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SignatureCanvas } from './SignatureCanvas';
 
 interface EtatSortieFormProps {
   etatId: string;
@@ -194,7 +196,7 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
                 {initialEtatDesLieux?.date_sortie ? 'Confirmer les modifications' : 'Finaliser l\'état des lieux'}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <p className="text-sm text-slate-600">
                 {initialEtatDesLieux?.date_sortie
                   ? `Cet état des lieux a été initialement finalisé le ${new Date(initialEtatDesLieux.date_sortie).toLocaleDateString()}. En confirmant, vous sauvegardez les modifications apportées.`
@@ -205,54 +207,85 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
                   La date de sortie enregistrée restera le <strong className='text-slate-800'>{new Date(initialEtatDesLieux.date_sortie).toLocaleDateString()}</strong>. Pour la modifier, veuillez retourner à l'étape 'Général'.
                 </p>
               )}
-              <div className="space-y-4 border-t pt-4">
-                <h4 className="font-medium text-slate-800">Travaux à réaliser</h4>
-                
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="travaux"
-                    checked={travauxAFaire}
-                    onCheckedChange={setTravauxAFaire}
-                  />
-                  <Label htmlFor="travaux">
-                    Des travaux sont nécessaires suite à cet état des lieux
-                  </Label>
-                </div>
 
-                {travauxAFaire && (
-                  <div className="space-y-2">
-                    <Label htmlFor="description-travaux">Description des travaux à effectuer</Label>
-                    <Textarea
-                      id="description-travaux"
-                      placeholder="Décrivez en détail les travaux à réaliser..."
-                      value={descriptionTravaux}
-                      onChange={(e) => setDescriptionTravaux(e.target.value)}
-                      className="min-h-[100px]"
+              <Tabs defaultValue="validation" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="validation">Validation</TabsTrigger>
+                  <TabsTrigger value="signature">Signatures</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="validation" className="space-y-4">
+                  <div className="space-y-4 border-t pt-4">
+                    <h4 className="font-medium text-slate-800">Travaux à réaliser</h4>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Switch 
+                        id="travaux"
+                        checked={travauxAFaire}
+                        onCheckedChange={setTravauxAFaire}
+                      />
+                      <Label htmlFor="travaux">
+                        Des travaux sont nécessaires suite à cet état des lieux
+                      </Label>
+                    </div>
+
+                    {travauxAFaire && (
+                      <div className="space-y-2">
+                        <Label htmlFor="description-travaux">Description des travaux à effectuer</Label>
+                        <Textarea
+                          id="description-travaux"
+                          placeholder="Décrivez en détail les travaux à réaliser..."
+                          value={descriptionTravaux}
+                          onChange={(e) => setDescriptionTravaux(e.target.value)}
+                          className="min-h-[100px]"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="validation"
+                      checked={isValidationChecked}
+                      onCheckedChange={handleCheckboxChange}
+                    />
+                    <Label htmlFor="validation">
+                      Je confirme que toutes les informations sont correctes et que l'état des lieux peut être {initialEtatDesLieux?.date_sortie ? 'mis à jour' : 'finalisé'}
+                    </Label>
+                  </div>
+                  
+                  <Button
+                    onClick={handleFinalize}
+                    disabled={!isValidationChecked || updateEtatSortieMutation.isPending}
+                    className="w-full"
+                  >
+                    {updateEtatSortieMutation.isPending
+                      ? (initialEtatDesLieux?.date_sortie ? 'Sauvegarde...' : 'Finalisation...')
+                      : (initialEtatDesLieux?.date_sortie ? 'Sauvegarder les modifications' : 'Finaliser l\'état des lieux')}
+                  </Button>
+                </TabsContent>
+
+                <TabsContent value="signature" className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <SignatureCanvas
+                      title="Signature du locataire"
+                      onSignatureSave={(signature) => {
+                        // TODO: Sauvegarder la signature du locataire
+                        console.log('Signature locataire:', signature);
+                        toast.success('Signature du locataire sauvegardée');
+                      }}
+                    />
+                    <SignatureCanvas
+                      title="Signature du propriétaire/agent"
+                      onSignatureSave={(signature) => {
+                        // TODO: Sauvegarder la signature du propriétaire
+                        console.log('Signature propriétaire:', signature);
+                        toast.success('Signature du propriétaire sauvegardée');
+                      }}
                     />
                   </div>
-                )}
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="validation"
-                  checked={isValidationChecked}
-                  onCheckedChange={handleCheckboxChange}
-                />
-                <Label htmlFor="validation">
-                  Je confirme que toutes les informations sont correctes et que l'état des lieux peut être {initialEtatDesLieux?.date_sortie ? 'mis à jour' : 'finalisé'}
-                </Label>
-              </div>
-              
-              <Button
-                onClick={handleFinalize}
-                disabled={!isValidationChecked || updateEtatSortieMutation.isPending}
-                className="w-full"
-              >
-                {updateEtatSortieMutation.isPending
-                  ? (initialEtatDesLieux?.date_sortie ? 'Sauvegarde...' : 'Finalisation...')
-                  : (initialEtatDesLieux?.date_sortie ? 'Sauvegarder les modifications' : 'Finaliser l\'état des lieux')}
-              </Button>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         );
