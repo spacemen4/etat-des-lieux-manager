@@ -51,44 +51,6 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, { etatId?: string }>(({ 
     }
   };
 
-  // Hook pour mettre à jour les équipements énergétiques
-  const updateEquipementsEnergetiques = async (equipements) => {
-    try {
-      const { data, error } = await supabase
-        .from('equipements_energetiques')
-        .update(equipements)
-        .eq('id', equipements.id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      setEquipementsEnergetiquesData(data);
-      return data;
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour:', error);
-      throw error;
-    }
-  };
-
-  // Hook pour créer les équipements énergétiques
-  const createEquipementsEnergetiques = async (equipements) => {
-    try {
-      const { data, error } = await supabase
-        .from('equipements_energetiques')
-        .insert(equipements)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      setEquipementsEnergetiquesData(data);
-      return data;
-    } catch (error) {
-      console.error('Erreur lors de la création:', error);
-      throw error;
-    }
-  };
 
   // Chargement initial des données
   useEffect(() => {
@@ -220,11 +182,13 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, { etatId?: string }>(({ 
         photos: allPhotos,
       };
       
-      if (equipementsEnergetiquesData?.id) {
-        await updateEquipementsEnergetiques(dataToSave);
-      } else {
-        const {id, ...creationData} = dataToSave;
-        await createEquipementsEnergetiques(creationData);
+      const { error: upsertError } = await supabase
+        .from('equipements_energetiques')
+        .upsert(dataToSave)
+        .select();
+
+      if (upsertError) {
+        throw upsertError;
       }
       
       setNewPhotos([]);
