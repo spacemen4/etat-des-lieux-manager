@@ -269,18 +269,24 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <SignatureCanvas
                       title="Signature du locataire"
+                      autoSave
+                      initialSignature={initialEtatDesLieux?.signature_locataire ?? undefined}
                       onSignatureSave={(signature) => {
-                        // TODO: Sauvegarder la signature du locataire
-                        console.log('Signature locataire:', signature);
-                        toast.success('Signature du locataire sauvegardée');
+                        updateEtatSortieMutation.mutate({
+                          id: etatId,
+                          signature_locataire: signature,
+                        });
                       }}
                     />
                     <SignatureCanvas
                       title="Signature du propriétaire/agent"
+                      autoSave
+                      initialSignature={initialEtatDesLieux?.signature_proprietaire_agent ?? undefined}
                       onSignatureSave={(signature) => {
-                        // TODO: Sauvegarder la signature du propriétaire
-                        console.log('Signature propriétaire:', signature);
-                        toast.success('Signature du propriétaire sauvegardée');
+                        updateEtatSortieMutation.mutate({
+                          id: etatId,
+                          signature_proprietaire_agent: signature,
+                        });
                       }}
                     />
                   </div>
