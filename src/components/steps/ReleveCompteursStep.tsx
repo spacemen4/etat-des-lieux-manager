@@ -403,8 +403,6 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
         gaz: [],
         eau: []
       });
-
-      alert('Relevé des compteurs sauvegardé avec succès');
       
     } catch (error) {
       console.error('❌ Erreur lors de la sauvegarde:', error);
