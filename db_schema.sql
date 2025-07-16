@@ -21,6 +21,8 @@ CREATE TABLE etat_des_lieux (
     rendez_vous_id UUID, -- Foreign key linking to the appointment that led to this inventory.
     travaux_a_faire BOOLEAN DEFAULT FALSE, -- Indicates if work is needed following the inventory (TRUE/FALSE).
     description_travaux TEXT, -- Detailed description of work to be done (optional if travaux_a_faire = TRUE).
+    signature_locataire TEXT, -- Signature of the tenant (base64 encoded image).
+    signature_proprietaire_agent TEXT, -- Signature of the landlord or agent (base64 encoded image).
     photos jsonb DEFAULT '[]'::jsonb -- Photos associated with the inventory.
 );
 
