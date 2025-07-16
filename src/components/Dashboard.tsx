@@ -325,18 +325,30 @@ const Dashboard = () => {
                           </Button>
                         )}
                         {etat.date_sortie && (
-                          <Button
-                            size="sm"
-                            asChild
-                            variant="outline"
-                            className="border-slate-400 hover:bg-slate-100 text-slate-700"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <a href={`/sortie/${etat.id}`} className="flex items-center justify-center gap-1">
-                              <FileText className="h-3 w-3" />
-                              Modifier
-                            </a>
-                          </Button>
+                          <div className="flex flex-col gap-2 w-full">
+                            <Button
+                              size="sm"
+                              asChild
+                              variant="outline"
+                              className="border-slate-400 hover:bg-slate-100 text-slate-700"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <a href={`/sortie/${etat.id}`} className="flex items-center justify-center gap-1">
+                                <FileText className="h-3 w-3" />
+                                Modifier
+                              </a>
+                            </Button>
+                            <Badge 
+                              variant="secondary" 
+                              className="cursor-pointer hover:bg-secondary/80 text-center py-1 px-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewEtat(etat.id);
+                              }}
+                            >
+                              Visualiser le détail de l'état des lieux terminé
+                            </Badge>
+                          </div>
                         )}
                       </div>
                     </div>

@@ -13,6 +13,7 @@ import {
   useEquipementsEnergetiquesByEtatId,
   useEquipementsChauffageByEtatId
 } from '@/hooks/useEtatDesLieux';
+import { useUser } from '@/context/UserContext';
 
 interface EtatDesLieuxViewerProps {
   etatId: string | null;
@@ -21,9 +22,8 @@ interface EtatDesLieuxViewerProps {
 }
 
 const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen, onClose }) => {
-  // Note: We need userUuid for the useEtatDesLieuxById hook, but it's not passed as prop
-  // For now, using empty string - this should be fixed to get user from context
-  const { data: etatDesLieux } = useEtatDesLieuxById(etatId || '', '');
+  const { userUuid } = useUser();
+  const { data: etatDesLieux } = useEtatDesLieuxById(etatId || '', userUuid);
   const { data: pieces } = usePiecesByEtatId(etatId || '');
   const { data: releveCompteurs } = useReleveCompteursByEtatId(etatId || '');
   const { data: cles } = useClesByEtatId(etatId || '');
@@ -407,14 +407,54 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                       </div>
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
+                 </div>
+               </CardContent>
+             </Card>
+           )}
+
+           {/* Signatures */}
+           {etatDesLieux.signature_locataire || etatDesLieux.signature_proprietaire_agent && (
+             <Card>
+               <CardHeader>
+                 <CardTitle className="flex items-center gap-2">
+                   <FileText className="h-4 w-4" />
+                   Signatures
+                 </CardTitle>
+               </CardHeader>
+               <CardContent>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   {etatDesLieux.signature_locataire && (
+                     <div>
+                       <h4 className="font-medium mb-2">Signature du locataire</h4>
+                       <div className="border rounded-lg p-2 bg-gray-50">
+                         <img 
+                           src={etatDesLieux.signature_locataire} 
+                           alt="Signature du locataire"
+                           className="w-full h-32 object-contain"
+                         />
+                       </div>
+                     </div>
+                   )}
+                   {etatDesLieux.signature_proprietaire_agent && (
+                     <div>
+                       <h4 className="font-medium mb-2">Signature du propriétaire/agent</h4>
+                       <div className="border rounded-lg p-2 bg-gray-50">
+                         <img 
+                           src={etatDesLieux.signature_proprietaire_agent} 
+                           alt="Signature du propriétaire/agent"
+                           className="w-full h-32 object-contain"
+                         />
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               </CardContent>
+             </Card>
+           )}
+         </div>
+       </DialogContent>
+     </Dialog>
+   );
+ };
 
 export default EtatDesLieuxViewer;
