@@ -1,23 +1,33 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eraser, Save, RotateCcw } from 'lucide-react';
+import { debounce } from 'lodash';
 
 interface SignatureCanvasProps {
   onSignatureSave: (signatureData: string) => void;
   initialSignature?: string;
   title?: string;
+  autoSave?: boolean;
+  debounceTime?: number;
 }
 
 export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
   onSignatureSave,
   initialSignature,
-  title = "Signature"
+  title = "Signature",
+  autoSave = false,
+  debounceTime = 1000,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isEmpty, setIsEmpty] = useState(true);
   const [lastPoint, setLastPoint] = useState<{ x: number; y: number } | null>(null);
+
+  // Debounced save function
+  const debouncedSave = debounce((dataURL: string) => {
+    onSignatureSave(dataURL);
+  }, debounceTime);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -104,6 +114,9 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
   const stopDrawing = () => {
     setIsDrawing(false);
     setLastPoint(null);
+    if (autoSave) {
+      saveSignature();
+    }
   };
 
   const clearCanvas = () => {
@@ -115,14 +128,26 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, rect.width, rect.height);
     setIsEmpty(true);
+    if (autoSave) {
+      debouncedSave(''); // Save empty signature
+    }
   };
 
   const saveSignature = () => {
     const canvas = canvasRef.current;
-    if (!canvas || isEmpty) return;
+    if (!canvas) return;
+
+    if (isEmpty) {
+      if (autoSave) debouncedSave('');
+      return;
+    }
 
     const dataURL = canvas.toDataURL('image/png');
-    onSignatureSave(dataURL);
+    if (autoSave) {
+      debouncedSave(dataURL);
+    } else {
+      onSignatureSave(dataURL);
+    }
   };
 
   return (
@@ -140,15 +165,17 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
               <RotateCcw className="h-4 w-4 mr-1" />
               Effacer
             </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={saveSignature}
-              disabled={isEmpty}
-            >
-              <Save className="h-4 w-4 mr-1" />
-              Sauvegarder
-            </Button>
+            {!autoSave && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={saveSignature}
+                disabled={isEmpty}
+              >
+                <Save className="h-4 w-4 mr-1" />
+                Sauvegarder
+              </Button>
+            )}
           </div>
         </CardTitle>
       </CardHeader>
