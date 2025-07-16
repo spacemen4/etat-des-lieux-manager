@@ -267,9 +267,11 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
       let savedData;
       if (equipementsChauffageData?.id) {
         // Mise à jour
+        const { id, ...updateData } = dataToSave;
         const { data, error } = await supabase
           .from('equipements_chauffage')
-          .upsert(dataToSave)
+          .update(updateData)
+          .eq('id', equipementsChauffageData.id)
           .select()
           .single();
           
