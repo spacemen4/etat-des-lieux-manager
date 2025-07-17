@@ -271,7 +271,7 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                                   <img 
                                     src={photo.url || photo.file_url} 
                                     alt={`Photo générale ${index + 1}`}
-                                    className="w-full h-32 object-cover rounded-lg border"
+                                    className="max-w-full max-h-32 rounded-lg border"
                                   />
                                 </div>
                               ))}
@@ -288,7 +288,7 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                                   <img 
                                     src={photo.url || photo.file_url} 
                                     alt={`Photo électricité ${index + 1}`}
-                                    className="w-full h-32 object-cover rounded-lg border"
+                                    className="max-w-full max-h-32 rounded-lg border"
                                   />
                                 </div>
                               ))}
@@ -305,7 +305,7 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                                   <img 
                                     src={photo.url || photo.file_url} 
                                     alt={`Photo eau ${index + 1}`}
-                                    className="w-full h-32 object-cover rounded-lg border"
+                                    className="max-w-full max-h-32 rounded-lg border"
                                   />
                                 </div>
                               ))}
@@ -322,7 +322,7 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                                   <img 
                                     src={photo.url || photo.file_url} 
                                     alt={`Photo gaz ${index + 1}`}
-                                    className="w-full h-32 object-cover rounded-lg border"
+                                    className="max-w-full max-h-32 rounded-lg border"
                                   />
                                 </div>
                               ))}
@@ -347,7 +347,7 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                                   <img 
                                     src={photo.url || photo.file_url} 
                                     alt={`Photo ${cle.type_cle_badge} ${index + 1}`}
-                                    className="w-full h-32 object-cover rounded-lg border"
+                                    className="max-w-full max-h-32 rounded-lg border"
                                   />
                                 </div>
                               ))}
@@ -372,7 +372,7 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                                   <img 
                                     src={photo.url || photo.file_url} 
                                     alt={`Photo ${partie.type_partie} ${index + 1}`}
-                                    className="w-full h-32 object-cover rounded-lg border"
+                                    className="max-w-full max-h-32 rounded-lg border"
                                   />
                                 </div>
                               ))}
@@ -397,7 +397,7 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                                   <img 
                                     src={photo.url || photo.file_url} 
                                     alt={`Photo ${equipement.equipement} ${index + 1}`}
-                                    className="w-full h-32 object-cover rounded-lg border"
+                                    className="max-w-full max-h-32 rounded-lg border"
                                   />
                                 </div>
                               ))}
