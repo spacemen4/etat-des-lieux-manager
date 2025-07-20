@@ -288,7 +288,6 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, { etatId?: string }>(({ 
                 value={formData.dpe_classe}
                 onChange={(e) => handleInputChange('dpe_classe', e.target.value.toUpperCase())}
                 placeholder="Lettre de A à G"
-.
                 maxLength={1}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
