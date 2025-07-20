@@ -63,11 +63,14 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, { etatId?: string }>(({ 
   useEffect(() => {
     if (equipementsEnergetiquesData) {
       const { photos, id, etat_des_lieux_id, ...restData } = equipementsEnergetiquesData;
+
+      const parsedPhotos = photos ? (typeof photos === 'string' ? JSON.parse(photos) : photos) : [];
+
       setFormData({
         ...restData,
         date_dpe: restData.date_dpe ? new Date(restData.date_dpe).toISOString().split('T')[0] : '',
       });
-      setExistingPhotos(photos || []);
+      setExistingPhotos(parsedPhotos);
     } else {
       setFormData({
         chauffage_type: '', eau_chaude_type: '', dpe_classe: '', ges_classe: '',
