@@ -372,6 +372,46 @@ CREATE TABLE public.retraitecomplementaire (
   CONSTRAINT retraitecomplementaire_pkey PRIMARY KEY (id),
   CONSTRAINT retraitecomplementaire_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
+
+CREATE TABLE public.releve_compteurs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    etat_des_lieux_id UUID NOT NULL,
+    nom_ancien_occupant TEXT,
+    electricite_n_compteur TEXT,
+    electricite_h_pleines TEXT,
+    electricite_h_creuses TEXT,
+    gaz_naturel_n_compteur TEXT,
+    gaz_naturel_releve TEXT,
+    eau_chaude_m3 TEXT,
+    eau_froide_m3 TEXT,
+    photos JSONB,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE public.etat_des_lieux (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.users(id),
+    -- other columns for etat_des_lieux
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE public.equipements_energetiques (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    etat_des_lieux_id UUID NOT NULL,
+    chauffage_type TEXT,
+    eau_chaude_type TEXT,
+    dpe_classe TEXT,
+    ges_classe TEXT,
+    date_dpe DATE,
+    presence_panneaux_solaires BOOLEAN,
+    type_isolation TEXT,
+    commentaires TEXT,
+    photos JSONB,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
 CREATE TABLE public.souscription_formulaire_cosouscripteur (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
