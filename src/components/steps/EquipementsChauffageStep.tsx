@@ -79,18 +79,27 @@ const useEquipementsChauffageByEtatId = (etatId: string) => {
   const [isLoading, setIsLoading] = useState(true);
   
   const refetch = async () => {
+    console.log('🔄 Rechargement des équipements chauffage pour etatId:', etatId);
     setIsLoading(true);
     try {
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/equipements_chauffage?etat_des_lieux_id=eq.${etatId}`, {
+      const url = `${SUPABASE_URL}/rest/v1/equipements_chauffage?etat_des_lieux_id=eq.${etatId}`;
+      console.log('📡 URL de requête:', url);
+      
+      const response = await fetch(url, {
         headers: {
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         }
       });
+      
+      console.log('📡 Réponse chargement - Status:', response.status);
+      
       const result = await response.json();
+      console.log('📡 Données chargées:', result);
+      
       setData(result || []);
     } catch (error) {
-      console.error('Erreur chargement équipements chauffage:', error);
+      console.error('❌ Erreur chargement équipements chauffage:', error);
       setData([]);
     } finally {
       setIsLoading(false);
@@ -107,6 +116,8 @@ const useEquipementsChauffageByEtatId = (etatId: string) => {
 const useCreateEquipementChauffage = () => {
   return {
     mutateAsync: async (data: EquipementChauffage) => {
+      console.log('🔄 Tentative de création équipement chauffage:', data);
+      
       const response = await fetch(`${SUPABASE_URL}/rest/v1/equipements_chauffage`, {
         method: 'POST',
         headers: {
@@ -117,8 +128,27 @@ const useCreateEquipementChauffage = () => {
         },
         body: JSON.stringify(data)
       });
-      if (!response.ok) throw new Error('Erreur création équipement chauffage');
-      return response.json();
+      
+      console.log('📡 Réponse API création - Status:', response.status);
+      console.log('📡 Réponse API création - Headers:', Object.fromEntries(response.headers.entries()));
+      
+      const responseText = await response.text();
+      console.log('📡 Réponse API création - Body:', responseText);
+      
+      if (!response.ok) {
+        console.error('❌ Erreur création - Status:', response.status);
+        console.error('❌ Erreur création - Response:', responseText);
+        throw new Error(`Erreur création équipement chauffage: ${response.status} - ${responseText}`);
+      }
+      
+      try {
+        const result = JSON.parse(responseText);
+        console.log('✅ Création réussie:', result);
+        return result;
+      } catch (parseError) {
+        console.error('❌ Erreur parsing JSON:', parseError);
+        return responseText;
+      }
     },
     isPending: false
   };
@@ -127,6 +157,8 @@ const useCreateEquipementChauffage = () => {
 const useUpdateEquipementChauffage = () => {
   return {
     mutateAsync: async (data: EquipementChauffage) => {
+      console.log('🔄 Tentative de mise à jour équipement chauffage:', data);
+      
       const response = await fetch(`${SUPABASE_URL}/rest/v1/equipements_chauffage?id=eq.${data.id}`, {
         method: 'PATCH',
         headers: {
@@ -137,8 +169,27 @@ const useUpdateEquipementChauffage = () => {
         },
         body: JSON.stringify(data)
       });
-      if (!response.ok) throw new Error('Erreur mise à jour équipement chauffage');
-      return response.json();
+      
+      console.log('📡 Réponse API mise à jour - Status:', response.status);
+      console.log('📡 Réponse API mise à jour - Headers:', Object.fromEntries(response.headers.entries()));
+      
+      const responseText = await response.text();
+      console.log('📡 Réponse API mise à jour - Body:', responseText);
+      
+      if (!response.ok) {
+        console.error('❌ Erreur mise à jour - Status:', response.status);
+        console.error('❌ Erreur mise à jour - Response:', responseText);
+        throw new Error(`Erreur mise à jour équipement chauffage: ${response.status} - ${responseText}`);
+      }
+      
+      try {
+        const result = JSON.parse(responseText);
+        console.log('✅ Mise à jour réussie:', result);
+        return result;
+      } catch (parseError) {
+        console.error('❌ Erreur parsing JSON:', parseError);
+        return responseText;
+      }
     },
     isPending: false
   };
@@ -307,28 +358,43 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
   };
 
   const handleSave = async () => {
+    console.log('🚀 Début de la sauvegarde');
+    console.log('📊 État actuel equipementChauffage:', equipementChauffage);
+    console.log('📸 Nouvelles photos:', newPhotos);
+    
     setIsSaving(true);
     try {
+      console.log('📸 Upload des photos...');
       const newlyUploadedPhotos = await _uploadPhotos();
+      console.log('📸 Photos uploadées:', newlyUploadedPhotos);
+      
       const allPhotos = [...equipementChauffage.photos, ...newlyUploadedPhotos];
+      console.log('📸 Toutes les photos:', allPhotos);
       
       const dataToSave = {
         ...equipementChauffage,
         photos: allPhotos,
         etat_des_lieux_id: etatId,
       };
+      
+      console.log('💾 Données à sauvegarder:', dataToSave);
+      console.log('🔍 A un ID existant?', !!equipementChauffage.id);
 
       if (equipementChauffage.id) {
+        console.log('🔄 Mise à jour de l\'équipement existant');
         await updateEquipementChauffageMutation.mutateAsync(dataToSave);
       } else {
+        console.log('🆕 Création d\'un nouvel équipement');
         await createEquipementChauffageMutation.mutateAsync(dataToSave);
       }
       
       setNewPhotos([]);
+      console.log('✅ Sauvegarde terminée avec succès');
       toast.success('Équipements de chauffage sauvegardés avec succès !');
       refetch();
     } catch (error) {
-      console.error("Erreur lors de la sauvegarde:", error);
+      console.error("❌ Erreur lors de la sauvegarde:", error);
+      console.error("❌ Stack trace:", error.stack);
       toast.error('Erreur lors de la sauvegarde des équipements de chauffage.');
     } finally {
       setIsSaving(false);
