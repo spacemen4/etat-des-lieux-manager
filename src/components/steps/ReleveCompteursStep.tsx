@@ -93,7 +93,7 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
 
       if (data) {
         console.log('✅ Données chargées:', data);
-        const photos = data.photos ? (typeof data.photos === 'string' ? JSON.parse(data.photos) : data.photos) : [];
+        const photos = data.photos || [];
         const transformedData = { ...data, photos };
 
         setReleveCompteurs(transformedData);

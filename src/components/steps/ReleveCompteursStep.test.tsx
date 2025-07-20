@@ -67,4 +67,11 @@ describe('ReleveCompteursStep', () => {
 
     await waitFor(() => expect(screen.getByText('chucknorris.png')).toBeInTheDocument());
   });
+
+  it('should call saveData on save button click', () => {
+    const saveData = mockRef.current.saveData;
+    render(<ReleveCompteursStep etatId="1" ref={mockRef} />);
+    fireEvent.click(screen.getAllByText(/Enregistrer le relevé/i)[0]);
+    expect(saveData).toHaveBeenCalled();
+  });
 });

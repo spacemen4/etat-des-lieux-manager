@@ -64,7 +64,7 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, { etatId?: string }>(({ 
     if (equipementsEnergetiquesData) {
       const { photos, id, etat_des_lieux_id, ...restData } = equipementsEnergetiquesData;
 
-      const parsedPhotos = photos ? (typeof photos === 'string' ? JSON.parse(photos) : photos) : [];
+      const parsedPhotos = photos || [];
 
       setFormData({
         ...restData,
@@ -180,23 +180,37 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, { etatId?: string }>(({ 
       const allPhotos = [...existingPhotos, ...uploadedPhotosData];
       const dataToSave = {
         ...formData,
-        id: equipementsEnergetiquesData?.id,
         etat_des_lieux_id: etatId,
         photos: allPhotos,
       };
       
-      const { error: upsertError } = await supabase
-        .from('equipements_energetiques')
-        .upsert(dataToSave)
-        .select();
+      let result;
+      if (equipementsEnergetiquesData?.id) {
+        // Mise à jour
+        const { data, error } = await supabase
+          .from('equipements_energetiques')
+          .update(dataToSave)
+          .eq('id', equipementsEnergetiquesData.id)
+          .select()
+          .single();
 
-      if (upsertError) {
-        throw upsertError;
+        if (error) throw error;
+        result = data;
+      } else {
+        // Création
+        const { data, error } = await supabase
+          .from('equipements_energetiques')
+          .insert(dataToSave)
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
       }
-      
+
+      setEquipementsEnergetiquesData(result);
       setNewPhotos([]);
       showNotification('Équipements énergétiques sauvegardés !', 'success');
-      await fetchEquipementsEnergetiques(etatId);
     } catch (error) {
       showNotification(`Erreur sauvegarde: ${error.message}`, 'error');
     } finally { 
@@ -274,6 +288,7 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, { etatId?: string }>(({ 
                 value={formData.dpe_classe}
                 onChange={(e) => handleInputChange('dpe_classe', e.target.value.toUpperCase())}
                 placeholder="Lettre de A à G"
+.
                 maxLength={1}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
