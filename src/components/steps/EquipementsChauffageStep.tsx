@@ -371,13 +371,28 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
       const allPhotos = [...equipementChauffage.photos, ...newlyUploadedPhotos];
       console.log('📸 Toutes les photos:', allPhotos);
       
+      // Nettoyer les données pour éviter les erreurs de type
       const dataToSave = {
         ...equipementChauffage,
         photos: allPhotos,
         etat_des_lieux_id: etatId,
+        // Nettoyer les champs date vides (PostgreSQL n'accepte pas "" pour une date)
+        chaudiere_date_dernier_entretien: equipementChauffage.chaudiere_date_dernier_entretien || null,
+        // Nettoyer les champs texte vides
+        chaudiere_etat: equipementChauffage.chaudiere_etat || null,
+        ballon_eau_chaude_etat: equipementChauffage.ballon_eau_chaude_etat || null,
+        radiateurs_etat: equipementChauffage.radiateurs_etat || null,
+        thermostat_etat: equipementChauffage.thermostat_etat || null,
+        pompe_a_chaleur_etat: equipementChauffage.pompe_a_chaleur_etat || null,
+        commentaires: equipementChauffage.commentaires || null,
+        // S'assurer que les booléens sont bien définis
+        thermostat_present: Boolean(equipementChauffage.thermostat_present),
+        pompe_a_chaleur_present: Boolean(equipementChauffage.pompe_a_chaleur_present),
+        // S'assurer que le nombre est bien un nombre
+        radiateurs_nombre: Number(equipementChauffage.radiateurs_nombre) || 0,
       };
       
-      console.log('💾 Données à sauvegarder:', dataToSave);
+      console.log('💾 Données nettoyées à sauvegarder:', dataToSave);
       console.log('🔍 A un ID existant?', !!equipementChauffage.id);
 
       if (equipementChauffage.id) {
