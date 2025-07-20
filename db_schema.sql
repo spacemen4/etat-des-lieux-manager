@@ -82,6 +82,7 @@ CREATE TABLE public.equipements_energetiques (
 ALTER TABLE public.equipements_energetiques ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all access to own equipements_energetiques" ON public.equipements_energetiques FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
+
 CREATE TABLE public.etat_des_lieux (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   date_entree date,
@@ -214,6 +215,7 @@ CREATE TABLE public.releve_compteurs (
   CONSTRAINT releve_compteurs_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
   CONSTRAINT releve_compteurs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
+
 ALTER TABLE public.releve_compteurs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all access to own releve_compteurs" ON public.releve_compteurs FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
