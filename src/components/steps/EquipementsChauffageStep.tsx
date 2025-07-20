@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useEquipementsChauffageByEtatId, useUpdateEquipementChauffage, useCreateEquipementChauffage, useDeleteEquipementChauffage } from '@/hooks/useEtatDesLieux';
+import { useAutresEquipementsByEtatId, useUpdateAutreEquipement, useCreateAutreEquipement, useDeleteAutreEquipement } from '@/hooks/useEtatDesLieux';
 import { toast } from 'sonner';
 import { Thermometer, Camera, X, Upload, Image as ImageIcon, Flame } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
@@ -57,6 +57,11 @@ interface Photo {
 interface EquipementChauffage {
   id?: string;
   etat_des_lieux_id: string;
+  equipement: string; // Pour la compatibilité avec les hooks existants
+  etat_entree: string;
+  etat_sortie: string;
+  commentaires: string;
+  // Champs spécifiques au chauffage stockés dans commentaires ou séparément
   chaudiere_etat: string;
   chaudiere_date_dernier_entretien: string;
   ballon_eau_chaude_etat: string;
@@ -66,7 +71,6 @@ interface EquipementChauffage {
   thermostat_etat: string;
   pompe_a_chaleur_present: boolean;
   pompe_a_chaleur_etat: string;
-  commentaires: string;
   photos: Photo[];
 }
 
@@ -75,13 +79,16 @@ interface EquipementsChauffageStepProps {
 }
 
 const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepProps>(({ etatId }, ref) => {
-  const { data: equipementsChauffageData, refetch, isLoading: isLoadingData } = useEquipementsChauffageByEtatId(etatId);
-  const createEquipementChauffageMutation = useCreateEquipementChauffage();
-  const updateEquipementChauffageMutation = useUpdateEquipementChauffage();
-  const deleteEquipementChauffageMutation = useDeleteEquipementChauffage();
+  const { data: equipementsChauffageData, refetch, isLoading: isLoadingData } = useAutresEquipementsByEtatId(etatId);
+  const createEquipementChauffageMutation = useCreateAutreEquipement();
+  const updateEquipementChauffageMutation = useUpdateAutreEquipement();
+  const deleteEquipementChauffageMutation = useDeleteAutreEquipement();
 
   const [equipementChauffage, setEquipementChauffage] = useState<EquipementChauffage>({
     etat_des_lieux_id: etatId,
+    equipement: 'Équipements de chauffage',
+    etat_entree: '',
+    etat_sortie: '',
     chaudiere_etat: '',
     chaudiere_date_dernier_entretien: '',
     ballon_eau_chaude_etat: '',
@@ -108,15 +115,27 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
 
   useEffect(() => {
     if (equipementsChauffageData && equipementsChauffageData.length > 0) {
-      const data = equipementsChauffageData[0];
-      setEquipementChauffage({
-        ...data,
-        photos: data.photos || [],
-        chaudiere_date_dernier_entretien: data.chaudiere_date_dernier_entretien || '',
-        radiateurs_nombre: data.radiateurs_nombre || 0,
-        thermostat_present: data.thermostat_present || false,
-        pompe_a_chaleur_present: data.pompe_a_chaleur_present || false,
-      });
+      // Chercher un équipement avec le nom "Équipements de chauffage" ou similaire
+      const chauffageEquipement = equipementsChauffageData.find(
+        eq => eq.equipement?.toLowerCase().includes('chauffage') || eq.equipement === 'Équipements de chauffage'
+      );
+      
+      if (chauffageEquipement) {
+        setEquipementChauffage({
+          ...chauffageEquipement,
+          photos: chauffageEquipement.photos || [],
+          // Initialiser les champs spécifiques s'ils ne sont pas présents
+          chaudiere_etat: chauffageEquipement.chaudiere_etat || '',
+          chaudiere_date_dernier_entretien: chauffageEquipement.chaudiere_date_dernier_entretien || '',
+          ballon_eau_chaude_etat: chauffageEquipement.ballon_eau_chaude_etat || '',
+          radiateurs_nombre: chauffageEquipement.radiateurs_nombre || 0,
+          radiateurs_etat: chauffageEquipement.radiateurs_etat || '',
+          thermostat_present: chauffageEquipement.thermostat_present || false,
+          thermostat_etat: chauffageEquipement.thermostat_etat || '',
+          pompe_a_chaleur_present: chauffageEquipement.pompe_a_chaleur_present || false,
+          pompe_a_chaleur_etat: chauffageEquipement.pompe_a_chaleur_etat || '',
+        });
+      }
     }
   }, [equipementsChauffageData]);
 
@@ -247,6 +266,7 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
         ...equipementChauffage,
         photos: allPhotos,
         etat_des_lieux_id: etatId,
+        equipement: 'Équipements de chauffage', // S'assurer que le nom est cohérent
       };
 
       if (equipementChauffage.id) {
