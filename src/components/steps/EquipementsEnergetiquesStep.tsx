@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Camera, X, Upload, Image as ImageIcon, Zap, Leaf, Sun } from 'lucide-react';
+import { Camera, X, Upload, Image as ImageIcon, Zap, Leaf } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import type { StepRef } from '../EtatSortieForm';
@@ -64,30 +64,6 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, EquipementsEnergetiquesS
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Options pour les select
-  const dpeClasses = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-  const gesClasses = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-  const chauffageTypes = [
-    'Gaz naturel',
-    'Électrique',
-    'Fioul',
-    'Bois/Granulés',
-    'Pompe à chaleur',
-    'Géothermie',
-    'Solaire',
-    'Mixte',
-    'Autre'
-  ];
-  const eauChaudeTypes = [
-    'Gaz naturel',
-    'Électrique',
-    'Fioul',
-    'Solaire',
-    'Pompe à chaleur',
-    'Chaudière mixte',
-    'Autre'
-  ];
 
   // Exposer la fonction de sauvegarde via useImperativeHandle
   useImperativeHandle(ref, () => ({
@@ -337,6 +313,9 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, EquipementsEnergetiquesS
     );
   }
 
+  const dpeclasses = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+  const gesClasses = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+
   return (
     <Card>
       <CardHeader>
@@ -345,44 +324,38 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, EquipementsEnergetiquesS
           Équipements énergétiques et performance
         </CardTitle>
         <p className="text-sm text-gray-600">
-          Renseignez les informations sur la performance énergétique du logement et ses équipements.
+          Renseignez les informations sur la performance énergétique et les équipements du logement.
         </p>
       </CardHeader>
       <CardContent className="space-y-8">
-        {/* Section Types d'énergie */}
+        {/* Section Types de chauffage et eau chaude */}
         <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
           <h3 className="text-lg font-semibold text-slate-700 mb-3">Types d'énergie</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="chauffage_type" className="font-medium">Type de chauffage</Label>
-              <Select value={formData.chauffage_type} onValueChange={(value) => handleInputChange('chauffage_type', value)}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Sélectionner le type de chauffage" />
-                </SelectTrigger>
-                <SelectContent>
-                  {chauffageTypes.map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input 
+                id="chauffage_type" 
+                value={formData.chauffage_type} 
+                onChange={(e) => handleInputChange('chauffage_type', e.target.value)} 
+                placeholder="Ex: Gaz, Électrique, Fuel, Bois" 
+                className="mt-1"
+              />
             </div>
             <div>
               <Label htmlFor="eau_chaude_type" className="font-medium">Type de production d'eau chaude</Label>
-              <Select value={formData.eau_chaude_type} onValueChange={(value) => handleInputChange('eau_chaude_type', value)}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Sélectionner le type d'eau chaude" />
-                </SelectTrigger>
-                <SelectContent>
-                  {eauChaudeTypes.map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input 
+                id="eau_chaude_type" 
+                value={formData.eau_chaude_type} 
+                onChange={(e) => handleInputChange('eau_chaude_type', e.target.value)} 
+                placeholder="Ex: Gaz, Électrique, Solaire" 
+                className="mt-1"
+              />
             </div>
           </div>
         </div>
 
-        {/* Section Diagnostic de Performance Énergétique */}
+        {/* Section DPE */}
         <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <Leaf className="h-5 w-5 text-green-500" />
@@ -393,10 +366,10 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, EquipementsEnergetiquesS
               <Label htmlFor="dpe_classe" className="font-medium">Classe DPE</Label>
               <Select value={formData.dpe_classe} onValueChange={(value) => handleInputChange('dpe_classe', value)}>
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Classe A-G" />
+                  <SelectValue placeholder="Sélectionner la classe" />
                 </SelectTrigger>
                 <SelectContent>
-                  {dpeClasses.map((classe) => (
+                  {dpeclasses.map((classe) => (
                     <SelectItem key={classe} value={classe}>
                       Classe {classe}
                     </SelectItem>
@@ -405,10 +378,10 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, EquipementsEnergetiquesS
               </Select>
             </div>
             <div>
-              <Label htmlFor="ges_classe" className="font-medium">Classe GES</Label>
+              <Label htmlFor="ges_classe" className="font-medium">Classe GES (Gaz à Effet de Serre)</Label>
               <Select value={formData.ges_classe} onValueChange={(value) => handleInputChange('ges_classe', value)}>
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Classe A-G" />
+                  <SelectValue placeholder="Sélectionner la classe" />
                 </SelectTrigger>
                 <SelectContent>
                   {gesClasses.map((classe) => (
@@ -432,21 +405,20 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, EquipementsEnergetiquesS
           </div>
         </div>
 
-        {/* Section Énergies renouvelables */}
+        {/* Section Équipements écologiques */}
         <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <Sun className="h-5 w-5 text-orange-500" />
-            <h3 className="text-lg font-semibold text-slate-700">Énergies renouvelables</h3>
-          </div>
-          <div className="flex items-center space-x-3 mb-3">
-            <Checkbox 
-              id="presence_panneaux_solaires" 
-              checked={formData.presence_panneaux_solaires} 
-              onCheckedChange={(checked) => handleInputChange('presence_panneaux_solaires', checked as boolean)}
-            />
-            <Label htmlFor="presence_panneaux_solaires" className="font-medium cursor-pointer">
-              Présence de panneaux solaires (photovoltaïques ou thermiques)
-            </Label>
+          <h3 className="text-lg font-semibold text-slate-700 mb-3">Équipements écologiques</h3>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <Checkbox 
+                id="presence_panneaux_solaires" 
+                checked={formData.presence_panneaux_solaires} 
+                onCheckedChange={(checked) => handleInputChange('presence_panneaux_solaires', checked as boolean)}
+              />
+              <Label htmlFor="presence_panneaux_solaires" className="font-medium cursor-pointer">
+                Présence de panneaux solaires (photovoltaïques ou thermiques)
+              </Label>
+            </div>
           </div>
         </div>
 
@@ -454,12 +426,12 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, EquipementsEnergetiquesS
         <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
           <h3 className="text-lg font-semibold text-slate-700 mb-3">Isolation</h3>
           <div>
-            <Label htmlFor="type_isolation" className="font-medium">Type et état de l'isolation</Label>
+            <Label htmlFor="type_isolation" className="font-medium">Type et qualité de l'isolation</Label>
             <Input 
               id="type_isolation" 
               value={formData.type_isolation} 
               onChange={(e) => handleInputChange('type_isolation', e.target.value)} 
-              placeholder="Ex: Isolation thermique récente, combles isolés, murs non isolés..." 
+              placeholder="Ex: Isolation renforcée, standard, à améliorer" 
               className="mt-1"
             />
           </div>
@@ -506,7 +478,7 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, EquipementsEnergetiquesS
                   <div key={photo.id} className="relative border rounded-lg overflow-hidden bg-white shadow-sm group">
                     <img 
                       src={photo.url} 
-                      alt={photo.name || 'Photo équipement énergétique'} 
+                      alt={photo.name || 'Photo énergétique'} 
                       className="w-full h-28 object-cover" 
                       onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/150?text=Erreur')} 
                     />
@@ -586,14 +558,14 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, EquipementsEnergetiquesS
 
         {/* Commentaires Généraux */}
         <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-          <Label htmlFor="commentaires_energetiques" className="text-lg font-semibold text-slate-700 mb-3 block">
-            Commentaires généraux sur les équipements énergétiques
+          <Label htmlFor="commentaires_energetique" className="text-lg font-semibold text-slate-700 mb-3 block">
+            Commentaires généraux sur la performance énergétique
           </Label>
           <Textarea 
-            id="commentaires_energetiques" 
+            id="commentaires_energetique" 
             value={formData.commentaires} 
             onChange={(e) => handleInputChange('commentaires', e.target.value)} 
-            placeholder="Observations sur la performance énergétique, travaux d'amélioration recommandés, particularités..." 
+            placeholder="Observations sur la consommation, recommandations d'amélioration, travaux suggérés..." 
             rows={4} 
             className="mt-1"
           />
