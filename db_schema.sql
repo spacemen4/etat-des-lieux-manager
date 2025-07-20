@@ -1,388 +1,568 @@
--- This SQL DDL script defines the schema for a PostgreSQL database to manage 'état des lieux' (property inventory) forms.
--- It is designed to be compatible with Supabase.
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
 
--- Enable the uuid-ossp extension for generating UUIDs.
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Table: etat_des_lieux
--- Stores general information about each property inventory form.
-CREATE TABLE etat_des_lieux (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each 'état des lieux' record.
-    date_entree DATE, -- Date of entry inventory.
-    date_sortie DATE, -- Date of exit inventory.
-    adresse_bien TEXT NOT NULL, -- Address of the property.
-    statut TEXT, -- Status of the inventory (e.g., 'en_cours', 'termine')
-    type_etat_des_lieux TEXT NOT NULL CHECK (type_etat_des_lieux IN ('entree', 'sortie')), -- Type of inventory: entry or exit
-    type_bien TEXT NOT NULL CHECK (type_bien IN ('studio', 't2_t3', 't4_t5', 'inventaire_mobilier', 'bureau', 'local_commercial', 'garage_box', 'pieces_supplementaires')), -- Type of property
-    bailleur_nom TEXT, -- Name of the landlord or their representative.
-    bailleur_adresse TEXT, -- Address of the landlord or their representative.
-    locataire_nom TEXT, -- Name of the tenant(s).
-    locataire_adresse TEXT, -- Address of the tenant(s).
-    rendez_vous_id UUID, -- Foreign key linking to the appointment that led to this inventory.
-    travaux_a_faire BOOLEAN DEFAULT FALSE, -- Indicates if work is needed following the inventory (TRUE/FALSE).
-    description_travaux TEXT, -- Detailed description of work to be done (optional if travaux_a_faire = TRUE).
-    signature_locataire TEXT, -- Signature of the tenant (base64 encoded image).
-    signature_proprietaire_agent TEXT, -- Signature of the landlord or agent (base64 encoded image).
-    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with the inventory.
+CREATE TABLE public.assurancevie (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  type_assurance text CHECK (type_assurance = ANY (ARRAY['Contrat monosupport'::text, 'Contrat multisupport'::text])),
+  libelle text,
+  numero text,
+  compagnie text,
+  date_acquisition date,
+  souscripteur text CHECK (souscripteur = ANY (ARRAY['Personne 1'::text, 'Personne 2'::text, 'Commun'::text])),
+  contrat_gere boolean,
+  somme_versee numeric,
+  fond_euros numeric,
+  unite_de_compte numeric,
+  value numeric,
+  epargne_annuelle numeric,
+  proprietaire text CHECK (proprietaire = ANY (ARRAY['Personne 1'::text, 'Personne 2'::text, 'Commun'::text])),
+  conjoint_part numeric,
+  conjoint_type text CHECK (conjoint_type = ANY (ARRAY['PP'::text, 'US'::text, 'NP -1'::text, 'NP -2'::text])),
+  enfants_part numeric,
+  enfants_type text CHECK (enfants_type = ANY (ARRAY['PP'::text, 'US'::text, 'NP -1'::text, 'NP -2'::text])),
+  autres_part numeric,
+  autres_type text CHECK (autres_type = ANY (ARRAY['PP'::text, 'US'::text, 'NP -1'::text, 'NP -2'::text])),
+  denouement text CHECK (denouement = ANY (ARRAY['Décès 1'::text, 'Décés 2'::text])),
+  rachat_part numeric,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT assurancevie_pkey PRIMARY KEY (id),
+  CONSTRAINT assurancevie_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
-
--- Table: releve_compteurs
--- Stores meter readings for electricity, gas, and water.
-CREATE TABLE releve_compteurs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each meter reading record.
-    etat_des_lieux_id UUID REFERENCES etat_des_lieux(id), -- Foreign key linking to the main 'état des lieux' record.
-    nom_ancien_occupant TEXT, -- Name of the previous occupant for meter transfer.
-    electricite_n_compteur TEXT, -- Electricity meter number.
-    electricite_h_pleines TEXT, -- Electricity reading during peak hours.
-    electricite_h_creuses TEXT, -- Electricity reading during off-peak hours.
-    gaz_naturel_n_compteur TEXT, -- Natural gas meter number.
-    gaz_naturel_releve TEXT, -- Natural gas reading.
-    eau_chaude_m3 TEXT, -- Hot water consumption in cubic meters.
-    eau_froide_m3 TEXT -- Cold water consumption in cubic meters.
+CREATE TABLE public.autrepatrimoine (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  libelle text,
+  famille_autre text,
+  date_acquisition date,
+  value numeric,
+  proprietaire text CHECK (proprietaire = ANY (ARRAY['Personne 1'::text, 'Personne 2'::text, 'Commun'::text])),
+  type_propriete text CHECK (type_propriete = ANY (ARRAY['PP'::text, 'US'::text, 'NP -1'::text, 'NP -2'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT autrepatrimoine_pkey PRIMARY KEY (id),
+  CONSTRAINT autrepatrimoine_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
-
--- Table: equipements_energetiques
--- Stores information about the type of heating and hot water systems.
-CREATE TABLE equipements_energetiques (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each energy equipment record.
-    etat_des_lieux_id UUID REFERENCES etat_des_lieux(id), -- Foreign key linking to the main 'état des lieux' record.
-    chauffage_type TEXT, -- Type of heating (e.g., electric, gas, collective, other).
-    eau_chaude_type TEXT, -- Type of hot water system (e.g., electric, gas, collective, other).
-    dpe_classe TEXT, -- DPE (Diagnostic de Performance Énergétique) class (e.g., 'A', 'B', 'C').
-    ges_classe TEXT, -- GES (Gaz à Effet de Serre) class (e.g., 'A', 'B', 'C').
-    date_dpe DATE, -- Date of the DPE.
-    presence_panneaux_solaires BOOLEAN, -- Indicates presence of solar panels.
-    type_isolation TEXT, -- Type of insulation (e.g., 'interieure', 'exterieure', 'combles').
-    commentaires TEXT, -- Comments and observations about energy equipment.
-    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with energy equipment.
+CREATE TABLE public.bienimmobilier (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  type_immobilier text CHECK (type_immobilier = ANY (ARRAY['Bien de jouissance'::text, 'Bien de rapport'::text])),
+  famille_immobilier text CHECK (famille_immobilier = ANY (ARRAY['Résidence principale'::text, 'Résidence secondaire'::text, 'Autre'::text])),
+  libelle text,
+  date_acquisition date,
+  date_echeance date,
+  value numeric,
+  proprietaire text CHECK (proprietaire = ANY (ARRAY['Personne 1'::text, 'Personne 2'::text, 'Commun'::text])),
+  type_propriete text CHECK (type_propriete = ANY (ARRAY['PP'::text, 'US'::text, 'NP -1'::text, 'NP -2'::text])),
+  loyer_brut numeric,
+  loyer_imposable numeric,
+  taxes numeric,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT bienimmobilier_pkey PRIMARY KEY (id),
+  CONSTRAINT bienimmobilier_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
-
--- Table: equipements_chauffage
--- Stores details about heating equipment like boiler and water heater.
-CREATE TABLE equipements_chauffage (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each heating equipment record.
-    etat_des_lieux_id UUID REFERENCES etat_des_lieux(id), -- Foreign key linking to the main 'état des lieux' record.
-    chaudiere_etat TEXT, -- Condition of the boiler.
-    chaudiere_date_dernier_entretien DATE, -- Date of the last boiler maintenance.
-    ballon_eau_chaude_etat TEXT, -- Condition of the hot water tank.
-    radiateurs_nombre INTEGER, -- Number of radiators.
-    radiateurs_etat TEXT, -- General condition of radiators.
-    thermostat_present BOOLEAN, -- Indicates presence of a thermostat.
-    thermostat_etat TEXT, -- Condition of the thermostat.
-    pompe_a_chaleur_present BOOLEAN, -- Indicates presence of a heat pump.
-    pompe_a_chaleur_etat TEXT, -- Condition of the heat pump.
-    commentaires TEXT, -- Comments and observations about heating equipment.
-    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with heating equipment.
+CREATE TABLE public.budget (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  asset_type text CHECK (asset_type = ANY (ARRAY['immobilier'::text, 'banque'::text, 'entreprise'::text, 'assurance_vie'::text, 'autres'::text])),
+  asset_id uuid,
+  libelle character varying NOT NULL,
+  montant numeric NOT NULL,
+  frequency character varying NOT NULL DEFAULT 'non_recurrente'::character varying CHECK (frequency::text = ANY (ARRAY['non_recurrente'::character varying, 'monthly'::character varying, 'annual'::character varying]::text[])),
+  date_creation timestamp with time zone NOT NULL DEFAULT now(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT budget_pkey PRIMARY KEY (id),
+  CONSTRAINT budget_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
-
--- Table: cles
--- Stores information about keys and badges provided with the property.
-CREATE TABLE cles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each key record.
-    etat_des_lieux_id UUID REFERENCES etat_des_lieux(id), -- Foreign key linking to the main 'état des lieux' record.
-    type_cle_badge TEXT, -- Type of key or badge (e.g., 'clé porte entrée', 'clé boîte aux lettres', 'bip portail', 'badge immeuble').
-    nombre INTEGER, -- Number of keys/badges of this type.
-    numero_cle TEXT, -- Key number or reference.
-    commentaires TEXT, -- Additional comments about the keys/badges.
-    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with keys/badges.
+CREATE TABLE public.comptebancaire (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  type_compte text CHECK (type_compte = ANY (ARRAY['Autre'::text, 'CEL'::text, 'Compte à terme'::text, 'Compte courant'::text, 'LDDS'::text, 'LEP'::text, 'Livret A'::text, 'PEL'::text, 'PEP'::text, 'Somme à investir'::text])),
+  famille_liquidites text CHECK (famille_liquidites = ANY (ARRAY['Action'::text, 'Autre'::text, 'Compte titre'::text, 'FCP'::text, 'FCPI'::text, 'FIP'::text, 'Obligations'::text, 'OPCI'::text, 'Parts sociales'::text, 'PEA'::text, 'PEA-PME'::text, 'PEE'::text, 'PEP'::text, 'SICAV'::text, 'SOFICA'::text])),
+  etablissement text,
+  libelle text,
+  contrat_gere boolean,
+  date_acquisition date,
+  date_cloture date,
+  value numeric,
+  epargne_annuelle numeric,
+  proprietaire text CHECK (proprietaire = ANY (ARRAY['Personne 1'::text, 'Personne 2'::text, 'Commun'::text])),
+  type_propriete text CHECK (type_propriete = ANY (ARRAY['PP'::text, 'US'::text, 'NP -1'::text, 'NP -2'::text])),
+  taux numeric,
+  optimisation text CHECK (optimisation = ANY (ARRAY['PFU 12,8%'::text, 'PFL, 22,5% pea'::text, 'PFL 19% pea'::text, 'Exonération'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT comptebancaire_pkey PRIMARY KEY (id),
+  CONSTRAINT comptebancaire_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
-
--- Table: parties_privatives
--- Stores the condition of private areas attached to the dwelling (e.g., cellar, parking, garden, balcony).
-CREATE TABLE parties_privatives (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each private area record.
-    etat_des_lieux_id UUID REFERENCES etat_des_lieux(id), -- Foreign key linking to the main 'état des lieux' record.
-    type_partie TEXT NOT NULL, -- Type of private area (e.g., Cave, Parking / Box / Garage, Jardin, Balcon / Terrasse).
-    etat_entree TEXT, -- Condition at entry.
-    etat_sortie TEXT, -- Condition at exit.
-    numero TEXT, -- Number or identifier for the private area (e.g., parking spot number).
-    commentaires TEXT, -- Additional comments about the private area.
-    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with private areas.
+CREATE TABLE public.contacts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  email text NOT NULL,
+  message text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  is_processed boolean DEFAULT false,
+  CONSTRAINT contacts_pkey PRIMARY KEY (id)
 );
-
--- Table: autres_equipements
--- Stores the condition of other general equipment and amenities.
-CREATE TABLE autres_equipements (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each other equipment record.
-    etat_des_lieux_id UUID REFERENCES etat_des_lieux(id), -- Foreign key linking to the main 'état des lieux' record.
-    equipement TEXT NOT NULL, -- Name of the equipment (e.g., 'Sonnette / Interphone', 'Boîte aux lettres', 'Internet', 'Alarme', 'Détecteur de fumée', 'VMC', 'Cheminée', 'Piscine', 'Jacuzzi', 'Sauna', 'Portail électrique', 'Volets roulants électriques', 'Store banne').
-    etat_entree TEXT, -- Condition at entry.
-    etat_sortie TEXT, -- Condition at exit.
-    commentaires TEXT, -- Additional comments about the equipment.
-    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with other equipment.
+CREATE TABLE public.contratcapitalisation (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  libelle text,
+  numero text,
+  regime text CHECK (regime = ANY (ARRAY['Art. 83 / PER'::text, 'Madelin'::text, 'PER'::text, 'PERCO'::text, 'PEREC'::text, 'PERO'::text, 'PERP'::text, 'PREFON PER'::text, 'Autre'::text])),
+  compagnie text,
+  date_acquisition date,
+  souscripteur text CHECK (souscripteur = ANY (ARRAY['Personne 1'::text, 'Personne 2'::text, 'Commun'::text])),
+  contrat_gere boolean,
+  fond_euros numeric,
+  unite_de_compte numeric,
+  value numeric,
+  phase text CHECK (phase = ANY (ARRAY['Epargne'::text, 'Retraite'::text])),
+  personnelle numeric,
+  professionnelle numeric,
+  rente_annuelle numeric,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT contratcapitalisation_pkey PRIMARY KEY (id),
+  CONSTRAINT contratcapitalisation_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
-
--- Table: pieces
--- Stores the condition of various elements within each room (e.g., living room, WC, bathroom, kitchen).
-CREATE TABLE pieces (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each room element record.
-    etat_des_lieux_id UUID REFERENCES etat_des_lieux(id), -- Foreign key linking to the main 'état des lieux' record.
-    nom_piece TEXT NOT NULL, -- Name of the room (e.g., Salon / Pièce à vivre, WC, Salle de bain, Coin cuisine).
-    revetements_sols_entree TEXT, -- Condition of floor coverings at entry.
-    revetements_sols_sortie TEXT, -- Condition of floor coverings at exit.
-    murs_menuiseries_entree TEXT, -- Condition of walls/woodwork at entry.
-    murs_menuiseries_sortie TEXT, -- Condition of walls/woodwork at exit.
-    plafond_entree TEXT, -- Condition of ceiling at entry.
-    plafond_sortie TEXT, -- Condition of ceiling at exit.
-    electricite_plomberie_entree TEXT, -- Condition of electricity/plumbing at entry.
-    electricite_plomberie_sortie TEXT, -- Condition of electricity/plumbing at exit.
-    placards_entree TEXT, -- Condition of cupboards at entry (specific to WC/living room).
-    placards_sortie TEXT, -- Condition of cupboards at exit (specific to WC/living room).
-    sanitaires_entree TEXT, -- Condition of sanitary facilities at entry (specific to WC).
-    sanitaires_sortie TEXT, -- Condition of sanitary facilities at exit (specific to WC).
-    menuiseries_entree TEXT, -- Condition of woodwork at entry (specific to bathroom/kitchen).
-    menuiseries_sortie TEXT, -- Condition of woodwork at exit (specific to bathroom/kitchen).
-    rangements_entree TEXT, -- Condition of storage units at entry (specific to bathroom).
-    rangements_sortie TEXT, -- Condition of storage units at exit (specific to bathroom).
-    baignoire_douche_entree TEXT, -- Condition of bathtub/shower at entry.
-    baignoire_douche_sortie TEXT, -- Condition of bathtub/shower at exit.
-    eviers_robinetterie_entree TEXT, -- Condition of sinks/taps at entry.
-    eviers_robinetterie_sortie TEXT, -- Condition of sinks/taps at exit.
-    chauffage_tuyauterie_entree TEXT, -- Condition of heating/piping at entry (specific to kitchen).
-    chauffage_tuyauterie_sortie TEXT, -- Condition of heating/piping at exit (specific to kitchen).
-    meubles_cuisine_entree TEXT, -- Condition of kitchen furniture at entry.
-    meubles_cuisine_sortie TEXT, -- Condition of kitchen furniture at exit.
-    hotte_entree TEXT, -- Condition of hood at entry.
-    hotte_sortie TEXT, -- Condition of hood at exit.
-    plaque_cuisson_entree TEXT, -- Condition of hob at entry.
-    plaque_cuisson_sortie TEXT, -- Condition of hob at exit.
-    commentaires TEXT, -- Additional comments for the room.
-    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with room elements.
+CREATE TABLE public.credit (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  type text,
+  libelle text,
+  date_acquisition date,
+  montant_initial numeric,
+  taux numeric,
+  duree_mois integer,
+  mensualite numeric,
+  assurance numeric,
+  capital_restant_du numeric,
+  emprunteur text CHECK (emprunteur = ANY (ARRAY['Personne 1'::text, 'Personne 2'::text, 'Commun'::text])),
+  assurance_1 numeric,
+  assurance_2 numeric,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT credit_pkey PRIMARY KEY (id),
+  CONSTRAINT credit_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
-
--- Table: rendez_vous
--- Stores information about scheduled appointments for property inventories.
-CREATE TABLE rendez_vous (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Unique identifier for each appointment.
-    date DATE NOT NULL, -- Date of the appointment.
-    heure TIME NOT NULL, -- Time of the appointment.
-    duree TEXT, -- Planned duration of the appointment (e.g., "1h30").
-    description TEXT, -- Description or purpose of the appointment.
-    adresse TEXT NOT NULL, -- Address where the appointment will take place.
-    code_postal TEXT NOT NULL, -- Postal code for the address.
-    ville TEXT NOT NULL, -- City for the address.
-    latitude FLOAT, -- Latitude for precise location (optional).
-    longitude FLOAT, -- Longitude for precise location (optional).
-    nom_contact TEXT NOT NULL, -- Name of the person to contact for the appointment.
-    telephone_contact TEXT NOT NULL, -- Phone number of the contact person.
-    email_contact TEXT NOT NULL, -- Email address of the contact person.
-    note_personnelle TEXT, -- Any personal notes regarding the appointment.
-    type_etat_des_lieux TEXT, -- Type of inventory (e.g., "entree", "sortie").
-    type_bien TEXT, -- Type of property (e.g., "studio", "t2-t3", "local").
-    created_at TIMESTAMPTZ DEFAULT now(), -- Timestamp of when the appointment was created.
-    statut TEXT DEFAULT 'planifie' CHECK (statut IN ('planifie', 'realise', 'annule', 'reporte')), -- Status of the appointment.
-    etat_des_lieux_id UUID, -- Reference to the inventory created from this appointment.
-    photos jsonb DEFAULT '[]'::jsonb -- Photos associated with the appointment.
+CREATE TABLE public.entreprise (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid UNIQUE,
+  actionnaire boolean,
+  formes_juridiques ARRAY,
+  cession_transmission text,
+  CONSTRAINT entreprise_pkey PRIMARY KEY (id),
+  CONSTRAINT entreprise_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
-
--- Add foreign key constraints after table creation to avoid circular dependency issues
-ALTER TABLE etat_des_lieux 
-ADD CONSTRAINT fk_etat_des_lieux_rendez_vous 
-FOREIGN KEY (rendez_vous_id) REFERENCES rendez_vous(id);
-
-ALTER TABLE rendez_vous 
-ADD CONSTRAINT fk_rendez_vous_etat_des_lieux 
-FOREIGN KEY (etat_des_lieux_id) REFERENCES etat_des_lieux(id);
-
--- Add comments for documentation
-COMMENT ON COLUMN etat_des_lieux.rendez_vous_id IS 'Référence vers le rendez-vous qui a donné lieu à cet état des lieux';
-COMMENT ON COLUMN etat_des_lieux.travaux_a_faire IS 'Indique si des travaux sont nécessaires suite à l''état des lieux (TRUE/FALSE)';
-COMMENT ON COLUMN etat_des_lieux.description_travaux IS 'Description détaillée des travaux à effectuer (optionnel si travaux_a_faire = TRUE)';
-COMMENT ON COLUMN rendez_vous.statut IS 'Statut du rendez-vous: planifie, realise, annule, reporte';
-COMMENT ON COLUMN rendez_vous.etat_des_lieux_id IS 'Référence vers l''état des lieux créé suite à ce rendez-vous';
-COMMENT ON COLUMN equipements_energetiques.commentaires IS 'Commentaires et observations sur les équipements énergétiques';
-COMMENT ON COLUMN equipements_chauffage.commentaires IS 'Commentaires et observations sur les équipements de chauffage';
-
--- Create indexes for better performance
-CREATE INDEX idx_etat_des_lieux_rendez_vous ON etat_des_lieux(rendez_vous_id);
-CREATE INDEX idx_rendez_vous_etat_des_lieux ON rendez_vous(etat_des_lieux_id);
-CREATE INDEX idx_rendez_vous_statut ON rendez_vous(statut);
-CREATE INDEX idx_rendez_vous_date ON rendez_vous(date);
-CREATE INDEX idx_etat_des_lieux_type ON etat_des_lieux(type_etat_des_lieux);
-CREATE INDEX idx_etat_des_lieux_statut ON etat_des_lieux(statut);
-
--- Function to automatically update appointment status when an inventory is created
-CREATE OR REPLACE FUNCTION update_rendez_vous_statut()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- Update appointment status when an inventory is created with this appointment_id
-    IF NEW.rendez_vous_id IS NOT NULL THEN
-        UPDATE rendez_vous 
-        SET statut = 'realise',
-            etat_des_lieux_id = NEW.id
-        WHERE id = NEW.rendez_vous_id;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger to automate status updates
-CREATE TRIGGER trigger_update_rendez_vous_statut
-    AFTER INSERT ON etat_des_lieux
-    FOR EACH ROW
-    EXECUTE FUNCTION update_rendez_vous_statut();
-
--- Extension du schéma existant pour supporter multi-utilisateurs et organisations
--- Add user_id to etat_des_lieux and rendez_vous
-ALTER TABLE etat_des_lieux ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
-ALTER TABLE rendez_vous ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
-
--- RLS (Row Level Security) for Supabase
-ALTER TABLE etat_des_lieux ENABLE ROW LEVEL SECURITY;
-ALTER TABLE rendez_vous ENABLE ROW LEVEL SECURITY;
-
--- Policies RLS for etat_des_lieux
-CREATE POLICY "Users can manage their own etat_des_lieux" ON etat_des_lieux
-    FOR ALL USING (
-        auth.uid() = user_id
-    );
-
-CREATE POLICY "Users can view their own etat_des_lieux" ON etat_des_lieux
-    FOR SELECT USING (
-        auth.uid() = user_id
-    );
-
--- Policies RLS for rendez_vous
-CREATE POLICY "Users can manage their own rendez_vous" ON rendez_vous
-    FOR ALL USING (
-        auth.uid() = user_id
-    );
-
-CREATE POLICY "Users can view their own rendez_vous" ON rendez_vous
-    FOR SELECT USING (
-        auth.uid() = user_id
-    );
-
--- First, ensure the auth.users reference exists (this is a Supabase-specific table)
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Add user_id columns if they don't exist
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'etat_des_lieux' AND column_name = 'user_id') THEN
-        ALTER TABLE etat_des_lieux ADD COLUMN user_id UUID;
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'rendez_vous' AND column_name = 'user_id') THEN
-        ALTER TABLE rendez_vous ADD COLUMN user_id UUID;
-    END IF;
-END $$;
-
--- Add organization_id columns if you want to support multiple organizations
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'etat_des_lieux' AND column_name = 'organization_id') THEN
-        ALTER TABLE etat_des_lieux ADD COLUMN organization_id UUID;
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'rendez_vous' AND column_name = 'organization_id') THEN
-        ALTER TABLE rendez_vous ADD COLUMN organization_id UUID;
-    END IF;
-END $$;
-
--- Enable Row Level Security
-ALTER TABLE etat_des_lieux ENABLE ROW LEVEL SECURITY;
-ALTER TABLE rendez_vous ENABLE ROW LEVEL SECURITY;
-ALTER TABLE releve_compteurs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE equipements_energetiques ENABLE ROW LEVEL SECURITY;
-ALTER TABLE equipements_chauffage ENABLE ROW LEVEL SECURITY;
-ALTER TABLE cles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE parties_privatives ENABLE ROW LEVEL SECURITY;
-ALTER TABLE autres_equipements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pieces ENABLE ROW LEVEL SECURITY;
-
--- Create policies for etat_des_lieux
-CREATE POLICY "Enable access to user's own etat_des_lieux" ON etat_des_lieux
-    FOR ALL USING (
-        auth.uid() = user_id
-    );
-
--- Create policies for rendez_vous
-CREATE POLICY "Enable access to user's own rendez_vous" ON rendez_vous
-    FOR ALL USING (
-        auth.uid() = user_id
-    );
-
--- Create policies for all related tables to ensure users can only access their own data
-CREATE POLICY "Enable access to user's own releve_compteurs" ON releve_compteurs
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM etat_des_lieux 
-            WHERE etat_des_lieux.id = releve_compteurs.etat_des_lieux_id 
-            AND etat_des_lieux.user_id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Enable access to user's own equipements_energetiques" ON equipements_energetiques
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM etat_des_lieux 
-            WHERE etat_des_lieux.id = equipements_energetiques.etat_des_lieux_id 
-            AND etat_des_lieux.user_id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Enable access to user's own equipements_chauffage" ON equipements_chauffage
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM etat_des_lieux 
-            WHERE etat_des_lieux.id = equipements_chauffage.etat_des_lieux_id 
-            AND etat_des_lieux.user_id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Enable access to user's own cles" ON cles
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM etat_des_lieux 
-            WHERE etat_des_lieux.id = cles.etat_des_lieux_id 
-            AND etat_des_lieux.user_id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Enable access to user's own parties_privatives" ON parties_privatives
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM etat_des_lieux 
-            WHERE etat_des_lieux.id = parties_privatives.etat_des_lieux_id 
-            AND etat_des_lieux.user_id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Enable access to user's own autres_equipements" ON autres_equipements
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM etat_des_lieux 
-            WHERE etat_des_lieux.id = autres_equipements.etat_des_lieux_id 
-            AND etat_des_lieux.user_id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Enable access to user's own pieces" ON pieces
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM etat_des_lieux 
-            WHERE etat_des_lieux.id = pieces.etat_des_lieux_id 
-            AND etat_des_lieux.user_id = auth.uid()
-        )
-    );
-
--- Create a function to automatically set the user_id when a new record is inserted
-CREATE OR REPLACE FUNCTION public.set_user_id()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.user_id = auth.uid();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create triggers to automatically set user_id on insert
-CREATE TRIGGER set_etat_des_lieux_user_id
-BEFORE INSERT ON etat_des_lieux
-FOR EACH ROW
-EXECUTE FUNCTION set_user_id();
-
-CREATE TRIGGER set_rendez_vous_user_id
-BEFORE INSERT ON rendez_vous
-FOR EACH ROW
-EXECUTE FUNCTION set_user_id();
+CREATE TABLE public.entrepriseparticipation (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  type_entreprise text CHECK (type_entreprise = ANY (ARRAY['Outils de travail'::text, 'Entreprise Participation'::text])),
+  famille_entreprise text CHECK (famille_entreprise = ANY (ARRAY['autre'::text, 'Clientèle BNC'::text, 'Entreprise BA'::text, 'Fonds de com.BIC'::text, 'SCI à l''IS'::text, 'Sociétés à l''IR'::text, 'Société à l''IS'::text, 'Société à l''IS en PEA'::text])),
+  libelle text,
+  date_acquisition date,
+  date_echeance date,
+  value numeric,
+  proprietaire text CHECK (proprietaire = ANY (ARRAY['Personne 1'::text, 'Personne 2'::text, 'Commun'::text])),
+  type_propriete text CHECK (type_propriete = ANY (ARRAY['PP'::text, 'US'::text, 'NP -1'::text, 'NP -2'::text])),
+  dividendes numeric,
+  optimisation text CHECK (optimisation = ANY (ARRAY['PFU 12,8%'::text, 'PFL, 22,5% pea'::text, 'PFL 19% pea'::text, 'Exonération'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT entrepriseparticipation_pkey PRIMARY KEY (id),
+  CONSTRAINT entrepriseparticipation_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.family (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  relation text,
+  related_user_id uuid,
+  linked boolean NOT NULL DEFAULT false,
+  CONSTRAINT family_pkey PRIMARY KEY (id),
+  CONSTRAINT family_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT family_related_user_id_fkey FOREIGN KEY (related_user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.family_invitations (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  family_id uuid NOT NULL,
+  sender_id uuid NOT NULL,
+  recipient_id uuid NOT NULL,
+  status text NOT NULL CHECK (status = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text])),
+  expires_at timestamp with time zone NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT family_invitations_pkey PRIMARY KEY (id),
+  CONSTRAINT family_invitations_family_id_fkey FOREIGN KEY (family_id) REFERENCES public.family(id),
+  CONSTRAINT family_invitations_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.users(id),
+  CONSTRAINT family_invitations_recipient_id_fkey FOREIGN KEY (recipient_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.fiscalite (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid UNIQUE,
+  connaissance_fiscale text,
+  utilisation_dispositifs boolean,
+  dispositifs_utilises ARRAY,
+  reduction_fiscale text,
+  CONSTRAINT fiscalite_pkey PRIMARY KEY (id),
+  CONSTRAINT fiscalite_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.health (
+  id integer NOT NULL DEFAULT nextval('health_id_seq'::regclass),
+  last_check timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT health_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.ifi (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  deduction numeric,
+  deduction_residence_principale numeric,
+  us numeric,
+  reduction numeric,
+  ifi numeric,
+  annee integer,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT ifi_pkey PRIMARY KEY (id),
+  CONSTRAINT ifi_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.impotrevenu (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  deduction_revenu numeric,
+  reduction_impot numeric,
+  majoration_revenu_fiscal numeric,
+  revenu_fiscal_reference numeric,
+  deduction_reintegrer numeric,
+  reduction_a_reintegrer numeric,
+  pv_immu_brut numeric,
+  pv_immo_base_pfu numeric,
+  pv_immo_base_ir numeric,
+  option_fiscale text CHECK (option_fiscale = ANY (ARRAY['PFU'::text, 'Barème IR'::text])),
+  annee integer,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT impotrevenu_pkey PRIMARY KEY (id),
+  CONSTRAINT impotrevenu_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.mission (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  document jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT mission_pkey PRIMARY KEY (id),
+  CONSTRAINT mission_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.patrimoinefinancier (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid UNIQUE,
+  placements ARRAY,
+  repartition_activ_risque numeric,
+  objectifs_investissement ARRAY,
+  horizon_investissement integer,
+  CONSTRAINT patrimoinefinancier_pkey PRIMARY KEY (id),
+  CONSTRAINT patrimoinefinancier_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.patrimoineimmo (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid UNIQUE,
+  biens_immobiliers boolean,
+  valeur_biens numeric,
+  credits_immobiliers boolean,
+  mensualites_credit numeric,
+  projets_immobiliers boolean,
+  type_projet_immobilier ARRAY,
+  biens_etranger boolean,
+  CONSTRAINT patrimoineimmo_pkey PRIMARY KEY (id),
+  CONSTRAINT patrimoineimmo_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.personalinfo (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid UNIQUE,
+  phone numeric,
+  age integer,
+  address text,
+  postal_code numeric,
+  city text,
+  situation_matrimoniale text,
+  contrat_mariage text,
+  nb_enfants_charge integer,
+  profession text,
+  revenu_annuel numeric,
+  capacite_epargne numeric,
+  epargne_precaution numeric,
+  inquietudes_patrimoine ARRAY,
+  inquietudes_immobilier boolean,
+  objectifs_patrimoniaux ARRAY,
+  priorite_gestion text,
+  projets_5_ans ARRAY,
+  reflexion_transmission text,
+  actions_transmission text,
+  objectifs_transmission ARRAY,
+  valeurs ARRAY,
+  CONSTRAINT personalinfo_pkey PRIMARY KEY (id),
+  CONSTRAINT personalinfo_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.pioneers (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  first_name text NOT NULL,
+  last_name text NOT NULL,
+  email text NOT NULL UNIQUE,
+  is_pioneer boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  auth_confirmed boolean DEFAULT false,
+  CONSTRAINT pioneers_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.prevoyance (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  contrat text,
+  compagnie text,
+  date_acquisition date,
+  echeance date,
+  souscripteur text CHECK (souscripteur = ANY (ARRAY['Personne 1'::text, 'Personne 2'::text, 'Commun'::text])),
+  contrat_gere boolean,
+  beneficiaire text CHECK (beneficiaire = ANY (ARRAY['Conjoint'::text, 'Enfants'::text, 'Autres'::text])),
+  capital_deces numeric,
+  garentie_accident numeric,
+  rente_deces_mensuelle numeric,
+  arret_travail numeric,
+  rente_invalidite_partielle numeric,
+  rente_invalidite_totale numeric,
+  prime_annuelle numeric,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT prevoyance_pkey PRIMARY KEY (id),
+  CONSTRAINT prevoyance_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.profileinvestisseur (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid UNIQUE,
+  tolerance_risque text,
+  reaction_baisse text,
+  produits_complexes text,
+  score smallint CHECK (score > 0),
+  profil text,
+  CONSTRAINT profileinvestisseur_pkey PRIMARY KEY (id),
+  CONSTRAINT profileinvestisseur_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.projetsvie (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid UNIQUE,
+  changements_previsibles boolean,
+  financement_etudes text,
+  depenses_importantes ARRAY,
+  liquidite_patrimoine numeric,
+  CONSTRAINT projetsvie_pkey PRIMARY KEY (id),
+  CONSTRAINT projetvie_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.retraite (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid UNIQUE,
+  epargne_retraite boolean,
+  montant_epargne numeric,
+  complement_retraite text,
+  contrats_prevoyance ARRAY,
+  CONSTRAINT retraite_pkey PRIMARY KEY (id),
+  CONSTRAINT retraite_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.retraitecomplementaire (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  type_produit_retraite text CHECK (type_produit_retraite = ANY (ARRAY['Contrat monosupport'::text, 'Contrat multisupport'::text])),
+  libelle text,
+  numero text,
+  created_at timestamp with time zone DEFAULT now(),
+  value numeric,
+  souscripteur text,
+  CONSTRAINT retraitecomplementaire_pkey PRIMARY KEY (id),
+  CONSTRAINT retraitecomplementaire_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.souscription_formulaire_cosouscripteur (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  civilite character varying,
+  nom character varying NOT NULL,
+  prenom character varying NOT NULL,
+  nom_naissance character varying,
+  adresse_postale character varying,
+  code_postal character varying,
+  ville character varying,
+  pays character varying,
+  date_naissance date,
+  code_postal_naissance character varying,
+  ville_naissance character varying,
+  pays_naissance character varying,
+  nir character varying,
+  nationalite character varying,
+  residence_fiscale character varying,
+  adresse_residence_fiscale_complete character varying,
+  telephone character varying,
+  email character varying,
+  document_presente character varying,
+  situation_familiale character varying,
+  regime_matrimonial character varying,
+  regime_protection_majeur character varying,
+  detail_regime_protection_majeur character varying,
+  regime_protection_mineur character varying,
+  detail_regime_protection_mineur character varying,
+  activite character varying,
+  profession character varying,
+  code_csp character varying,
+  date_fin_activite date,
+  code_naf character varying,
+  siret character varying,
+  nom_entreprise character varying,
+  CONSTRAINT souscription_formulaire_cosouscripteur_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.souscription_formulaire_financialdata (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  subscription_id uuid NOT NULL,
+  revenus_annuels_foyer_range character varying,
+  revenus_annuels_foyer_precise numeric,
+  estimation_patrimoine_foyer_range character varying,
+  estimation_patrimoine_foyer_precise numeric,
+  repartition_immobilier numeric,
+  repartition_portefeuille_valeurs_mobilieres numeric,
+  repartition_placements_bancaires numeric,
+  repartition_contrats_assurance_vie numeric,
+  repartition_autre numeric,
+  repartition_autre_precise character varying,
+  origine_epargne_revenus boolean,
+  origine_succession_donation boolean,
+  origine_cession_immobilier boolean,
+  origine_cession_mobilier boolean,
+  origine_cession_professionnel boolean,
+  origine_gains_jeux boolean,
+  origine_autre_precise character varying,
+  CONSTRAINT souscription_formulaire_financialdata_pkey PRIMARY KEY (id),
+  CONSTRAINT souscription_formulaire_financialdata_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.souscription_formulaire_subscription(id)
+);
+CREATE TABLE public.souscription_formulaire_fundorigindetails (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  subscription_id uuid NOT NULL,
+  type_fonds character varying NOT NULL,
+  montant numeric,
+  organisme_nom character varying,
+  CONSTRAINT souscription_formulaire_fundorigindetails_pkey PRIMARY KEY (id),
+  CONSTRAINT souscription_formulaire_fundorigindetails_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.souscription_formulaire_subscription(id)
+);
+CREATE TABLE public.souscription_formulaire_ppe (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  person_type character varying NOT NULL,
+  person_id uuid NOT NULL,
+  exerce_fonction_politique boolean,
+  pays_exercice_fonction character varying,
+  fonction_politique character varying,
+  date_fin_fonction date,
+  proche_ppe boolean,
+  nom_prenom_ppe character varying,
+  fonction_ppe character varying,
+  lien_ppe_personne character varying,
+  date_fin_fonction_ppe date,
+  CONSTRAINT souscription_formulaire_ppe_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.souscription_formulaire_souscripteur (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  civilite character varying,
+  nom character varying NOT NULL,
+  prenom character varying NOT NULL,
+  nom_naissance character varying,
+  adresse_postale character varying,
+  code_postal character varying,
+  ville character varying,
+  pays character varying,
+  date_naissance date,
+  code_postal_naissance character varying,
+  ville_naissance character varying,
+  pays_naissance character varying,
+  nir character varying,
+  nationalite character varying,
+  residence_fiscale character varying,
+  adresse_residence_fiscale_complete character varying,
+  telephone character varying,
+  email character varying,
+  document_presente character varying,
+  situation_familiale character varying,
+  regime_matrimonial character varying,
+  regime_protection_majeur character varying,
+  detail_regime_protection_majeur character varying,
+  regime_protection_mineur character varying,
+  detail_regime_protection_mineur character varying,
+  activite character varying,
+  profession character varying,
+  code_csp character varying,
+  date_fin_activite date,
+  code_naf character varying,
+  siret character varying,
+  nom_entreprise character varying,
+  CONSTRAINT souscription_formulaire_souscripteur_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.souscription_formulaire_subscription (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  souscripteur_id uuid NOT NULL,
+  co_souscripteur_id uuid,
+  objectifs_versement text,
+  horizon_investissement character varying,
+  fonds_regularisation_fiscale boolean,
+  CONSTRAINT souscription_formulaire_subscription_pkey PRIMARY KEY (id),
+  CONSTRAINT souscription_formulaire_subscription_co_souscripteur_id_fkey FOREIGN KEY (co_souscripteur_id) REFERENCES public.souscription_formulaire_cosouscripteur(id),
+  CONSTRAINT souscription_formulaire_subscription_souscripteur_id_fkey FOREIGN KEY (souscripteur_id) REFERENCES public.souscription_formulaire_souscripteur(id)
+);
+CREATE TABLE public.souscription_formulaire_taxresidence (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  person_type character varying NOT NULL,
+  person_id uuid NOT NULL,
+  citoyen_usa boolean,
+  resident_fiscal_usa boolean,
+  possede_tin_usa boolean,
+  tin_usa_numero character varying,
+  adresse_residence_fiscale_tin character varying,
+  resident_fiscal_autres_pays boolean,
+  pays_residence_fiscale_1 character varying,
+  nif_1 character varying,
+  adresse_residence_fiscale_1 character varying,
+  pays_residence_fiscale_2 character varying,
+  nif_2 character varying,
+  adresse_residence_fiscale_2 character varying,
+  pays_residence_fiscale_3 character varying,
+  nif_3 character varying,
+  adresse_residence_fiscale_3 character varying,
+  CONSTRAINT souscription_formulaire_taxresidence_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.statements (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  document jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT statements_pkey PRIMARY KEY (id),
+  CONSTRAINT statements_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.traindevie (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid UNIQUE,
+  loyer numeric,
+  charges_loyer numeric,
+  assurances numeric,
+  transport numeric,
+  alimentation numeric,
+  loisirs numeric,
+  etudes numeric,
+  sante numeric,
+  divers numeric,
+  total numeric,
+  CONSTRAINT traindevie_pkey PRIMARY KEY (id),
+  CONSTRAINT traindevie_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  last_name text,
+  first_name text,
+  power integer,
+  email text,
+  created_at timestamp with time zone DEFAULT now(),
+  civilite text CHECK (civilite = ANY (ARRAY['M.'::text, 'Mme'::text, 'Mlle'::text])),
+  date_naissance date,
+  part_fiscale numeric,
+  CONSTRAINT users_pkey PRIMARY KEY (id)
+);
