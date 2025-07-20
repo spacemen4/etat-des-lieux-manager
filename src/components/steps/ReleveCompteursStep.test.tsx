@@ -3,33 +3,75 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ReleveCompteursStep from './ReleveCompteursStep';
 import { supabase } from '@/lib/supabase';
+import { mock, describe, it, expect } from 'bun:test';
 
 // Mock Supabase
-jest.mock('@/lib/supabase', () => ({
+mock.module('@/lib/supabase', () => ({
   supabase: {
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn(),
-    eq: jest.fn().mockReturnThis(),
-    single: jest.fn(),
-    update: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          single: () => ({ data: null, error: null }),
+        }),
+      }),
+      update: () => ({
+        eq: () => ({
+          select: () => ({
+            single: () => ({ data: {}, error: null }),
+          }),
+        }),
+      }),
+      insert: () => ({
+        select: () => ({
+          single: () => ({ data: {}, error: null }),
+        }),
+      }),
+    }),
     storage: {
-      from: jest.fn().mockReturnThis(),
-      upload: jest.fn(),
-      getPublicUrl: jest.fn(),
+      from: () => ({
+        upload: () => ({ data: { path: 'test-path' }, error: null }),
+        getPublicUrl: () => ({ data: { publicUrl: 'test-url' } }),
+        remove: () => ({ data: null, error: null }),
+      }),
     },
   },
 }));
 
 const mockRef = {
   current: {
-    saveData: jest.fn(),
+    saveData: () => {},
   },
 };
 
 describe('ReleveCompteursStep', () => {
-  it('should render without crashing', () => {
+  it('should render without crashing', async () => {
     render(<ReleveCompteursStep etatId="1" ref={mockRef} />);
-    expect(screen.getByText(/Relevé des compteurs/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('heading', { name: /Relevé des compteurs/i })).toBeInTheDocument());
+  });
+
+  it('should allow adding a new photo', async () => {
+    const { container } = render(<ReleveCompteursStep etatId="1" ref={mockRef} />);
+    await waitFor(() => expect(screen.getAllByText(/Ajouter photos/i)[0]).toBeInTheDocument());
+
+    const file = new File(['(⌐□_□)'], 'chucknorris.png', { type: 'image/png' });
+
+    const input = container.querySelector('input[type="file"]');
+
+    await waitFor(() => {
+      fireEvent.change(input, {
+        target: {
+          files: [file],
+        },
+      });
+    });
+
+    await waitFor(() => expect(screen.getByText('chucknorris.png')).toBeInTheDocument());
+  });
+
+  it('should call saveData on save button click', () => {
+    const saveData = mockRef.current.saveData;
+    render(<ReleveCompteursStep etatId="1" ref={mockRef} />);
+    fireEvent.click(screen.getAllByText(/Enregistrer le relevé/i)[0]);
+    expect(saveData).toHaveBeenCalled();
   });
 });

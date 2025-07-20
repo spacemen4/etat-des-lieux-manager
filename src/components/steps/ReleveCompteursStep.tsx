@@ -93,7 +93,10 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
 
       if (data) {
         console.log('✅ Données chargées:', data);
-        setReleveCompteurs(data);
+        const photos = data.photos || [];
+        const transformedData = { ...data, photos };
+
+        setReleveCompteurs(transformedData);
         setFormData({
           nom_ancien_occupant: data.nom_ancien_occupant || '',
           electricite_n_compteur: data.electricite_n_compteur || '',
@@ -222,14 +225,10 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
       // Mettre à jour les photos dans la base de données
       const updatedPhotos = releveCompteurs?.photos.filter(photo => photo.id !== photoId) || [];
       
-      const updateResult = await supabase
+      const { error: updateError } = await supabase
         .from('releve_compteurs')
         .update({ photos: updatedPhotos })
-        .eq('id', releveCompteurs?.id)
-        .select()
-        .single();
-      
-      const updateError = updateResult.error;
+        .eq('id', releveCompteurs!.id);
 
       if (updateError) {
         throw updateError;
@@ -354,16 +353,9 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
 
       // Préparer les données
       const dataToSave = {
+        ...formData,
         etat_des_lieux_id: etatId,
-        nom_ancien_occupant: formData.nom_ancien_occupant || null,
-        electricite_n_compteur: formData.electricite_n_compteur || null,
-        electricite_h_pleines: formData.electricite_h_pleines || null,
-        electricite_h_creuses: formData.electricite_h_creuses || null,
-        gaz_naturel_n_compteur: formData.gaz_naturel_n_compteur || null,
-        gaz_naturel_releve: formData.gaz_naturel_releve || null,
-        eau_chaude_m3: formData.eau_chaude_m3 || null,
-        eau_froide_m3: formData.eau_froide_m3 || null,
-        photos: JSON.stringify(allPhotos),
+        photos: allPhotos,
       };
 
       console.log('📝 Données à sauvegarder:', dataToSave);
