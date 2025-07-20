@@ -3,13 +3,45 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Camera, X, Upload, Image as ImageIcon, Flame } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useEquipementsChauffageByEtatId, useUpdateEquipementChauffage, useCreateEquipementChauffage, useDeleteEquipementChauffage } from '@/hooks/useEtatDesLieux';
+import { toast } from 'sonner';
+import { Thermometer, Camera, X, Upload, Image as ImageIcon, Flame } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
+
+// Configuration Supabase (simulée, adaptez avec votre vraie configuration)
+const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXB2eXJjdGxoYWd0emtic3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjg1NjYsImV4cCI6MjA2NjYwNDU2Nn0.4APWILaWXOtXCwdFYTk4MDithvZhp55ZJB6PnVn8D1w';
+
+const supabase = {
+  storage: {
+    from: (bucket: string) => ({
+      upload: async (path: string, file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+          body: formData
+        });
+        if (!response.ok) throw new Error(`Upload failed: ${response.status}`);
+        return { data: { path }, error: null };
+      },
+      remove: async (paths: string[]) => {
+        const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}`, {
+          method: 'DELETE',
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prefixes: paths })
+        });
+        return { error: response.ok ? null : new Error('Delete failed') };
+      },
+      getPublicUrl: (path: string) => ({
+        data: { publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}` }
+      })
+    })
+  }
+};
 
 interface Photo {
   id: string;
@@ -18,11 +50,11 @@ interface Photo {
   type: string;
   url: string;
   description?: string;
-  category: string;
+  category: string; // 'equipements_chauffage' pour ce composant
   file_path: string;
 }
 
-interface EquipementChauffageData {
+interface EquipementChauffage {
   id?: string;
   etat_des_lieux_id: string;
   chaudiere_etat: string;
@@ -43,13 +75,13 @@ interface EquipementsChauffageStepProps {
 }
 
 const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepProps>(({ etatId }, ref) => {
-  const { toast } = useToast();
-  
-  // État local pour simuler les données
-  const [isLoading, setIsLoading] = useState(true);
-  const [equipementsChauffageData, setEquipementsChauffageData] = useState<EquipementChauffageData | null>(null);
-  
-  const [formData, setFormData] = useState<Omit<EquipementChauffageData, 'id' | 'etat_des_lieux_id' | 'photos'>>({
+  const { data: equipementsChauffageData, refetch, isLoading: isLoadingData } = useEquipementsChauffageByEtatId(etatId);
+  const createEquipementChauffageMutation = useCreateEquipementChauffage();
+  const updateEquipementChauffageMutation = useUpdateEquipementChauffage();
+  const deleteEquipementChauffageMutation = useDeleteEquipementChauffage();
+
+  const [equipementChauffage, setEquipementChauffage] = useState<EquipementChauffage>({
+    etat_des_lieux_id: etatId,
     chaudiere_etat: '',
     chaudiere_date_dernier_entretien: '',
     ballon_eau_chaude_etat: '',
@@ -60,107 +92,62 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
     pompe_a_chaleur_present: false,
     pompe_a_chaleur_etat: '',
     commentaires: '',
+    photos: [],
   });
-  
-  const [existingPhotos, setExistingPhotos] = useState<Photo[]>([]);
+
   const [newPhotos, setNewPhotos] = useState<(File & { description?: string })[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Exposer la fonction de sauvegarde via useImperativeHandle
   useImperativeHandle(ref, () => ({
     saveData: handleSave
   }));
 
-  // Simulation du chargement des données
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('equipements_chauffage')
-          .select('*')
-          .eq('etat_des_lieux_id', etatId)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          throw error;
-        }
-
-        if (data) {
-          setEquipementsChauffageData(data);
-          const { photos, id, etat_des_lieux_id, ...restData } = data;
-          setFormData({
-            ...restData,
-            chaudiere_date_dernier_entretien: restData.chaudiere_date_dernier_entretien
-              ? new Date(restData.chaudiere_date_dernier_entretien).toISOString().split('T')[0]
-              : '',
-          });
-          setExistingPhotos(photos || []);
-        } else {
-          setEquipementsChauffageData(null);
-          setFormData({
-            chaudiere_etat: '',
-            chaudiere_date_dernier_entretien: '',
-            ballon_eau_chaude_etat: '',
-            radiateurs_nombre: 0,
-            radiateurs_etat: '',
-            thermostat_present: false,
-            thermostat_etat: '',
-            pompe_a_chaleur_present: false,
-            pompe_a_chaleur_etat: '',
-            commentaires: '',
-          });
-          setExistingPhotos([]);
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
-        toast({
-          title: "Erreur",
-          description: "Erreur lors du chargement des données",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (etatId) {
-      loadData();
+    if (equipementsChauffageData && equipementsChauffageData.length > 0) {
+      const data = equipementsChauffageData[0];
+      setEquipementChauffage({
+        ...data,
+        photos: data.photos || [],
+        chaudiere_date_dernier_entretien: data.chaudiere_date_dernier_entretien || '',
+        radiateurs_nombre: data.radiateurs_nombre || 0,
+        thermostat_present: data.thermostat_present || false,
+        pompe_a_chaleur_present: data.pompe_a_chaleur_present || false,
+      });
     }
-  }, [etatId]);
+  }, [equipementsChauffageData]);
 
-  const handleInputChange = (field: keyof typeof formData, value: string | number | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (field: keyof EquipementChauffage, value: string | number | boolean) => {
+    setEquipementChauffage(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
-    
+
     const validFiles: (File & { description?: string })[] = [];
+    const maxSize = 5 * 1024 * 1024;
+
     Array.from(files).forEach(file => {
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Erreur",
-          description: `Fichier ${file.name} trop volumineux (max 5MB)`,
-          variant: "destructive"
-        });
+      if (file.size > maxSize) {
+        toast.error(`Le fichier ${file.name} est trop volumineux (max 5MB)`);
         return;
       }
       if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Erreur",
-          description: `Fichier ${file.name} n'est pas une image`,
-          variant: "destructive"
-        });
+        toast.error(`Le fichier ${file.name} n'est pas une image`);
         return;
       }
-      const fileWithDesc = file as (File & { description?: string });
-      fileWithDesc.description = '';
-      validFiles.push(fileWithDesc);
+      const fileWithDescription = file as File & { description?: string };
+      fileWithDescription.description = '';
+      validFiles.push(fileWithDescription);
     });
+
     setNewPhotos(prev => [...prev, ...validFiles]);
   };
 
@@ -169,54 +156,67 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
   };
 
   const handleNewPhotoDescriptionChange = (photoIndex: number, description: string) => {
-    setNewPhotos(prev => prev.map((photo, i) => i === photoIndex ? { ...photo, description } : photo));
+    setNewPhotos(prev => prev.map((photo, index) => 
+      index === photoIndex ? { ...photo, description } : photo
+    ));
   };
 
   const handleRemoveExistingPhoto = async (photoId: string, filePath: string) => {
     try {
-      await supabase.storage.from('etat-des-lieux-photos').remove([filePath]);
-      setExistingPhotos(prev => prev.filter(p => p.id !== photoId));
-      toast({
-        title: "Photo retirée",
-        description: "Photo retirée localement. Sauvegardez pour confirmer."
-      });
+      const { error: storageError } = await supabase.storage
+        .from('etat-des-lieux-photos')
+        .remove([filePath]);
+
+      if (storageError) {
+        console.error('Erreur suppression storage:', storageError);
+        toast.error('Erreur lors de la suppression du fichier de stockage.');
+      }
+
+      setEquipementChauffage(prev => ({
+        ...prev,
+        photos: prev.photos.filter(photo => photo.id !== photoId)
+      }));
+      toast.success('Photo retirée de la liste. Sauvegardez pour confirmer.');
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Erreur suppression photo du stockage.",
-        variant: "destructive"
-      });
+      toast.error('Erreur lors de la suppression de la photo.');
     }
   };
 
   const handleExistingPhotoDescriptionChange = (photoId: string, description: string) => {
-    setExistingPhotos(prev => prev.map(p => p.id === photoId ? { ...p, description } : p));
+    setEquipementChauffage(prev => ({
+      ...prev,
+      photos: prev.photos.map(photo =>
+        photo.id === photoId ? { ...photo, description } : photo
+      )
+    }));
   };
 
-  const uploadPhotos = async (): Promise<Photo[]> => {
+  const _uploadPhotos = async (): Promise<Photo[]> => {
     if (newPhotos.length === 0) return [];
-    
+
     setUploadingPhotos(true);
-    const uploadedResults: Photo[] = [];
-    
+    const uploadedPhotosResult: Photo[] = [];
+
     try {
       for (const photoFile of newPhotos) {
         const timestamp = Date.now();
         const randomId = Math.random().toString(36).substring(2, 15);
         const fileExtension = photoFile.name.split('.').pop();
         const fileName = `${etatId}/equipements_chauffage/${timestamp}_${randomId}.${fileExtension}`;
-        
+
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('etat-des-lieux-photos')
           .upload(fileName, photoFile);
-          
-        if (uploadError) throw uploadError;
-        
+
+        if (uploadError) {
+          throw new Error(`Erreur upload ${photoFile.name}: ${uploadError.message}`);
+        }
+
         const { data: publicUrlData } = supabase.storage
           .from('etat-des-lieux-photos')
-          .getPublicUrl(uploadData!.path);
-          
-        uploadedResults.push({
+          .getPublicUrl(fileName);
+
+        uploadedPhotosResult.push({
           id: `${timestamp}_${randomId}`,
           name: photoFile.name,
           size: photoFile.size,
@@ -224,16 +224,13 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
           url: publicUrlData.publicUrl,
           description: photoFile.description || '',
           category: 'equipements_chauffage',
-          file_path: uploadData!.path
+          file_path: fileName
         });
       }
-      return uploadedResults;
+      return uploadedPhotosResult;
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: `Erreur upload: ${error instanceof Error ? error.message : 'Inconnue'}`,
-        variant: "destructive"
-      });
+      console.error("Erreur pendant l'upload:", error);
+      toast.error(`Erreur lors de l'upload des photos: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
       throw error;
     } finally {
       setUploadingPhotos(false);
@@ -241,362 +238,307 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
   };
 
   const handleSave = async () => {
-    if (!etatId) {
-      toast({
-        title: "Erreur",
-        description: "ID de l'état des lieux manquant.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     setIsSaving(true);
-    
     try {
-      const uploadedPhotos = await uploadPhotos();
-      const allPhotos = [...existingPhotos, ...uploadedPhotos];
-
-      const dataToSave: EquipementChauffageData = {
-        ...formData,
-        id: equipementsChauffageData?.id,
-        etat_des_lieux_id: etatId,
+      const newlyUploadedPhotos = await _uploadPhotos();
+      const allPhotos = [...equipementChauffage.photos, ...newlyUploadedPhotos];
+      
+      const dataToSave = {
+        ...equipementChauffage,
         photos: allPhotos,
-        radiateurs_nombre: Number(formData.radiateurs_nombre) || 0,
+        etat_des_lieux_id: etatId,
       };
 
-      let savedData;
-      if (equipementsChauffageData?.id) {
-        // Mise à jour
-        const { id, ...updateData } = dataToSave;
-        const { data, error } = await supabase
-          .from('equipements_chauffage')
-          .update(updateData)
-          .eq('id', equipementsChauffageData.id)
-          .select()
-          .single();
-          
-        if (error) throw error;
-        savedData = data;
+      if (equipementChauffage.id) {
+        await updateEquipementChauffageMutation.mutateAsync(dataToSave);
       } else {
-        // Création
-        const { id, ...creationData } = dataToSave;
-        const { data, error } = await supabase
-          .from('equipements_chauffage')
-          .insert(creationData)
-          .select()
-          .single();
-          
-        if (error) throw error;
-        savedData = data;
+        await createEquipementChauffageMutation.mutateAsync(dataToSave);
       }
-
-      setEquipementsChauffageData(savedData);
+      
       setNewPhotos([]);
-      toast({
-        title: "Succès",
-        description: "Équipements de chauffage sauvegardés !"
-      });
+      toast.success('Équipements de chauffage sauvegardés avec succès !');
+      refetch();
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: `Erreur sauvegarde: ${error instanceof Error ? error.message : 'Détails dans console'}`,
-        variant: "destructive"
-      });
-      console.error('Erreur de sauvegarde:', error);
+      console.error("Erreur lors de la sauvegarde:", error);
+      toast.error('Erreur lors de la sauvegarde des équipements de chauffage.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-10">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
-          Chargement des données de chauffage...
-        </CardContent>
-      </Card>
-    );
+  if (isLoadingData) {
+    return <Card><CardContent className="p-4">Chargement...</CardContent></Card>;
   }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Flame className="h-6 w-6 text-orange-500" />
-          Équipements de chauffage et production d'eau chaude
+          <Thermometer className="h-5 w-5" />
+          Équipements de chauffage
         </CardTitle>
         <p className="text-sm text-gray-600">
-          Décrivez l'état et les caractéristiques des installations de chauffage et d'eau chaude.
+          Renseignez l'état des équipements de chauffage du logement (chaudière, radiateurs, thermostat, etc.).
         </p>
       </CardHeader>
-      <CardContent className="space-y-8">
-        {/* Section Chaudière */}
-        <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-700 mb-3">Chaudière</h3>
+      <CardContent className="space-y-6">
+        {/* Chaudière */}
+        <div className="p-4 border rounded-lg space-y-4 bg-slate-50 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Flame className="h-5 w-5 text-orange-500" />
+            <h4 className="font-semibold text-lg text-slate-700">Chaudière</h4>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="chaudiere_etat" className="font-medium">État de la chaudière</Label>
-              <Input 
-                id="chaudiere_etat" 
-                value={formData.chaudiere_etat} 
-                onChange={(e) => handleInputChange('chaudiere_etat', e.target.value)} 
-                placeholder="Ex: Bon état, traces d'usure" 
+              <Input
+                id="chaudiere_etat"
+                value={equipementChauffage.chaudiere_etat}
+                onChange={(e) => handleInputChange('chaudiere_etat', e.target.value)}
+                placeholder="Ex: Bon état, Entretien nécessaire, Défaillante"
                 className="mt-1"
               />
             </div>
             <div>
               <Label htmlFor="chaudiere_date_dernier_entretien" className="font-medium">Date du dernier entretien</Label>
-              <Input 
-                id="chaudiere_date_dernier_entretien" 
-                type="date" 
-                value={formData.chaudiere_date_dernier_entretien} 
-                onChange={(e) => handleInputChange('chaudiere_date_dernier_entretien', e.target.value)} 
+              <Input
+                id="chaudiere_date_dernier_entretien"
+                type="date"
+                value={equipementChauffage.chaudiere_date_dernier_entretien}
+                onChange={(e) => handleInputChange('chaudiere_date_dernier_entretien', e.target.value)}
                 className="mt-1"
               />
             </div>
           </div>
         </div>
 
-        {/* Section Ballon d'eau chaude */}
-        <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-700 mb-3">Ballon d'eau chaude / Cumulus</h3>
+        {/* Ballon d'eau chaude */}
+        <div className="p-4 border rounded-lg space-y-4 bg-slate-50 shadow-sm">
+          <h4 className="font-semibold text-lg text-slate-700">Ballon d'eau chaude</h4>
           <div>
-            <Label htmlFor="ballon_eau_chaude_etat" className="font-medium">État du ballon</Label>
-            <Input 
-              id="ballon_eau_chaude_etat" 
-              value={formData.ballon_eau_chaude_etat} 
-              onChange={(e) => handleInputChange('ballon_eau_chaude_etat', e.target.value)} 
-              placeholder="Ex: Bon état, récent, ancien" 
+            <Label htmlFor="ballon_eau_chaude_etat" className="font-medium">État du ballon d'eau chaude</Label>
+            <Input
+              id="ballon_eau_chaude_etat"
+              value={equipementChauffage.ballon_eau_chaude_etat}
+              onChange={(e) => handleInputChange('ballon_eau_chaude_etat', e.target.value)}
+              placeholder="Ex: Bon état, Fuite, Thermostat défaillant"
               className="mt-1"
             />
           </div>
         </div>
 
-        {/* Section Radiateurs */}
-        <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-700 mb-3">Radiateurs</h3>
+        {/* Radiateurs */}
+        <div className="p-4 border rounded-lg space-y-4 bg-slate-50 shadow-sm">
+          <h4 className="font-semibold text-lg text-slate-700">Radiateurs</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="radiateurs_nombre" className="font-medium">Nombre de radiateurs</Label>
-              <Input 
-                id="radiateurs_nombre" 
-                type="number" 
-                value={formData.radiateurs_nombre} 
-                onChange={(e) => handleInputChange('radiateurs_nombre', parseInt(e.target.value) || 0)} 
-                min="0" 
+              <Input
+                id="radiateurs_nombre"
+                type="number"
+                min="0"
+                value={equipementChauffage.radiateurs_nombre}
+                onChange={(e) => handleInputChange('radiateurs_nombre', parseInt(e.target.value) || 0)}
                 className="mt-1"
               />
             </div>
             <div>
-              <Label htmlFor="radiateurs_etat" className="font-medium">État général des radiateurs</Label>
-              <Input 
-                id="radiateurs_etat" 
-                value={formData.radiateurs_etat} 
-                onChange={(e) => handleInputChange('radiateurs_etat', e.target.value)} 
-                placeholder="Ex: Bon état, quelques rayures" 
+              <Label htmlFor="radiateurs_etat" className="font-medium">État des radiateurs</Label>
+              <Input
+                id="radiateurs_etat"
+                value={equipementChauffage.radiateurs_etat}
+                onChange={(e) => handleInputChange('radiateurs_etat', e.target.value)}
+                placeholder="Ex: Bon état, Purge nécessaire, Robinets défaillants"
                 className="mt-1"
               />
             </div>
           </div>
         </div>
 
-        {/* Section Thermostat */}
-        <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-700 mb-3">Thermostat</h3>
-          <div className="flex items-center space-x-3 mb-3">
-            <Checkbox 
-              id="thermostat_present" 
-              checked={formData.thermostat_present} 
-              onCheckedChange={(checked) => handleInputChange('thermostat_present', checked as boolean)}
-            />
-            <Label htmlFor="thermostat_present" className="font-medium cursor-pointer">
-              Présence d'un thermostat d'ambiance
-            </Label>
-          </div>
-          {formData.thermostat_present && (
-            <div>
-              <Label htmlFor="thermostat_etat" className="font-medium">État et type du thermostat</Label>
-              <Input 
-                id="thermostat_etat" 
-                value={formData.thermostat_etat} 
-                onChange={(e) => handleInputChange('thermostat_etat', e.target.value)} 
-                placeholder="Ex: Programmable, connecté, bon état" 
-                className="mt-1"
+        {/* Thermostat */}
+        <div className="p-4 border rounded-lg space-y-4 bg-slate-50 shadow-sm">
+          <h4 className="font-semibold text-lg text-slate-700">Thermostat</h4>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="thermostat_present"
+                checked={equipementChauffage.thermostat_present}
+                onCheckedChange={(checked) => handleInputChange('thermostat_present', Boolean(checked))}
               />
+              <Label htmlFor="thermostat_present" className="font-medium">Thermostat présent</Label>
             </div>
-          )}
-        </div>
-
-        {/* Section Pompe à chaleur */}
-        <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-700 mb-3">Pompe à chaleur (si applicable)</h3>
-          <div className="flex items-center space-x-3 mb-3">
-            <Checkbox 
-              id="pompe_a_chaleur_present" 
-              checked={formData.pompe_a_chaleur_present} 
-              onCheckedChange={(checked) => handleInputChange('pompe_a_chaleur_present', checked as boolean)}
-            />
-            <Label htmlFor="pompe_a_chaleur_present" className="font-medium cursor-pointer">
-              Présence d'une pompe à chaleur
-            </Label>
-          </div>
-          {formData.pompe_a_chaleur_present && (
-            <div>
-              <Label htmlFor="pompe_a_chaleur_etat" className="font-medium">État de la pompe à chaleur</Label>
-              <Input 
-                id="pompe_a_chaleur_etat" 
-                value={formData.pompe_a_chaleur_etat} 
-                onChange={(e) => handleInputChange('pompe_a_chaleur_etat', e.target.value)} 
-                placeholder="Ex: Bon état, modèle récent" 
-                className="mt-1"
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Section Photos */}
-        <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <Camera className="h-5 w-5 text-slate-600" />
-            <h3 className="text-lg font-semibold text-slate-700">Photos des équipements de chauffage</h3>
-            <Badge variant="secondary">{existingPhotos.length + newPhotos.length} photo(s)</Badge>
-          </div>
-          
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors cursor-pointer" 
-               onClick={() => fileInputRef.current?.click()}>
-            <input 
-              ref={fileInputRef} 
-              type="file" 
-              multiple 
-              accept="image/*" 
-              onChange={handleFileSelect} 
-              className="hidden" 
-              disabled={uploadingPhotos || isSaving}
-            />
-            <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
-              onClick={(e) => {e.stopPropagation(); fileInputRef.current?.click();}} 
-              disabled={uploadingPhotos || isSaving}
-            >
-              <ImageIcon className="h-4 w-4 mr-2" /> 
-              Ajouter des photos
-            </Button>
-            <p className="text-xs text-gray-500 mt-1">Chaudière, radiateurs, thermostat, etc.</p>
-          </div>
-
-          {existingPhotos.length > 0 && (
-            <div className="mt-4 space-y-2">
-              <h4 className="text-sm font-medium text-gray-600">Photos sauvegardées :</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {existingPhotos.map((photo) => (
-                  <div key={photo.id} className="relative border rounded-lg overflow-hidden bg-white shadow-sm group">
-                    <img 
-                      src={photo.url} 
-                      alt={photo.name || 'Photo chauffage'} 
-                      className="w-full h-28 object-cover" 
-                      onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/150?text=Erreur')} 
-                    />
-                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button 
-                        type="button" 
-                        variant="destructive" 
-                        size="icon" 
-                        onClick={() => handleRemoveExistingPhoto(photo.id, photo.file_path)} 
-                        className="h-6 w-6 p-0" 
-                        disabled={isSaving || uploadingPhotos}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <div className="p-2">
-                      <Input 
-                        type="text" 
-                        placeholder="Description" 
-                        value={photo.description || ''} 
-                        onChange={(e) => handleExistingPhotoDescriptionChange(photo.id, e.target.value)} 
-                        className="text-xs h-7 w-full" 
-                        disabled={isSaving || uploadingPhotos} 
-                      />
-                      <p className="text-xs text-gray-500 truncate mt-1" title={photo.name}>
-                        {(photo.size / 1024).toFixed(1)} KB <span className="text-green-600">✓</span>
-                      </p>
-                    </div>
-                  </div>
-                ))}
+            
+            {equipementChauffage.thermostat_present && (
+              <div>
+                <Label htmlFor="thermostat_etat" className="font-medium">État du thermostat</Label>
+                <Input
+                  id="thermostat_etat"
+                  value={equipementChauffage.thermostat_etat}
+                  onChange={(e) => handleInputChange('thermostat_etat', e.target.value)}
+                  placeholder="Ex: Fonctionne parfaitement, Écran défaillant, Programmation défectueuse"
+                  className="mt-1"
+                />
               </div>
-            </div>
-          )}
-
-          {newPhotos.length > 0 && (
-            <div className="mt-4 space-y-2">
-              <h4 className="text-sm font-medium text-gray-600">Nouvelles photos :</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {newPhotos.map((photoFile, idx) => (
-                  <div key={`new-chauffage-${idx}`} className="relative border rounded-lg overflow-hidden bg-white shadow-sm group">
-                    <img 
-                      src={URL.createObjectURL(photoFile)} 
-                      alt={photoFile.name} 
-                      className="w-full h-28 object-cover" 
-                    />
-                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button 
-                        type="button" 
-                        variant="destructive" 
-                        size="icon" 
-                        onClick={() => handleRemoveNewPhoto(idx)} 
-                        className="h-6 w-6 p-0" 
-                        disabled={isSaving || uploadingPhotos}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <div className="p-2">
-                      <Input 
-                        type="text" 
-                        placeholder="Description" 
-                        value={photoFile.description || ''} 
-                        onChange={(e) => handleNewPhotoDescriptionChange(idx, e.target.value)} 
-                        className="text-xs h-7 w-full" 
-                        disabled={isSaving || uploadingPhotos} 
-                      />
-                      <p className="text-xs text-gray-500 truncate mt-1" title={photoFile.name}>
-                        {(photoFile.size / 1024).toFixed(1)} KB <span className="text-orange-500">↯</span>
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Commentaires Généraux */}
-        <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-          <Label htmlFor="commentaires_chauffage" className="text-lg font-semibold text-slate-700 mb-3 block">
-            Commentaires généraux sur le chauffage
-          </Label>
-          <Textarea 
-            id="commentaires_chauffage" 
-            value={formData.commentaires} 
-            onChange={(e) => handleInputChange('commentaires', e.target.value)} 
-            placeholder="Observations globales, conseils d'utilisation, dysfonctionnements signalés..." 
-            rows={4} 
+        {/* Pompe à chaleur */}
+        <div className="p-4 border rounded-lg space-y-4 bg-slate-50 shadow-sm">
+          <h4 className="font-semibold text-lg text-slate-700">Pompe à chaleur</h4>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="pompe_a_chaleur_present"
+                checked={equipementChauffage.pompe_a_chaleur_present}
+                onCheckedChange={(checked) => handleInputChange('pompe_a_chaleur_present', Boolean(checked))}
+              />
+              <Label htmlFor="pompe_a_chaleur_present" className="font-medium">Pompe à chaleur présente</Label>
+            </div>
+            
+            {equipementChauffage.pompe_a_chaleur_present && (
+              <div>
+                <Label htmlFor="pompe_a_chaleur_etat" className="font-medium">État de la pompe à chaleur</Label>
+                <Input
+                  id="pompe_a_chaleur_etat"
+                  value={equipementChauffage.pompe_a_chaleur_etat}
+                  onChange={(e) => handleInputChange('pompe_a_chaleur_etat', e.target.value)}
+                  placeholder="Ex: Bon état, Bruyante, Manque de gaz réfrigérant"
+                  className="mt-1"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Commentaires */}
+        <div>
+          <Label htmlFor="commentaires" className="font-medium">Commentaires généraux</Label>
+          <Input
+            id="commentaires"
+            value={equipementChauffage.commentaires}
+            onChange={(e) => handleInputChange('commentaires', e.target.value)}
+            placeholder="Observations particulières sur les équipements de chauffage..."
             className="mt-1"
           />
         </div>
 
-        <div className="mt-8 pt-6 border-t">
+        {/* Section Photos */}
+        <div className="space-y-3 pt-3 border-t mt-4">
+          <div className="flex items-center gap-2">
+            <Camera className="h-5 w-5 text-slate-600" />
+            <h5 className="font-medium text-slate-700">Photos des équipements de chauffage</h5>
+            <Badge variant="outline">{equipementChauffage.photos.length + newPhotos.length} photo(s)</Badge>
+          </div>
+
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPhotos}
+            >
+              <ImageIcon className="h-4 w-4 mr-2" />
+              Ajouter des photos
+            </Button>
+            <p className="text-xs text-gray-500 mt-1">Max 5MB par image.</p>
+          </div>
+
+          {/* Photos existantes */}
+          {equipementChauffage.photos.length > 0 && (
+            <div className="space-y-2">
+              <h6 className="text-sm font-medium text-gray-600">Photos sauvegardées :</h6>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {equipementChauffage.photos.map((photo) => (
+                  <div key={photo.id} className="relative border rounded-lg overflow-hidden bg-white shadow-sm">
+                    <img src={photo.url} alt={photo.name} className="w-full h-28 object-cover" />
+                    <div className="p-2 space-y-1">
+                      <Input
+                        type="text"
+                        placeholder="Description..."
+                        value={photo.description || ''}
+                        onChange={(e) => handleExistingPhotoDescriptionChange(photo.id, e.target.value)}
+                        className="text-xs h-7 w-full"
+                      />
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-xs text-gray-500 truncate" title={photo.name}>
+                          {(photo.size / 1024).toFixed(1)} KB
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveExistingPhoto(photo.id, photo.file_path)}
+                          className="text-red-500 hover:text-red-600 h-6 w-6 p-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Nouvelles photos */}
+          {newPhotos.length > 0 && (
+            <div className="space-y-2">
+              <h6 className="text-sm font-medium text-gray-600">Nouvelles photos (non sauvegardées) :</h6>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {newPhotos.map((photoFile, photoIdx) => (
+                  <div key={`new-${photoIdx}`} className="relative border rounded-lg overflow-hidden bg-white shadow-sm">
+                    <img src={URL.createObjectURL(photoFile)} alt={photoFile.name} className="w-full h-28 object-cover" />
+                    <div className="p-2 space-y-1">
+                      <Input
+                        type="text"
+                        placeholder="Description..."
+                        value={photoFile.description || ''}
+                        onChange={(e) => handleNewPhotoDescriptionChange(photoIdx, e.target.value)}
+                        className="text-xs h-7 w-full"
+                      />
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-xs text-gray-500 truncate" title={photoFile.name}>
+                          {(photoFile.size / 1024).toFixed(1)} KB
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveNewPhoto(photoIdx)}
+                          className="text-red-500 hover:text-red-600 h-6 w-6 p-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bouton de sauvegarde */}
+        <div className="mt-6 pt-6 border-t">
           <Button
             onClick={handleSave}
-            disabled={isSaving || uploadingPhotos}
+            disabled={isSaving || uploadingPhotos || createEquipementChauffageMutation.isPending || updateEquipementChauffageMutation.isPending}
             className="w-full md:w-auto"
             size="lg"
           >
-            {isSaving || uploadingPhotos ? 'Sauvegarde en cours...' : 'Sauvegarder les informations de chauffage'}
+            {isSaving || uploadingPhotos ? 'Sauvegarde en cours...' : 'Sauvegarder les équipements de chauffage'}
           </Button>
         </div>
       </CardContent>
