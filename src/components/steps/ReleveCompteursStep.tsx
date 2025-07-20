@@ -363,7 +363,7 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
         gaz_naturel_releve: formData.gaz_naturel_releve || null,
         eau_chaude_m3: formData.eau_chaude_m3 || null,
         eau_froide_m3: formData.eau_froide_m3 || null,
-        photos: JSON.stringify(allPhotos),
+        photos: allPhotos,
       };
 
       console.log('📝 Données à sauvegarder:', dataToSave);
