@@ -8,39 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { Thermometer, Camera, X, Upload, Image as ImageIcon, Flame } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
-
-// Configuration Supabase (simulée, adaptez avec votre vraie configuration)
-const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXB2eXJjdGxoYWd0emtic3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjg1NjYsImV4cCI6MjA2NjYwNDU2Nn0.4APWILaWXOtXCwdFYTk4MDithvZhp55ZJB6PnVn8D1w';
-
-const supabase = {
-  storage: {
-    from: (bucket: string) => ({
-      upload: async (path: string, file: File) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
-          method: 'POST',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-          body: formData
-        });
-        if (!response.ok) throw new Error(`Upload failed: ${response.status}`);
-        return { data: { path }, error: null };
-      },
-      remove: async (paths: string[]) => {
-        const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}`, {
-          method: 'DELETE',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prefixes: paths })
-        });
-        return { error: response.ok ? null : new Error('Delete failed') };
-      },
-      getPublicUrl: (path: string) => ({
-        data: { publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}` }
-      })
-    })
-  }
-};
+import { supabase } from '@/lib/supabase';
 
 interface Photo {
   id: string;
@@ -73,33 +41,27 @@ interface EquipementsChauffageStepProps {
   etatId: string;
 }
 
-// Hooks temporaires pour simuler les vraies API calls
+// Hooks pour interagir avec Supabase
 const useEquipementsChauffageByEtatId = (etatId: string) => {
   const [data, setData] = useState<EquipementChauffage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const refetch = async () => {
     console.log('🔄 Rechargement des équipements chauffage pour etatId:', etatId);
     setIsLoading(true);
     try {
-      const url = `${SUPABASE_URL}/rest/v1/equipements_chauffage?etat_des_lieux_id=eq.${etatId}`;
-      console.log('📡 URL de requête:', url);
-      
-      const response = await fetch(url, {
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        }
-      });
-      
-      console.log('📡 Réponse chargement - Status:', response.status);
-      
-      const result = await response.json();
+      const { data: result, error } = await supabase
+        .from('equipements_chauffage')
+        .select('*')
+        .eq('etat_des_lieux_id', etatId);
+
+      if (error) throw error;
+
       console.log('📡 Données chargées:', result);
-      
       setData(result || []);
     } catch (error) {
       console.error('❌ Erreur chargement équipements chauffage:', error);
+      toast.error('Erreur lors du chargement des données de chauffage.');
       setData([]);
     } finally {
       setIsLoading(false);
@@ -107,92 +69,63 @@ const useEquipementsChauffageByEtatId = (etatId: string) => {
   };
 
   useEffect(() => {
-    refetch();
+    if (etatId) {
+      refetch();
+    }
   }, [etatId]);
 
   return { data, refetch, isLoading };
 };
 
 const useCreateEquipementChauffage = () => {
-  return {
-    mutateAsync: async (data: EquipementChauffage) => {
-      console.log('🔄 Tentative de création équipement chauffage:', data);
-      
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/equipements_chauffage`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify(data)
-      });
-      
-      console.log('📡 Réponse API création - Status:', response.status);
-      console.log('📡 Réponse API création - Headers:', Object.fromEntries(response.headers.entries()));
-      
-      const responseText = await response.text();
-      console.log('📡 Réponse API création - Body:', responseText);
-      
-      if (!response.ok) {
-        console.error('❌ Erreur création - Status:', response.status);
-        console.error('❌ Erreur création - Response:', responseText);
-        throw new Error(`Erreur création équipement chauffage: ${response.status} - ${responseText}`);
-      }
-      
-      try {
-        const result = JSON.parse(responseText);
-        console.log('✅ Création réussie:', result);
-        return result;
-      } catch (parseError) {
-        console.error('❌ Erreur parsing JSON:', parseError);
-        return responseText;
-      }
-    },
-    isPending: false
+  const [isPending, setIsPending] = useState(false);
+
+  const mutateAsync = async (data: Omit<EquipementChauffage, 'id'>) => {
+    setIsPending(true);
+    console.log('🔄 Tentative de création équipement chauffage:', data);
+
+    const { data: result, error } = await supabase
+      .from('equipements_chauffage')
+      .insert([data])
+      .select();
+
+    if (error) {
+      console.error('❌ Erreur création:', error);
+      throw new Error(`Erreur création équipement chauffage: ${error.message}`);
+    }
+
+    console.log('✅ Création réussie:', result);
+    setIsPending(false);
+    return result;
   };
+
+  return { mutateAsync, isPending };
 };
 
 const useUpdateEquipementChauffage = () => {
-  return {
-    mutateAsync: async (data: EquipementChauffage) => {
-      console.log('🔄 Tentative de mise à jour équipement chauffage:', data);
-      
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/equipements_chauffage?id=eq.${data.id}`, {
-        method: 'PATCH',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify(data)
-      });
-      
-      console.log('📡 Réponse API mise à jour - Status:', response.status);
-      console.log('📡 Réponse API mise à jour - Headers:', Object.fromEntries(response.headers.entries()));
-      
-      const responseText = await response.text();
-      console.log('📡 Réponse API mise à jour - Body:', responseText);
-      
-      if (!response.ok) {
-        console.error('❌ Erreur mise à jour - Status:', response.status);
-        console.error('❌ Erreur mise à jour - Response:', responseText);
-        throw new Error(`Erreur mise à jour équipement chauffage: ${response.status} - ${responseText}`);
-      }
-      
-      try {
-        const result = JSON.parse(responseText);
-        console.log('✅ Mise à jour réussie:', result);
-        return result;
-      } catch (parseError) {
-        console.error('❌ Erreur parsing JSON:', parseError);
-        return responseText;
-      }
-    },
-    isPending: false
+  const [isPending, setIsPending] = useState(false);
+
+  const mutateAsync = async (data: EquipementChauffage) => {
+    setIsPending(true);
+    console.log('🔄 Tentative de mise à jour équipement chauffage:', data);
+
+    const { data: result, error } = await supabase
+      .from('equipements_chauffage')
+      .update(data)
+      .eq('id', data.id)
+      .select();
+
+    if (error) {
+      console.error('❌ Erreur mise à jour:', error);
+      throw new Error(`Erreur mise à jour équipement chauffage: ${error.message}`);
+    }
+
+    console.log('✅ Mise à jour réussie:', result);
+    setIsPending(false);
+    return result;
   };
+
+  return { mutateAsync, isPending };
 };
 
 const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepProps>(({ etatId }, ref) => {
@@ -400,7 +333,8 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
         await updateEquipementChauffageMutation.mutateAsync(dataToSave);
       } else {
         console.log('🆕 Création d\'un nouvel équipement');
-        await createEquipementChauffageMutation.mutateAsync(dataToSave);
+        const { id, ...createData } = dataToSave;
+        await createEquipementChauffageMutation.mutateAsync(createData);
       }
       
       setNewPhotos([]);
