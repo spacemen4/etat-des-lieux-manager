@@ -4,11 +4,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Edit, Trash2, Home, Camera, Upload, Image as ImageIcon, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Home, Camera, Upload, Image as ImageIcon, X, AlertCircle } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
 import { supabase } from '@/lib/supabase';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXB2eXJjdGxoYWd0emtic3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjg1NjYsImV4cCI6MjA2NjYwNDU2Nn0.4APWILaWXOtXCwdFYTk4MDithvZhp55ZJB6PnVn8D1w';
@@ -239,6 +240,9 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
   const [currentPieceExistingPhotos, setCurrentPieceExistingPhotos] = useState([]);
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const fileInputRef = useRef(null);
+  const [alertInfo, setAlertInfo] = useState<{ type: 'error' | 'success' | 'info'; message: string } | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [pieceToDelete, setPieceToDelete] = useState(null);
 
   // Exposer la fonction de sauvegarde via useImperativeHandle
   useImperativeHandle(ref, () => ({
@@ -248,13 +252,6 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
       }
     }
   }));
-
-  const showToast = (message, type = 'info') => {
-    console.log(`[${type.toUpperCase()}] ${message}`);
-    // Simulation d'un toast - vous pouvez intégrer une vraie librairie de toast
-    const alertType = type === 'error' ? 'Erreur' : type === 'success' ? 'Succès' : 'Info';
-    alert(`${alertType}: ${message}`);
-  };
 
   // Chargement initial des pièces depuis Supabase
   useEffect(() => {
@@ -307,11 +304,11 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
     const validFiles = [];
     Array.from(files).forEach((file: File) => {
       if (file.size > 5 * 1024 * 1024) { 
-        showToast(`Fichier ${file.name} trop volumineux (max 5MB)`, 'error'); 
+        setAlertInfo({ type: 'error', message: `Fichier ${file.name} trop volumineux (max 5MB)` });
         return; 
       }
       if (!file.type.startsWith('image/')) { 
-        showToast(`Fichier ${file.name} n'est pas une image`, 'error'); 
+        setAlertInfo({ type: 'error', message: `Fichier ${file.name} n'est pas une image` });
         return; 
       }
       const fileWithDesc = file as any;
@@ -352,10 +349,10 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
         // Pour l'instant, on laisse la sauvegarde principale gérer ça via handleSave.
       }
       
-      showToast('Photo marquée pour suppression. Sauvegardez la pièce pour confirmer.', 'info');
+      setAlertInfo({ type: 'info', message: 'Photo marquée pour suppression. Sauvegardez la pièce pour confirmer.' });
     } catch (error) {
       console.error('Erreur suppression photo du stockage:', error);
-      showToast('Erreur lors de la suppression du fichier photo du stockage.', 'error');
+      setAlertInfo({ type: 'error', message: 'Erreur lors de la suppression du fichier photo du stockage.' });
     } finally {
       setIsProcessingPhotos(false);
     }
@@ -413,7 +410,7 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
       return uploadedPhotoMetadataList;
     } catch (error) {
       console.error('Erreur upload photos:', error);
-      showToast(`Erreur upload photos: ${error.message}`, 'error');
+      setAlertInfo({ type: 'error', message: `Erreur upload photos: ${error.message}` });
       throw error;
     } finally {
       setIsProcessingPhotos(false);
@@ -459,10 +456,10 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
       setSelectedPiece(finalUpdatedPieceForState);
       setCurrentPieceNewPhotos([]);
       
-      showToast(`Pièce "${selectedPiece.nom_piece}" sauvegardée avec succès`, 'success');
+      setAlertInfo({ type: 'success', message: `Pièce "${selectedPiece.nom_piece}" sauvegardée avec succès` });
     } catch (error) {
       console.error('Erreur sauvegarde pièce:', error);
-      showToast('Erreur lors de la sauvegarde de la pièce', 'error');
+      setAlertInfo({ type: 'error', message: 'Erreur lors de la sauvegarde de la pièce' });
     } finally {
       setIsSaving(false);
     }
@@ -470,7 +467,7 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
 
   const handleCreatePiece = async () => {
     if (!newPieceName.trim()) {
-      showToast('Veuillez saisir un nom de pièce', 'error');
+      setAlertInfo({ type: 'error', message: 'Veuillez saisir un nom de pièce' });
       return;
     }
 
@@ -487,14 +484,14 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
       // newPiece should already have the 'photos' array from the DB response if 'return=representation'
       setPieces(prev => [...prev, newPiece]);
 
-      showToast(`Pièce "${newPieceName}" créée avec succès`, 'success');
+      setAlertInfo({ type: 'success', message: `Pièce "${newPieceName}" créée avec succès` });
       setNewPieceName('');
       setSelectedSuggestion('');
       setIsCreateDialogOpen(false);
       setSelectedPiece(newPiece);
     } catch (error) {
       console.error('Erreur création pièce:', error);
-      showToast('Erreur lors de la création de la pièce', 'error');
+      setAlertInfo({ type: 'error', message: 'Erreur lors de la création de la pièce' });
     } finally {
       setIsCreating(false);
     }
@@ -505,49 +502,48 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
     setNewPieceName(suggestion);
   };
 
-  const handleDeletePiece = async (pieceId, pieceName) => {
-    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer la pièce "${pieceName}" et toutes ses données associées (y compris les photos) ? Cette action est irréversible.`)) {
-      return;
-    }
+  const handleDeletePiece = (piece) => {
+    setPieceToDelete(piece);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeletePiece = async () => {
+    if (!pieceToDelete) return;
 
     setIsDeleting(true);
     
     try {
-      const pieceToDelete = pieces.find(p => p.id === pieceId);
-      
       // Supprimer les photos du stockage si elles existent
-      if (pieceToDelete?.photos && pieceToDelete.photos.length > 0) {
-        const photoPaths = pieceToDelete.photos.map(p => p.file_path).filter(Boolean); // Ensure paths are valid
+      if (pieceToDelete.photos && pieceToDelete.photos.length > 0) {
+        const photoPaths = pieceToDelete.photos.map(p => p.file_path).filter(Boolean);
         if (photoPaths.length > 0) {
           try {
-            console.log('[DEBUG] handleDeletePiece: Removing photos from storage:', photoPaths);
             await supabaseClient.storage.from('etat-des-lieux-photos').remove(photoPaths);
           } catch (storageError) {
-            console.error("Erreur suppression photos du stockage lors de la suppression de la pièce:", storageError);
-            showToast('Erreur partielle: certaines photos du stockage n\'ont pu être supprimées.', 'error');
-            // Continue with deleting the piece record itself
+            console.error("Erreur suppression photos du stockage:", storageError);
+            setAlertInfo({ type: 'error', message: 'Erreur partielle: certaines photos du stockage n\'ont pu être supprimées.' });
           }
         }
       }
 
       // Supprimer la pièce de la base de données
-      // (cela supprimera la pièce et sa colonne 'photos' contenant les métadonnées)
-      console.log('[DEBUG] handleDeletePiece: Deleting piece record from DB:', pieceId);
-      await supabaseClient.pieces.delete(pieceId);
+      await supabaseClient.pieces.delete(pieceToDelete.id);
       
       // Mettre à jour l'état local
-      setPieces(prev => prev.filter(piece => piece.id !== pieceId));
+      setPieces(prev => prev.filter(p => p.id !== pieceToDelete.id));
       
-      if (selectedPiece && selectedPiece.id === pieceId) {
+      if (selectedPiece && selectedPiece.id === pieceToDelete.id) {
         setSelectedPiece(null);
       }
 
-      showToast(`Pièce "${pieceName}" supprimée avec succès`, 'success');
+      setAlertInfo({ type: 'success', message: `Pièce "${pieceToDelete.nom_piece}" supprimée avec succès` });
     } catch (error) {
       console.error('Erreur suppression pièce:', error);
-      showToast(`Erreur lors de la suppression de la pièce: ${error.message}`, 'error');
+      setAlertInfo({ type: 'error', message: `Erreur lors de la suppression de la pièce: ${error.message}` });
     } finally {
       setIsDeleting(false);
+      setShowDeleteConfirm(false);
+      setPieceToDelete(null);
     }
   };
 
@@ -606,11 +602,40 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
 
   return (
     <div className="space-y-6">
+      {alertInfo && (
+        <Alert variant={alertInfo.type === 'error' ? 'destructive' : 'default'}>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{alertInfo.type === 'error' ? 'Erreur' : 'Information'}</AlertTitle>
+          <AlertDescription>
+            {alertInfo.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+          </DialogHeader>
+          <p>
+            Êtes-vous sûr de vouloir supprimer la pièce "{pieceToDelete?.nom_piece}" et toutes ses données associées (y compris les photos) ? Cette action est irréversible.
+          </p>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Annuler</Button>
+            </DialogClose>
+            <Button variant="destructive" onClick={confirmDeletePiece} disabled={isDeleting}>
+              {isDeleting ? 'Suppression...' : 'Supprimer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Home className="h-5 w-5" />
-            Pièces de l'état des lieux (état à l'entrée)
+            Pièces de l'état des lieux
           </CardTitle>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
@@ -623,9 +648,12 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
               <DialogHeader>
                 <DialogTitle>Ajouter une nouvelle pièce</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="space-y-4 p-4">
                 <div className="space-y-2">
                   <Label htmlFor="piece-name">Nom de la pièce</Label>
+                  <p className="text-sm text-gray-500">
+                    Entrez un nom personnalisé ou choisissez parmi les suggestions.
+                  </p>
                   <Input
                     id="piece-name"
                     value={newPieceName}
@@ -635,53 +663,33 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Ou choisir parmi les suggestions :</Label>
+                  <Label>Suggestions</Label>
                   <div className="grid grid-cols-2 gap-2">
                     {PIECES_TYPES.map((type) => (
-                      <div key={type} className="space-y-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSuggestionSelect(type)}
-                          className="w-full text-left justify-start"
-                        >
-                          {type}
-                        </Button>
-                        {selectedSuggestion === type && PIECES_SUGGESTIONS[type] && (
-                          <div className="ml-2 space-y-1">
-                            {PIECES_SUGGESTIONS[type].map((suggestion) => (
-                              <Button
-                                key={suggestion}
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleSuggestionSelect(suggestion)}
-                                className="w-full text-left justify-start text-xs"
-                              >
-                                {suggestion}
-                              </Button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      <Button
+                        key={type}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSuggestionSelect(type)}
+                        className="w-full text-left justify-start"
+                      >
+                        {type}
+                      </Button>
                     ))}
                   </div>
                 </div>
-                
-                <div className="flex justify-end space-x-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsCreateDialogOpen(false)}
-                  >
-                    Annuler
-                  </Button>
-                  <Button 
-                    onClick={handleCreatePiece}
-                    disabled={!newPieceName.trim() || isCreating}
-                  >
-                    {isCreating ? 'Création...' : 'Créer'}
-                  </Button>
-                </div>
               </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Annuler</Button>
+                </DialogClose>
+                <Button
+                  onClick={handleCreatePiece}
+                  disabled={!newPieceName.trim() || isCreating}
+                >
+                  {isCreating ? 'Création...' : 'Créer'}
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </CardHeader>
@@ -689,9 +697,14 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
           {pieces.length === 0 ? (
             <div className="text-center py-8">
               <Home className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune pièce ajoutée</h3>
-              <p className="text-gray-500 mb-4">Commencez par ajouter les pièces de votre état des lieux</p>
-              <p className="text-sm text-gray-400">Cliquez sur "Ajouter une pièce" pour commencer</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune pièce définie</h3>
+              <p className="text-gray-500 mb-4">
+                Pour commencer, ajoutez les différentes pièces du logement.
+              </p>
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter la première pièce
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -709,7 +722,7 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
                     variant="ghost"
                     size="icon"
                     className="h-9 w-9 flex-shrink-0 text-red-500 hover:text-red-700"
-                    onClick={(e) => { e.stopPropagation(); handleDeletePiece(piece.id, piece.nom_piece); }}
+                    onClick={(e) => { e.stopPropagation(); handleDeletePiece(piece); }}
                     disabled={isDeleting}
                     title={`Supprimer ${piece.nom_piece}`}
                   >
@@ -728,12 +741,12 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Edit className="h-5 w-5" />
-                {selectedPiece.nom_piece} (état à l'entrée)
+                Détails de : {selectedPiece.nom_piece}
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleDeletePiece(selectedPiece.id, selectedPiece.nom_piece)}
+                onClick={() => handleDeletePiece(selectedPiece)}
                 className="text-red-500 hover:text-red-700"
                 disabled={isDeleting}
               >
@@ -748,7 +761,7 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
               <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
                   <Camera className="h-5 w-5 text-slate-600" />
-                  <h3 className="text-lg font-semibold text-slate-700">Photos pour {selectedPiece.nom_piece} (état à l'entrée)</h3>
+                  <h3 className="text-lg font-semibold text-slate-700">Photos pour {selectedPiece.nom_piece}</h3>
                   <Badge variant="secondary">{currentPieceExistingPhotos.length + currentPieceNewPhotos.length} photo(s)</Badge>
                 </div>
                 <div 
@@ -774,7 +787,7 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
                   >
                     <ImageIcon className="h-4 w-4 mr-2" /> Ajouter des photos
                   </Button>
-                  <p className="text-xs text-gray-500 mt-1">Max 5MB par image.</p>
+                  <p className="text-xs text-gray-500 mt-1">Ajoutez des photos pour documenter l'état de la pièce. Max 5MB par image.</p>
                 </div>
 
                 {currentPieceExistingPhotos.length > 0 && (
@@ -864,12 +877,12 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
               </div>
 
               <div className="mt-6 space-y-2">
-                <Label htmlFor="commentaires">Commentaires généraux (état à l'entrée)</Label>
+                <Label htmlFor="commentaires">Commentaires généraux</Label>
                 <Textarea
                   id="commentaires"
                   value={formData.commentaires || ''}
                   onChange={(e) => handleInputChange('commentaires', e.target.value)}
-                  placeholder="Ajoutez des commentaires généraux sur cette pièce..."
+                  placeholder="Ajoutez des observations générales sur l'état de la pièce..."
                   className="min-h-[100px]"
                 />
               </div>
@@ -880,7 +893,7 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
                   disabled={isSaving || isProcessingPhotos || isDeleting}
                   className="flex-1"
                 >
-                  {isSaving || isProcessingPhotos ? 'Sauvegarde...' : `Sauvegarder ${selectedPiece.nom_piece}`}
+                  {isSaving || isProcessingPhotos ? 'Sauvegarde en cours...' : `Enregistrer les détails de ${selectedPiece.nom_piece}`}
                 </Button>
                 <Button
                   variant="outline"
