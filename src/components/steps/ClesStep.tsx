@@ -5,8 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useClesByEtatId, useCreateCle, useUpdateCle, useDeleteCle } from '@/hooks/useEtatDesLieux';
-import { toast } from 'sonner';
-import { Plus, Trash2, Camera, X, Upload, Image as ImageIcon, KeyRound } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Plus, Trash2, Camera, X, Upload, Image as ImageIcon, KeyRound, AlertCircle } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
 
 // Configuration Supabase (simulée, adaptez avec votre vraie configuration)
@@ -78,6 +78,7 @@ const ClesStep = forwardRef<StepRef, ClesStepProps>(({ etatId }, ref) => {
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const [alertInfo, setAlertInfo] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
 
   // Exposer la fonction de sauvegarde via useImperativeHandle
   useImperativeHandle(ref, () => ({
@@ -111,10 +112,10 @@ const ClesStep = forwardRef<StepRef, ClesStepProps>(({ etatId }, ref) => {
     if (cleId) {
       try {
         await deleteCleMutation.mutateAsync(cleId);
-        toast.success('Clé supprimée de la base de données.');
+        setAlertInfo({ type: 'success', message: 'Clé supprimée de la base de données.' });
       } catch (error) {
         console.error("Erreur suppression BDD:", error);
-        toast.error('Erreur lors de la suppression de la clé en base de données.');
+        setAlertInfo({ type: 'error', message: 'Erreur lors de la suppression de la clé en base de données.' });
         return;
       }
     }
@@ -134,10 +135,10 @@ const ClesStep = forwardRef<StepRef, ClesStepProps>(({ etatId }, ref) => {
     const validFiles: (File & { description?: string })[] = [];
     Array.from(files).forEach(file => {
       if (file.size > 5 * 1024 * 1024) { // 5MB
-        toast.error(`Fichier ${file.name} trop volumineux (max 5MB)`); return;
+        setAlertInfo({ type: 'error', message: `Fichier ${file.name} trop volumineux (max 5MB)` }); return;
       }
       if (!file.type.startsWith('image/')) {
-        toast.error(`Fichier ${file.name} n'est pas une image`); return;
+        setAlertInfo({ type: 'error', message: `Fichier ${file.name} n'est pas une image` }); return;
       }
       const fileWithDesc = file as (File & { description?: string });
       fileWithDesc.description = '';
@@ -177,10 +178,10 @@ const ClesStep = forwardRef<StepRef, ClesStepProps>(({ etatId }, ref) => {
         }
         return cle;
       }));
-      toast.info('Photo retirée localement. N\'oubliez pas de sauvegarder les modifications pour la supprimer définitivement.');
+      setAlertInfo({ type: 'success', message: 'Photo retirée localement. N\'oubliez pas de sauvegarder les modifications pour la supprimer définitivement.' });
     } catch (error) {
       console.error("Erreur handleRemoveExistingPhoto:", error);
-      toast.error(`Erreur lors de la suppression de la photo: ${error instanceof Error ? error.message : 'Vérifiez la console'}`);
+      setAlertInfo({ type: 'error', message: `Erreur lors de la suppression de la photo: ${error instanceof Error ? error.message : 'Vérifiez la console'}` });
     }
   };
 
@@ -221,7 +222,7 @@ const ClesStep = forwardRef<StepRef, ClesStepProps>(({ etatId }, ref) => {
       return uploadedPhotosResult;
     } catch (error) {
       console.error("Erreur _uploadPhotos:", error);
-      toast.error(`Erreur lors de l'upload des photos: ${error instanceof Error ? error.message : 'Vérifiez la console'}`);
+      setAlertInfo({ type: 'error', message: `Erreur lors de l'upload des photos: ${error instanceof Error ? error.message : 'Vérifiez la console'}` });
       throw error; // Re-throw to be caught by handleSave
     } finally {
       setUploadingPhotos(false);
@@ -259,11 +260,11 @@ const ClesStep = forwardRef<StepRef, ClesStepProps>(({ etatId }, ref) => {
       }
       await Promise.all(results);
       setNewPhotos({}); // Clear new photos queue for all items
-      toast.success('Clés et badges sauvegardés avec succès !');
+      setAlertInfo({ type: 'success', message: 'Clés et badges sauvegardés avec succès !' });
       refetch(); // Refetch data to get latest state including new IDs and photo URLs
     } catch (error) {
       console.error("Erreur handleSave:", error);
-      toast.error(`Erreur lors de la sauvegarde des clés/badges: ${error instanceof Error ? error.message : 'Vérifiez la console'}`);
+      setAlertInfo({ type: 'error', message: `Erreur lors de la sauvegarde des clés/badges: ${error instanceof Error ? error.message : 'Vérifiez la console'}` });
     } finally {
       setIsSaving(false);
     }
@@ -285,10 +286,19 @@ const ClesStep = forwardRef<StepRef, ClesStepProps>(({ etatId }, ref) => {
           </Button>
         </CardTitle>
         <p className="text-sm text-gray-600">
-          Détaillez chaque clé ou badge remis, y compris le nombre, le type et éventuellement un numéro ou une référence. Prenez des photos claires.
+          Inventoriez chaque clé et badge remis. Précisez le type, la quantité, et toute référence utile. Assurez-vous de prendre des photos claires pour chaque élément.
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
+        {alertInfo && (
+          <Alert variant={alertInfo.type === 'error' ? 'destructive' : 'default'}>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{alertInfo.type === 'error' ? 'Erreur' : 'Succès'}</AlertTitle>
+            <AlertDescription>
+              {alertInfo.message}
+            </AlertDescription>
+          </Alert>
+        )}
         {clesList.map((cle, index) => (
           <div key={cle.id || `new-cle-${index}`} className="p-4 border rounded-lg space-y-4 bg-slate-50 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">

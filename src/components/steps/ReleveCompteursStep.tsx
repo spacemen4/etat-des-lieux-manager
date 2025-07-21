@@ -848,13 +848,13 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
         {/* Note informative */}
         <Alert>
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Conseils pour un relevé efficace</AlertTitle>
+          <AlertTitle>Instructions pour un relevé de compteur précis</AlertTitle>
           <AlertDescription>
             <ul className="list-disc pl-5 space-y-1">
-              <li>Relevez les index à une date la plus proche possible de l'état des lieux.</li>
-              <li>Prenez des photos claires et lisibles de chaque compteur, en incluant le numéro de série et l'index.</li>
-              <li>Le nom de l'ancien occupant facilite les démarches de transfert de contrat.</li>
-              <li>Les champs non remplis ne seront pas sauvegardés.</li>
+              <li>Effectuez le relevé à la date la plus proche de l'état des lieux pour une facturation exacte.</li>
+              <li>Prenez des photos nettes de chaque compteur, en vous assurant que le numéro de série et l'index (les chiffres de consommation) sont bien visibles.</li>
+              <li>Indiquer le nom de l'ancien occupant est essentiel pour accélérer le transfert des contrats d'énergie.</li>
+              <li>Seuls les champs remplis seront enregistrés. Les champs laissés vides seront ignorés.</li>
             </ul>
           </AlertDescription>
         </Alert>
