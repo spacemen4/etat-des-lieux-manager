@@ -413,7 +413,7 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
            )}
 
            {/* Signatures */}
-           {etatDesLieux.signature_locataire || etatDesLieux.signature_proprietaire_agent && (
+           {(etatDesLieux.signature_locataire || etatDesLieux.signature_proprietaire_agent) && (
              <Card>
                <CardHeader>
                  <CardTitle className="flex items-center gap-2">
