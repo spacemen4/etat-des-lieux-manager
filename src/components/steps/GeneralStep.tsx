@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEtatDesLieuxById, useUpdateEtatDesLieux, useRendezVousById } from '@/hooks/useEtatDesLieux';
-import { Camera, X, Upload, Image as ImageIcon, Info, FileText } from 'lucide-react';
+import { Camera, X, Upload, Image as ImageIcon, Info, FileText, AlertCircle } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 // Configuration Supabase (simulée)
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
@@ -108,6 +108,7 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
   const [newPhotos, setNewPhotos] = useState<(File & { description?: string })[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [alertInfo, setAlertInfo] = useState<{ type: 'error' | 'success' | 'info'; message: string } | null>(null);
   
   // Exposer la fonction de sauvegarde via useImperativeHandle
   useImperativeHandle(ref, () => ({
@@ -177,7 +178,7 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
     
     Array.from(files).forEach(file => {
       if (file.size > 5 * 1024 * 1024) {
-        toast.error(`Fichier ${file.name} trop volumineux (max 5MB)`);
+        setAlertInfo({ type: 'error', message: `Fichier ${file.name} trop volumineux (max 5MB)` });
         return;
       }
       
@@ -188,7 +189,7 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
       ];
       
       if (!file.type.startsWith('image/') && !allowedTypes.includes(file.type)) {
-        toast.error(`Type de fichier ${file.name} non supporté.`);
+        setAlertInfo({ type: 'error', message: `Type de fichier ${file.name} non supporté.` });
         return;
       }
       
@@ -215,9 +216,9 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
     try {
       await supabase.storage.from('etat-des-lieux-photos').remove([filePath]);
       setExistingPhotos(prev => prev.filter(p => p.id !== photoId));
-      toast.info('Photo retirée. Sauvegardez les informations générales pour confirmer la suppression.');
+      setAlertInfo({ type: 'info', message: 'Photo retirée. Sauvegardez les informations générales pour confirmer la suppression.' });
     } catch (error) {
-      toast.error('Erreur lors de la suppression du fichier de stockage.');
+      setAlertInfo({ type: 'error', message: 'Erreur lors de la suppression du fichier de stockage.' });
     } finally {
       setIsSaving(false);
     }
@@ -264,7 +265,7 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
       return uploadedResults;
     } catch (error) {
       console.error("Erreur _uploadPhotos:", error);
-      toast.error(`Erreur lors de l'upload des photos: ${error instanceof Error ? error.message : 'Vérifiez la console'}`);
+      setAlertInfo({ type: 'error', message: `Erreur lors de l'upload des photos: ${error instanceof Error ? error.message : 'Vérifiez la console'}` });
       throw error;
     }
   };
@@ -293,17 +294,17 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
 
       updateEtatDesLieux(validatedData, {
         onSuccess: () => {
-          toast.success('Informations générales sauvegardées avec succès !');
+          setAlertInfo({ type: 'success', message: 'Informations générales sauvegardées avec succès !' });
           setNewPhotos([]);
           refetch();
         },
         onError: (error) => {
           console.error('Erreur lors de la sauvegarde:', error);
-          toast.error('Erreur lors de la sauvegarde des informations générales.');
+          setAlertInfo({ type: 'error', message: 'Erreur lors de la sauvegarde des informations générales.' });
         }
       });
     } catch (error) {
-      toast.error(`Erreur lors du processus de sauvegarde: ${error instanceof Error ? error.message : "Erreur inconnue"}`);
+      setAlertInfo({ type: 'error', message: `Erreur lors du processus de sauvegarde: ${error instanceof Error ? error.message : "Erreur inconnue"}` });
     } finally {
       setIsSaving(false);
     }
@@ -325,38 +326,55 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Info className="h-6 w-6 text-sky-600" />
-          Informations Générales de l'État des Lieux
+          Informations Générales
         </CardTitle>
-        {rendezVousData && (
-          <div className="text-sm text-blue-700 bg-blue-100 p-3 rounded-md mt-2 border border-blue-200">
-            Certaines informations ont été pré-remplies depuis le rendez-vous du {new Date(rendezVousData.date).toLocaleDateString('fr-FR')}.
-          </div>
-        )}
+        <p className="text-sm text-gray-500">
+          Renseignez les informations essentielles de l'état des lieux.
+        </p>
       </CardHeader>
       <CardContent className="space-y-8">
+        {alertInfo && (
+          <Alert variant={alertInfo.type === 'error' ? 'destructive' : 'default'}>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{alertInfo.type === 'error' ? 'Erreur' : 'Information'}</AlertTitle>
+            <AlertDescription>
+              {alertInfo.message}
+            </AlertDescription>
+          </Alert>
+        )}
+        {rendezVousData && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Information</AlertTitle>
+            <AlertDescription>
+              Certaines informations ont été pré-remplies depuis le rendez-vous du {new Date(rendezVousData.date).toLocaleDateString('fr-FR')}.
+            </AlertDescription>
+          </Alert>
+        )}
         {/* Section Bien immobilier */}
         <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-700 mb-3">Bien immobilier</h3>
+          <h3 className="text-lg font-semibold text-slate-700 mb-3">Détails du bien</h3>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="adresse_bien" className="font-medium">Adresse du bien *</Label>
+              <Label htmlFor="adresse_bien" className="font-medium">Adresse du bien</Label>
+              <p className="text-sm text-gray-500 mb-1">Indiquez l'adresse complète du logement concerné.</p>
               <Input 
                 id="adresse_bien" 
                 value={formData.adresse_bien} 
                 onChange={handleInputChange} 
-                placeholder="Adresse complète du bien" 
+                placeholder="Ex: 123 rue de la Paix, 75000 Paris"
                 className="mt-1"
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="type_etat_des_lieux" className="font-medium">Type d'état des lieux *</Label>
+                <Label htmlFor="type_etat_des_lieux" className="font-medium">Type d'état des lieux</Label>
                 <Select 
                   value={formData.type_etat_des_lieux} 
                   onValueChange={(value) => handleSelectChange('type_etat_des_lieux', value)}
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Sélectionner le type" />
+                    <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
                   <SelectContent>
                     {typeEtatDesLieuxOptions.map(option => (
@@ -368,13 +386,13 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="type_bien" className="font-medium">Type de bien *</Label>
+                <Label htmlFor="type_bien" className="font-medium">Type de bien</Label>
                 <Select 
                   value={formData.type_bien} 
                   onValueChange={(value) => handleSelectChange('type_bien', value)}
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Sélectionner le type" />
+                    <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
                   <SelectContent>
                     {typeBienOptions.map(option => (
@@ -391,10 +409,10 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
 
         {/* Section Dates Clés */}
         <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-700 mb-3">Dates Clés</h3>
+          <h3 className="text-lg font-semibold text-slate-700 mb-3">Dates importantes</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="date_entree" className="font-medium">Date d'entrée dans les lieux</Label>
+              <Label htmlFor="date_entree" className="font-medium">Date d'entrée</Label>
               <Input 
                 id="date_entree" 
                 type="date" 
@@ -404,7 +422,7 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
               />
             </div>
             <div>
-              <Label htmlFor="date_sortie" className="font-medium">Date de sortie des lieux</Label>
+              <Label htmlFor="date_sortie" className="font-medium">Date de sortie</Label>
               <Input 
                 id="date_sortie" 
                 type="date" 
@@ -418,25 +436,25 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
 
         {/* Section Bailleur */}
         <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-700 mb-3">Bailleur / Propriétaire</h3>
+          <h3 className="text-lg font-semibold text-slate-700 mb-3">Informations sur le bailleur</h3>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="bailleur_nom" className="font-medium">Nom du bailleur (ou représentant)</Label>
+              <Label htmlFor="bailleur_nom" className="font-medium">Nom et prénom (ou raison sociale)</Label>
               <Input 
                 id="bailleur_nom" 
                 value={formData.bailleur_nom} 
                 onChange={handleInputChange} 
-                placeholder="Nom complet" 
+                placeholder="Ex: Jean Dupont"
                 className="mt-1"
               />
             </div>
             <div>
-              <Label htmlFor="bailleur_adresse" className="font-medium">Adresse du bailleur</Label>
+              <Label htmlFor="bailleur_adresse" className="font-medium">Adresse</Label>
               <Input 
                 id="bailleur_adresse" 
                 value={formData.bailleur_adresse} 
                 onChange={handleInputChange} 
-                placeholder="Adresse complète" 
+                placeholder="Ex: 456 Avenue des Champs-Élysées, 75008 Paris"
                 className="mt-1"
               />
             </div>
@@ -445,25 +463,25 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
 
         {/* Section Locataire */}
         <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-700 mb-3">Locataire(s)</h3>
+          <h3 className="text-lg font-semibold text-slate-700 mb-3">Informations sur le locataire</h3>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="locataire_nom" className="font-medium">Nom du/des locataire(s)</Label>
+              <Label htmlFor="locataire_nom" className="font-medium">Nom et prénom</Label>
               <Input 
                 id="locataire_nom" 
                 value={formData.locataire_nom} 
                 onChange={handleInputChange} 
-                placeholder="Nom(s) complet(s)" 
+                placeholder="Ex: Marie Martin"
                 className="mt-1"
               />
             </div>
             <div>
-              <Label htmlFor="locataire_adresse" className="font-medium">Adresse du/des locataire(s) (si différente)</Label>
+              <Label htmlFor="locataire_adresse" className="font-medium">Nouvelle adresse (si applicable)</Label>
               <Input 
                 id="locataire_adresse" 
                 value={formData.locataire_adresse} 
                 onChange={handleInputChange} 
-                placeholder="Adresse complète" 
+                placeholder="Adresse de réexpédition du courrier"
                 className="mt-1"
               />
             </div>
@@ -474,12 +492,14 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
         <div className="p-4 border rounded-lg bg-slate-50 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <Camera className="h-5 w-5 text-slate-600" />
-            <h3 className="text-lg font-semibold text-slate-700">Photos générales / Documents</h3>
+            <h3 className="text-lg font-semibold text-slate-700">Documents et photos générales</h3>
             <Badge variant="secondary">
-              {existingPhotos.length + newPhotos.length} photo(s)/doc(s)
+              {existingPhotos.length + newPhotos.length} fichier(s)
             </Badge>
           </div>
-          
+          <p className="text-sm text-gray-500 mb-3">
+            Joignez ici des photos de la façade, le bail, ou tout autre document pertinent.
+          </p>
           <div 
             className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors cursor-pointer" 
             onClick={() => !isSaving && fileInputRef.current?.click()}
@@ -505,16 +525,16 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
               disabled={isSaving}
             >
               <ImageIcon className="h-4 w-4 mr-2" /> 
-              Ajouter photos/documents
+              Ajouter des fichiers
             </Button>
             <p className="text-xs text-gray-500 mt-1">
-              Façade, documents annexes, etc. (Images, PDF, Word)
+              Formats supportés : Images, PDF, Word.
             </p>
           </div>
 
           {existingPhotos.length > 0 && (
             <div className="mt-4 space-y-2">
-              <h4 className="text-sm font-medium text-gray-600">Photos/Documents sauvegardé(e)s :</h4>
+              <h4 className="text-sm font-medium text-gray-600">Fichiers sauvegardés :</h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {existingPhotos.map((photo) => (
                   <div key={photo.id} className="relative border rounded-lg overflow-hidden bg-white shadow-sm group">
@@ -568,7 +588,7 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
 
           {newPhotos.length > 0 && (
             <div className="mt-4 space-y-2">
-              <h4 className="text-sm font-medium text-gray-600">Nouveaux photos/documents :</h4>
+              <h4 className="text-sm font-medium text-gray-600">Nouveaux fichiers à téléverser :</h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {newPhotos.map((photoFile, idx) => (
                   <div key={`new-general-${idx}`} className="relative border rounded-lg overflow-hidden bg-white shadow-sm group">
@@ -649,7 +669,7 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
             className="w-full md:w-auto"
             size="lg"
           >
-            {isSaving || isUpdatingMutation ? 'Enregistrement...' : 'Sauvegarder les informations générales'}
+            {isSaving || isUpdatingMutation ? 'Enregistrement en cours...' : 'Sauvegarder les informations générales'}
           </Button>
         </div>
       </CardContent>

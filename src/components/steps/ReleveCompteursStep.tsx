@@ -4,9 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Zap, Flame, Droplets, User, Camera, X, Upload, Image as ImageIcon, RefreshCw } from 'lucide-react';
+import { Zap, Flame, Droplets, User, Camera, X, Upload, Image as ImageIcon, RefreshCw, AlertCircle } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
 import { supabase } from '@/lib/supabase';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface Photo {
   id: string;
@@ -169,6 +170,8 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
     setErrors(prev => ({ ...prev, [field]: error }));
   };
 
+  const [alertInfo, setAlertInfo] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, category: 'electricite' | 'gaz' | 'eau') => {
     const files = event.target.files;
     if (!files) return;
@@ -178,12 +181,12 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
 
     Array.from(files).forEach(file => {
       if (file.size > maxSize) {
-        alert(`Le fichier ${file.name} est trop volumineux (max 5MB)`);
+        setAlertInfo({ type: 'error', message: `Le fichier ${file.name} est trop volumineux (max 5MB)` });
         return;
       }
 
       if (!file.type.startsWith('image/')) {
-        alert(`Le fichier ${file.name} n'est pas une image`);
+        setAlertInfo({ type: 'error', message: `Le fichier ${file.name} n'est pas une image` });
         return;
       }
 
@@ -237,10 +240,10 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
       // Mettre à jour l'état local
       setReleveCompteurs(prev => prev ? { ...prev, photos: updatedPhotos } : null);
       
-      alert('Photo supprimée avec succès');
+      setAlertInfo({ type: 'success', message: 'Photo supprimée avec succès' });
     } catch (error) {
       console.error('❌ Erreur lors de la suppression:', error);
-      alert('Erreur lors de la suppression de la photo');
+      setAlertInfo({ type: 'error', message: 'Erreur lors de la suppression de la photo' });
     }
   };
 
@@ -335,7 +338,7 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
 
   const handleSave = async () => {
     if (!validateForm()) {
-      alert('Veuillez corriger les erreurs avant de sauvegarder');
+      setAlertInfo({ type: 'error', message: 'Veuillez corriger les erreurs avant de sauvegarder' });
       return;
     }
 
@@ -396,9 +399,10 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
         eau: []
       });
       
+      setAlertInfo({ type: 'success', message: 'Relevé des compteurs sauvegardé avec succès' });
     } catch (error) {
       console.error('❌ Erreur lors de la sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde. Vérifiez votre configuration Supabase.');
+      setAlertInfo({ type: 'error', message: 'Erreur lors de la sauvegarde. Vérifiez votre configuration Supabase.' });
     } finally {
       setIsSaving(false);
     }
@@ -615,15 +619,19 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
           )}
         </CardTitle>
         <p className="text-sm text-gray-600">
-          Renseignez les informations et index de tous les compteurs présents dans le logement
+          Saisissez ici toutes les informations relatives aux compteurs d'énergie et d'eau du logement.
         </p>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-2">
-          <p className="text-sm text-red-800">
-            <strong>⚠️ Configuration requise:</strong> Remplacez les valeurs SUPABASE_URL et SUPABASE_ANON_KEY par vos vraies informations Supabase dans le code.
-          </p>
-        </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {alertInfo && (
+          <Alert variant={alertInfo.type === 'error' ? 'destructive' : 'default'}>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{alertInfo.type === 'error' ? 'Erreur' : 'Succès'}</AlertTitle>
+            <AlertDescription>
+              {alertInfo.message}
+            </AlertDescription>
+          </Alert>
+        )}
         {/* Section Ancien occupant */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b">
@@ -838,30 +846,18 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
         </div>
 
         {/* Note informative */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-          <h4 className="font-medium text-blue-900 mb-2">💡 Conseils pour le relevé</h4>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Relevez les index au plus près de la date d'entrée/sortie</li>
-            <li>• Notez les numéros de compteur pour faciliter les démarches</li>
-            <li>• Vérifiez que les compteurs fonctionnent correctement</li>
-            <li>• Prenez des photos spécifiques pour chaque type de compteur</li>
-            <li>• Photographiez les numéros de série et les index clairement</li>
-            <li>• Organisez vos photos par catégorie (électricité, gaz, eau)</li>
-            <li>• Les champs vides seront ignorés lors de la sauvegarde</li>
-          </ul>
-        </div>
-
-        {/* Informations supplémentaires */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <h4 className="font-medium text-amber-900 mb-2">ℹ️ Informations importantes</h4>
-          <ul className="text-sm text-amber-800 space-y-1">
-            <li>• Le nom de l'ancien occupant est nécessaire pour le transfert des compteurs</li>
-            <li>• Les numéros de compteur sont requis pour identifier les installations</li>
-            <li>• Les photos sont organisées par type de compteur pour faciliter les démarches</li>
-            <li>• Chaque photo peut être accompagnée d'une description</li>
-            <li>• Conservez une copie de ce relevé pour vos démarches administratives</li>
-          </ul>
-        </div>
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Conseils pour un relevé efficace</AlertTitle>
+          <AlertDescription>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Relevez les index à une date la plus proche possible de l'état des lieux.</li>
+              <li>Prenez des photos claires et lisibles de chaque compteur, en incluant le numéro de série et l'index.</li>
+              <li>Le nom de l'ancien occupant facilite les démarches de transfert de contrat.</li>
+              <li>Les champs non remplis ne seront pas sauvegardés.</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
       </CardContent>
     </Card>
   );
