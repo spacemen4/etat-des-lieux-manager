@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, User, FileText, Loader2, Building2, Plus, LogIn, LogOut, Clock, CheckCircle, AlertCircle, Lock, Download, Printer } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, Loader2, Building2, Plus, LogIn, LogOut, Clock, CheckCircle, AlertCircle, Lock, Download, Printer, Mail } from 'lucide-react';
 import { useEtatDesLieux, useRendezVous } from '@/hooks/useEtatDesLieux';
 import EtatDesLieuxViewer from './EtatDesLieuxViewer';
 import { useUser } from '@/context/UserContext';
@@ -379,6 +379,18 @@ const Dashboard = () => {
                                 }}
                               >
                                 <Printer className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-slate-400 hover:bg-slate-100 text-slate-700 px-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // TODO: Implement email sending functionality
+                                  console.log('Send email for etat:', etat.id);
+                                }}
+                              >
+                                <Mail className="h-3 w-3" />
                               </Button>
                             </div>
                           </div>
