@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Building, Users, UserCheck, LogOut, Home, FilePlus, Calendar } from 'lucide-react';
+import { Building, Users, UserCheck, LogOut, Home, FilePlus, Calendar, ExternalLink } from 'lucide-react';
 import { useAuth } from '../auth'; // Assurez-vous que le chemin est correct
 import { Button } from '@/components/ui/button';
 
@@ -39,14 +39,25 @@ export const Sidebar = () => {
         ))}
       </nav>
 
-      <Button
-        variant="ghost"
-        className="mt-auto justify-start gap-3 p-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-        onClick={signOut}
-      >
-        <LogOut className="w-5 h-5" />
-        Déconnexion
-      </Button>
+      <div className="mt-auto">
+        <a
+          href="https://www.etatdelux.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 p-2 rounded-md transition-colors text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+        >
+          <ExternalLink className="w-5 h-5" />
+          <span>Retour au site</span>
+        </a>
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 p-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          onClick={signOut}
+        >
+          <LogOut className="w-5 h-5" />
+          Déconnexion
+        </Button>
+      </div>
     </div>
   );
 };
