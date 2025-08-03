@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, User, FileText, Loader2, Building2, Plus, LogIn, LogOut, Clock, CheckCircle, AlertCircle, Lock } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, Loader2, Building2, Plus, LogIn, LogOut, Clock, CheckCircle, AlertCircle, Lock, Download, Printer } from 'lucide-react';
 import { useEtatDesLieux, useRendezVous } from '@/hooks/useEtatDesLieux';
 import EtatDesLieuxViewer from './EtatDesLieuxViewer';
 import { useUser } from '@/context/UserContext';
@@ -345,16 +345,42 @@ const Dashboard = () => {
                                 </a>
                               </Button>
                             )}
-                            <Badge 
-                              variant="secondary" 
-                              className="cursor-pointer hover:bg-secondary/80 text-center py-1 px-2"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewEtat(etat.id);
-                              }}
-                            >
-                              Visualiser le détail de l'état des lieux terminé
-                            </Badge>
+                            <div className="flex gap-2 w-full">
+                              <Badge 
+                                variant="secondary" 
+                                className="cursor-pointer hover:bg-secondary/80 text-center py-1 px-2 flex-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewEtat(etat.id);
+                                }}
+                              >
+                                Visualiser le détail de l'état des lieux terminé
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-slate-400 hover:bg-slate-100 text-slate-700 px-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // TODO: Implement PDF generation
+                                  console.log('Generate PDF for etat:', etat.id);
+                                }}
+                              >
+                                <Download className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-slate-400 hover:bg-slate-100 text-slate-700 px-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // TODO: Implement print functionality
+                                  window.print();
+                                }}
+                              >
+                                <Printer className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         )}
                       </div>
