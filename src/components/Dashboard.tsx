@@ -1,32 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import ReactDOM from 'react-dom/client';
 import { supabase } from '@/lib/supabase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, User, FileText, Loader2, Building2, Plus, LogIn, LogOut, Clock, CheckCircle, AlertCircle, Lock, Download, Printer, Mail } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, Loader2, Building2, LogIn, LogOut, Clock, Lock, Download, Printer, Mail } from 'lucide-react';
 import { useEtatDesLieux, useRendezVous } from '@/hooks/useEtatDesLieux';
 import EtatDesLieuxViewer from './EtatDesLieuxViewer';
-import { useUser } from '@/context/UserContext';
+import EtatDesLieuxPrintable from './EtatDesLieuxPrintable';
+import { useUser, UserProvider } from '@/context/UserContext';
+import { AuthProvider } from '@/auth';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import html2pdf from 'html2pdf.js';
 import { toast } from 'sonner';
 
+const queryClient = new QueryClient();
+
 const Dashboard = () => {
   const { userUuid } = useUser();
-  console.log('[DASHBOARD] userUuid:', userUuid);
-  
   const { data: etatsDesLieux, isLoading: isLoadingEtats, error: errorEtats } = useEtatDesLieux(userUuid);
-  console.log('[DASHBOARD] etatsDesLieux:', etatsDesLieux, 'isLoadingEtats:', isLoadingEtats, 'errorEtats:', errorEtats);
-  
   const { data: rendezVous, isLoading: isLoadingRdv, error: errorRdv } = useRendezVous(userUuid);
-  console.log('[DASHBOARD] rendezVous:', rendezVous, 'isLoadingRdv:', isLoadingRdv, 'errorRdv:', errorRdv);
-  
   const [selectedEtatId, setSelectedEtatId] = useState<string | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   const isLoading = isLoadingEtats || isLoadingRdv;
   const error = errorEtats || errorRdv;
-  
-  console.log('[DASHBOARD] Final state - isLoading:', isLoading, 'error:', error);
 
   if (isLoading) {
     return (
@@ -58,12 +56,6 @@ const Dashboard = () => {
       'local_commercial': 'Local commercial',
       'garage_box': 'Garage / Box',
       'pieces_supplementaires': 'Pièces supplémentaires',
-      't2-t3': 'T2 - T3',
-      't4-t5': 'T4 - T5',
-      'mobilier': 'Inventaire mobilier',
-      'local': 'Local commercial',
-      'garage': 'Garage / Box',
-      'pieces-supplementaires': 'Pièces supplémentaires'
     };
     return labels[typeBien] || typeBien;
   };
@@ -74,120 +66,58 @@ const Dashboard = () => {
   };
 
   const generatePDF = async (etatId: string) => {
-    try {
-      toast.info('Génération du PDF en cours...');
-      
-      // Récupérer les données complètes de l'état des lieux
-      const { data: etatData, error } = await supabase
-        .from('etat_des_lieux')
-        .select('*')
-        .eq('id', etatId)
-        .single();
+    toast.info('Préparation du document PDF...');
 
-      if (error) throw error;
+    const { data: etatData, error } = await supabase
+      .from('etat_des_lieux')
+      .select('type_etat_des_lieux, adresse_bien')
+      .eq('id', etatId)
+      .single();
 
-      // Créer le contenu HTML pour le PDF
-      const htmlContent = `
-        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
-          <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px;">
-            <h1 style="color: #333; margin: 0;">ÉTAT DES LIEUX</h1>
-            <h2 style="color: #666; margin: 10px 0;">${etatData.type_etat_des_lieux === 'entree' ? "D'ENTRÉE" : "DE SORTIE"}</h2>
-          </div>
-          
-          <div style="margin-bottom: 30px;">
-            <h3 style="background-color: #f0f0f0; padding: 10px; margin: 0 0 15px 0;">Informations du bien</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 200px;">Adresse</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${etatData.adresse_bien || 'Non renseigné'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Type de bien</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${getTypeBienLabel(etatData.type_bien)}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Date d'entrée</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${etatData.date_entree ? new Date(etatData.date_entree).toLocaleDateString() : 'Non renseigné'}</td>
-              </tr>
-              ${etatData.date_sortie ? `
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Date de sortie</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${new Date(etatData.date_sortie).toLocaleDateString()}</td>
-              </tr>
-              ` : ''}
-            </table>
-          </div>
+    if (error || !etatData) {
+      toast.error('Impossible de récupérer les informations pour le nom du fichier.');
+      return;
+    }
 
-          <div style="margin-bottom: 30px;">
-            <h3 style="background-color: #f0f0f0; padding: 10px; margin: 0 0 15px 0;">Informations locataire</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 200px;">Nom</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${etatData.locataire_nom || 'Non renseigné'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Téléphone</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${etatData.locataire_telephone || 'Non renseigné'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Email</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${etatData.locataire_email || 'Non renseigné'}</td>
-              </tr>
-            </table>
-          </div>
+    const printableContainer = document.createElement('div');
+    printableContainer.style.position = 'absolute';
+    printableContainer.style.left = '-9999px';
+    document.body.appendChild(printableContainer);
 
-          ${etatData.travaux_a_faire ? `
-          <div style="margin-bottom: 30px;">
-            <h3 style="background-color: #ffe6e6; padding: 10px; margin: 0 0 15px 0; color: #d32f2f;">Travaux à effectuer</h3>
-            <p style="padding: 10px; border: 1px solid #ddd; background-color: #fff5f5;">
-              ${etatData.description_travaux || 'Travaux nécessaires sans description détaillée.'}
-            </p>
-          </div>
-          ` : ''}
+    const root = ReactDOM.createRoot(printableContainer);
 
-          ${etatData.signature_locataire || etatData.signature_proprietaire_agent ? `
-          <div style="margin-top: 40px;">
-            <h3 style="background-color: #f0f0f0; padding: 10px; margin: 0 0 15px 0;">Signatures</h3>
-            <div style="display: flex; justify-content: space-between;">
-              ${etatData.signature_locataire ? `
-              <div style="text-align: center; width: 45%;">
-                <p style="font-weight: bold; margin-bottom: 10px;">Signature du locataire</p>
-                <img src="${etatData.signature_locataire}" style="max-width: 200px; max-height: 100px; border: 1px solid #ddd;" />
-              </div>
-              ` : ''}
-              ${etatData.signature_proprietaire_agent ? `
-              <div style="text-align: center; width: 45%;">
-                <p style="font-weight: bold; margin-bottom: 10px;">Signature du propriétaire/agent</p>
-                <img src="${etatData.signature_proprietaire_agent}" style="max-width: 200px; max-height: 100px; border: 1px solid #ddd;" />
-              </div>
-              ` : ''}
-            </div>
-          </div>
-          ` : ''}
-
-          <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #666;">
-            <p>Document généré le ${new Date().toLocaleDateString()} à ${new Date().toLocaleTimeString()}</p>
-          </div>
-        </div>
-      `;
-
-      // Configuration pour html2pdf
+    const onReady = () => {
       const opt = {
-        margin: 1,
+        margin: 0,
         filename: `etat-des-lieux-${etatData.type_etat_des_lieux}-${etatData.adresse_bien?.replace(/[^a-zA-Z0-9]/g, '-') || 'bien'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        html2canvas: { scale: 2, useCORS: true, logging: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
 
-      // Générer et télécharger le PDF
-      await html2pdf().set(opt).from(htmlContent).save();
-      
-      toast.success('PDF généré avec succès!');
-    } catch (error) {
-      console.error('Erreur génération PDF:', error);
-      toast.error('Erreur lors de la génération du PDF');
-    }
+      html2pdf().from(printableContainer.firstElementChild).set(opt).save().then(() => {
+        toast.success('PDF généré avec succès!');
+        document.body.removeChild(printableContainer);
+        root.unmount();
+      }).catch((err) => {
+        toast.error('Erreur lors de la génération du PDF.');
+        console.error('Erreur html2pdf:', err);
+        document.body.removeChild(printableContainer);
+        root.unmount();
+      });
+    };
+
+    root.render(
+      <React.StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <UserProvider>
+              <EtatDesLieuxPrintable etatId={etatId} onReady={onReady} />
+            </UserProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </React.StrictMode>
+    );
   };
 
   // Fonction pour vérifier si un rendez-vous a déjà un état des lieux associé
