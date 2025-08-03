@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, User, FileText, Loader2, Building2, Plus, LogIn, LogOut, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, Loader2, Building2, Plus, LogIn, LogOut, Clock, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { useEtatDesLieux, useRendezVous } from '@/hooks/useEtatDesLieux';
 import EtatDesLieuxViewer from './EtatDesLieuxViewer';
 import { useUser } from '@/context/UserContext';
@@ -326,18 +326,25 @@ const Dashboard = () => {
                         )}
                         {etat.date_sortie && (
                           <div className="flex flex-col gap-2 w-full">
-                            <Button
-                              size="sm"
-                              asChild
-                              variant="outline"
-                              className="border-slate-400 hover:bg-slate-100 text-slate-700"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <a href={`/sortie/${etat.id}`} className="flex items-center justify-center gap-1">
-                                <FileText className="h-3 w-3" />
-                                Modifier
-                              </a>
-                            </Button>
+                            {etat.signature_locataire && etat.signature_proprietaire_agent ? (
+                              <div className="flex items-center justify-center gap-1 text-slate-500 text-sm py-2">
+                                <Lock className="h-3 w-3" />
+                                <span>Signé et verrouillé</span>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                asChild
+                                variant="outline"
+                                className="border-slate-400 hover:bg-slate-100 text-slate-700"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <a href={`/sortie/${etat.id}`} className="flex items-center justify-center gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  Modifier
+                                </a>
+                              </Button>
+                            )}
                             <Badge 
                               variant="secondary" 
                               className="cursor-pointer hover:bg-secondary/80 text-center py-1 px-2"

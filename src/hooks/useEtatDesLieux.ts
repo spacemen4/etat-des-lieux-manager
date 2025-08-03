@@ -184,10 +184,12 @@ export const useUpdateEtatSortie = () => {
   return useMutation({
     mutationFn: async (updates: {
       id: string;
-      date_sortie: string | null;
-      statut: 'finalise' | 'en_cours';
+      date_sortie?: string | null;
+      statut?: 'finalise' | 'en_cours';
       travaux_a_faire?: boolean;
       description_travaux?: string | null;
+      signature_locataire?: string | null;
+      signature_proprietaire_agent?: string | null;
     }) => {
       const { id, ...rest } = updates;
       const { data, error } = await supabase

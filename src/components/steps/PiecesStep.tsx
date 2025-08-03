@@ -10,6 +10,7 @@ import { Plus, Edit, Trash2, Home, Camera, Upload, Image as ImageIcon, X, AlertC
 import type { StepRef } from '../EtatSortieForm';
 import { supabase } from '@/lib/supabase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { toast } from 'sonner';
 
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXB2eXJjdGxoYWd0emtic3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjg1NjYsImV4cCI6MjA2NjYwNDU2Nn0.4APWILaWXOtXCwdFYTk4MDithvZhp55ZJB6PnVn8D1w';
@@ -270,7 +271,7 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
         setPieces(piecesWithInitializedPhotos);
       } catch (error) {
         console.error('Erreur chargement pièces:', error);
-        showToast('Erreur lors du chargement des pièces', 'error');
+        toast.error('Erreur lors du chargement des pièces');
       } finally {
         setIsLoading(false);
       }

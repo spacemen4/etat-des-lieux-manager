@@ -13,6 +13,8 @@ export interface EtatDesLieux {
   travaux_a_prevoir?: boolean;
   travaux_a_faire?: boolean | null;
   description_travaux?: string | null;
+  signature_locataire?: string | null;
+  signature_proprietaire_agent?: string | null;
 }
 
 export interface ReleveCompteurs {
