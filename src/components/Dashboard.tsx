@@ -79,7 +79,7 @@ const Dashboard = () => {
       
       // Récupérer les données complètes de l'état des lieux
       const { data: etatData, error } = await supabase
-        .from('etats_des_lieux')
+        .from('etat_des_lieux')
         .select('*')
         .eq('id', etatId)
         .single();
