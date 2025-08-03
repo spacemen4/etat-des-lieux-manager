@@ -120,6 +120,61 @@ const Dashboard = () => {
     );
   };
 
+  const handlePrint = (etatId: string) => {
+    toast.info('Préparation de l\'impression...');
+    const printableContainer = document.createElement('div');
+    printableContainer.style.position = 'absolute';
+    printableContainer.style.left = '-9999px';
+    document.body.appendChild(printableContainer);
+
+    const root = ReactDOM.createRoot(printableContainer);
+
+    const onReady = () => {
+      const printFrame = document.createElement('iframe');
+      printFrame.style.position = 'absolute';
+      printFrame.style.width = '0';
+      printFrame.style.height = '0';
+      printFrame.style.border = '0';
+      document.body.appendChild(printFrame);
+
+      const frameDocument = printFrame.contentWindow?.document;
+      if (frameDocument) {
+        frameDocument.open();
+        frameDocument.write('<html><head><title>État des Lieux</title>');
+        // It might be necessary to copy stylesheets here if EtatDesLieuxPrintable relies on external CSS
+        frameDocument.write('</head><body>');
+        frameDocument.write(printableContainer.innerHTML);
+        frameDocument.write('</body></html>');
+        frameDocument.close();
+
+        setTimeout(() => {
+          printFrame.contentWindow?.focus();
+          printFrame.contentWindow?.print();
+          document.body.removeChild(printFrame);
+          document.body.removeChild(printableContainer);
+          root.unmount();
+          toast.success('Impression lancée.');
+        }, 500); // Timeout to ensure content is loaded in iframe
+      } else {
+        toast.error('Impossible de créer le cadre d\'impression.');
+        document.body.removeChild(printableContainer);
+        root.unmount();
+      }
+    };
+
+    root.render(
+      <React.StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <UserProvider>
+              <EtatDesLieuxPrintable etatId={etatId} onReady={onReady} />
+            </UserProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </React.StrictMode>
+    );
+  };
+
   // Fonction pour vérifier si un rendez-vous a déjà un état des lieux associé
   const hasAssociatedEtatDesLieux = (rdvId: string) => {
     return etatsDesLieux?.some(etat => etat.rendez_vous_id === rdvId) || false;
@@ -422,8 +477,7 @@ const Dashboard = () => {
                                 className="border-slate-400 hover:bg-slate-100 text-slate-700 px-2"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  // TODO: Implement print functionality
-                                  window.print();
+                                  handlePrint(etat.id);
                                 }}
                               >
                                 <Printer className="h-3 w-3" />
