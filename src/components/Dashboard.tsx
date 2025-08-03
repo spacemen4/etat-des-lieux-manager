@@ -120,6 +120,83 @@ const Dashboard = () => {
     );
   };
 
+  const handleEmail = async (etatId: string) => {
+    // NOTE: This feature requires setting up the Resend integration.
+    // See instructions in `api/send-email.ts`.
+    const etat = etatsDesLieux?.find(e => e.id === etatId);
+    if (!etat) {
+      toast.error('État des lieux non trouvé.');
+      return;
+    }
+
+    const recipientEmail = prompt('Veuillez entrer l\'adresse e-mail du destinataire :', '');
+
+    if (!recipientEmail) {
+      toast.info('Envoi de l\'e-mail annulé.');
+      return;
+    }
+
+    toast.info('Génération du PDF pour l\'envoi par e-mail...');
+
+    const printableContainer = document.createElement('div');
+    printableContainer.style.position = 'absolute';
+    printableContainer.style.left = '-9999px';
+    document.body.appendChild(printableContainer);
+
+    const root = ReactDOM.createRoot(printableContainer);
+
+    const onReady = () => {
+      const opt = {
+        margin: 0,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().from(printableContainer.firstElementChild).set(opt).output('datauristring').then(async (pdfBase64) => {
+        document.body.removeChild(printableContainer);
+        root.unmount();
+
+        toast.info('PDF généré. Envoi de l\'e-mail...');
+
+        // The PDF string is prefixed with `data:application/pdf;base64,`, remove it.
+        const pdfData = pdfBase64.split(',')[1];
+
+        const { data, error } = await supabase.functions.invoke('send-email', {
+          body: JSON.stringify({
+            to: recipientEmail,
+            subject: `État des lieux pour ${etat.adresse_bien}`,
+            html: `Bonjour,<br><br>Veuillez trouver ci-joint l'état des lieux pour le bien situé à ${etat.adresse_bien}.<br><br>Cordialement.`,
+            attachment: pdfData,
+          }),
+        });
+
+        if (error) {
+          toast.error(`Erreur lors de l'envoi de l'e-mail: ${error.message}`);
+        } else {
+          toast.success('E-mail envoyé avec succès !');
+        }
+      }).catch((err) => {
+        toast.error('Erreur lors de la génération du PDF pour l\'e-mail.');
+        console.error('Erreur html2pdf email:', err);
+        document.body.removeChild(printableContainer);
+        root.unmount();
+      });
+    };
+
+    root.render(
+      <React.StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <UserProvider>
+              <EtatDesLieuxPrintable etatId={etatId} onReady={onReady} />
+            </UserProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </React.StrictMode>
+    );
+  };
+
   const handlePrint = (etatId: string) => {
     toast.info('Préparation de l\'impression...');
     const printableContainer = document.createElement('div');
@@ -488,8 +565,7 @@ const Dashboard = () => {
                                 className="border-slate-400 hover:bg-slate-100 text-slate-700 px-2"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  // TODO: Implement email sending functionality
-                                  console.log('Send email for etat:', etat.id);
+                                  handleEmail(etat.id);
                                 }}
                               >
                                 <Mail className="h-3 w-3" />
