@@ -18,7 +18,7 @@ export const Sidebar = () => {
   return (
     <div className="w-64 border-r h-screen p-4 flex flex-col bg-white">
       <div className="flex items-center gap-2 mb-8 p-2">
-        <Building className="w-6 h-6" />
+        <img src="/favicon.ico" alt="Logo" className="w-6 h-6" />
         <h1 className="font-semibold text-lg">Mon Application</h1>
       </div>
 
