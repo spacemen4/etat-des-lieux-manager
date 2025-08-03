@@ -114,6 +114,13 @@ export const LoginForm = ({ onSuccess }) => {
         <div className="mt-4 text-center text-sm">
           <p>Vous n'avez pas de compte ? <a href="/signup" className="underline">Inscrivez-vous</a></p>
         </div>
+        <div className="mt-4 text-center">
+            <a href="https://www.etatdelux.com" target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" className="w-full">
+                    Retour au site
+                </Button>
+            </a>
+        </div>
       </CardContent>
     </Card>
   );
