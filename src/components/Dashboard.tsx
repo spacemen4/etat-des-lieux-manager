@@ -272,23 +272,23 @@ const Dashboard = () => {
   return (
     <div className="space-y-8 animate-fade-in custom-scrollbar">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="animate-slide-up">
-          <h2 className="text-2xl sm:text-3xl font-bold gradient-text mb-1 animate-glow">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold gradient-text mb-1">
             Tableau de bord
           </h2>
-          <p className="text-slate-600/80 text-sm sm:text-base backdrop-blur-sm">
+          <p className="text-slate-600/80 text-sm sm:text-base">
             Gérez vos états des lieux d'entrée et de sortie
           </p>
         </div>
-        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto animate-slide-in-right">
-          <Button asChild variant="gradient-aurora" className="flex-1 sm:flex-initial micro-bounce">
+        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+          <Button asChild variant="gradient-aurora" className="flex-1 sm:flex-initial">
             <a href="/new-etat-des-lieux?type=entree" className="flex items-center justify-center gap-2">
               <LogIn className="h-4 w-4" />
               <span className="hidden sm:inline">État d'entrée</span>
               <span className="sm:hidden">Entrée</span>
             </a>
           </Button>
-          <Button asChild variant="gradient-cyberpunk" className="flex-1 sm:flex-initial micro-bounce">
+          <Button asChild variant="gradient-cyberpunk" className="flex-1 sm:flex-initial">
             <a href="/new-etat-des-lieux?type=sortie" className="flex items-center justify-center gap-2">
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">État de sortie</span>
@@ -299,60 +299,60 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="glass-heavy card-tilt animate-slide-in-left">
+        <Card className="glass-heavy">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Total des biens</CardTitle>
-            <div className="p-2 rounded-lg bg-gradient-primary animate-float">
+            <div className="p-2 rounded-lg bg-gradient-primary">
               <FileText className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold gradient-text animate-pulse-soft">{etatsDesLieux?.length || 0}</div>
+            <div className="text-3xl font-bold gradient-text">{etatsDesLieux?.length || 0}</div>
             <p className="text-xs text-muted-foreground/70">
               États des lieux
             </p>
           </CardContent>
         </Card>
 
-        <Card className="glass-heavy card-tilt animate-slide-in-left" style={{animationDelay: '0.1s'}}>
+        <Card className="glass-heavy">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium gradient-text">En cours</CardTitle>
-            <div className="p-2 rounded-lg bg-gradient-warm animate-float" style={{animationDelay: '0.5s'}}>
+            <div className="p-2 rounded-lg bg-gradient-warm">
               <Calendar className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-orange-500 animate-pulse-soft">{etatsEnCours.length}</div>
+            <div className="text-3xl font-bold text-orange-500">{etatsEnCours.length}</div>
             <p className="text-xs text-muted-foreground/70">
               Locations actives
             </p>
           </CardContent>
         </Card>
 
-        <Card className="glass-heavy card-tilt animate-slide-in-right" style={{animationDelay: '0.1s'}}>
+        <Card className="glass-heavy">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Terminés</CardTitle>
-            <div className="p-2 rounded-lg bg-gradient-cool animate-float" style={{animationDelay: '1s'}}>
+            <div className="p-2 rounded-lg bg-gradient-cool">
               <User className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-500 animate-pulse-soft">{etatsTermines.length}</div>
+            <div className="text-3xl font-bold text-green-500">{etatsTermines.length}</div>
             <p className="text-xs text-muted-foreground/70">
               États finalisés
             </p>
           </CardContent>
         </Card>
 
-        <Card className="glass-heavy card-tilt animate-slide-in-right">
+        <Card className="glass-heavy">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Rendez-vous</CardTitle>
-            <div className="p-2 rounded-lg bg-gradient-sunset animate-float" style={{animationDelay: '1.5s'}}>
+            <div className="p-2 rounded-lg bg-gradient-sunset">
               <Clock className="h-4 w-4 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-500 animate-pulse-soft">{rendezVousPlanifies.length}</div>
+            <div className="text-3xl font-bold text-blue-500">{rendezVousPlanifies.length}</div>
             <p className="text-xs text-muted-foreground/70">
               Rendez-vous planifiés
             </p>
