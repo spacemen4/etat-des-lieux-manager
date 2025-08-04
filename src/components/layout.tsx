@@ -1,15 +1,26 @@
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './sidebar'; // Assurez-vous que le chemin est correct
 import { useAuth } from '../auth'; // Assurez-vous que le chemin est correct
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export const DashboardLayout = ({ children }) => {
   const { user, organisation } = useAuth();
+  const isMobile = useIsMobile();
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen w-full">
       <Sidebar />
-      <main className="flex-1 p-6 bg-gray-50">
-        {children || <Outlet />}
+      <main className={`
+        flex-1 
+        ${isMobile ? 'p-4 pt-16' : 'p-4 md:p-6 lg:p-8'} 
+        bg-gradient-to-br from-background via-background/95 to-background
+        min-h-screen
+        overflow-x-hidden
+        transition-all duration-300
+      `}>
+        <div className="max-w-full mx-auto">
+          {children || <Outlet />}
+        </div>
       </main>
     </div>
   );

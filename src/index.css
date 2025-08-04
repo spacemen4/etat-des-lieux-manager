@@ -523,3 +523,236 @@
     background-position: 100% 50%;
   }
 }
+
+/* Media queries pour la responsivité */
+@media (max-width: 767px) {
+  /* Mobile styles */
+  body {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .glass {
+    padding: 1rem;
+    margin: 0.5rem 0;
+  }
+
+  .glass-card {
+    border-radius: 1rem;
+    padding: 1rem;
+  }
+
+  /* Adaptation des cartes pour mobile */
+  .card-mobile {
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  /* Textes responsive */
+  .text-responsive-lg {
+    font-size: 1.5rem;
+    line-height: 1.4;
+  }
+
+  .text-responsive-md {
+    font-size: 1.125rem;
+    line-height: 1.4;
+  }
+
+  .text-responsive-sm {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  /* Boutons mobiles */
+  .btn-mobile {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    min-height: 44px; /* Taille minimale recommandée pour les touch targets */
+  }
+
+  /* Grilles responsive */
+  .grid-mobile-1 {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .grid-mobile-2 {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  /* Espacements mobiles */
+  .space-mobile {
+    padding: 1rem;
+  }
+
+  .space-mobile-sm {
+    padding: 0.5rem;
+  }
+
+  /* Navigation mobile */
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--glass-bg-heavy);
+    border-top: 1px solid var(--glass-border);
+    backdrop-filter: var(--glass-backdrop-blur);
+    z-index: 1000;
+    padding: 0.5rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Tablet styles */
+  .glass {
+    padding: 1.5rem;
+  }
+
+  .glass-card {
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+  }
+
+  /* Textes tablette */
+  .text-responsive-lg {
+    font-size: 1.75rem;
+    line-height: 1.3;
+  }
+
+  .text-responsive-md {
+    font-size: 1.25rem;
+    line-height: 1.4;
+  }
+
+  /* Grilles tablette */
+  .grid-tablet-2 {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .grid-tablet-3 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  /* Sidebar tablette */
+  .sidebar-tablet {
+    width: 200px;
+  }
+
+  /* Espacements tablette */
+  .space-tablet {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Desktop styles */
+  .glass {
+    padding: 2rem;
+  }
+
+  .glass-card {
+    border-radius: 1.5rem;
+    padding: 2rem;
+  }
+
+  /* Textes desktop */
+  .text-responsive-lg {
+    font-size: 2rem;
+    line-height: 1.3;
+  }
+
+  .text-responsive-md {
+    font-size: 1.375rem;
+    line-height: 1.4;
+  }
+
+  /* Grilles desktop */
+  .grid-desktop-4 {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+
+  .grid-desktop-3 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  /* Espacements desktop */
+  .space-desktop {
+    padding: 2rem;
+  }
+}
+
+/* Utilitaires responsive supplémentaires */
+@media (max-width: 640px) {
+  /* Masquer certains éléments sur très petits écrans */
+  .hidden-mobile {
+    display: none !important;
+  }
+
+  /* Container mobile */
+  .container-mobile {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  /* Typography mobile */
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.25rem; }
+  h3 { font-size: 1.125rem; }
+  h4 { font-size: 1rem; }
+  h5 { font-size: 0.875rem; }
+  h6 { font-size: 0.75rem; }
+
+  /* Form elements mobile */
+  input, select, textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* Touch targets - minimum 44px pour l'accessibilité mobile */
+@media (max-width: 767px) {
+  button, input[type="button"], input[type="submit"], a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Amélioration des interactions tactiles */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .glass, .glass-card, .glass-light, .glass-heavy {
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  body::before {
+    display: none !important;
+  }
+}

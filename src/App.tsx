@@ -103,9 +103,9 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4 md:p-6 lg:p-8 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/10 to-transparent animate-shimmer"></div>
-      <div className="animate-slide-up z-10">
+      <div className="animate-slide-up z-10 w-full max-w-md mx-auto">
         <LoginForm onSuccess={handleLoginSuccess} />
       </div>
     </div>
@@ -120,9 +120,9 @@ const SignUpPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4 md:p-6 lg:p-8 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/10 to-transparent animate-shimmer" style={{animationDelay: '1s'}}></div>
-      <div className="animate-slide-in-left z-10">
+      <div className="animate-slide-in-left z-10 w-full max-w-md mx-auto">
         <SignUpForm onSuccess={handleSignUpSuccess} />
       </div>
     </div>
