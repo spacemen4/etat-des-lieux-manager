@@ -219,7 +219,7 @@
   }
 
   .glass-card:hover {
-    transform: translateY(-4px) scale(1.02);
+    transform: translateY(-2px) scale(1.005);
     box-shadow: var(--glass-shadow-strong);
   }
 
@@ -285,8 +285,8 @@
   }
 
   .btn-glass:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--glass-shadow), 0 10px 25px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    box-shadow: var(--glass-shadow), 0 5px 15px rgba(0, 0, 0, 0.08);
   }
 
   .btn-gradient {
@@ -295,8 +295,8 @@
   }
 
   .btn-gradient:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.25);
   }
 
   /* Enhanced smooth animations */
@@ -345,7 +345,7 @@
   }
 
   .card-hover:hover {
-    transform: translateY(-8px) scale(1.02);
+    transform: translateY(-4px) scale(1.01);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   }
 
@@ -354,8 +354,8 @@
   }
 
   .card-hover-subtle:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
   }
 
   .card-tilt {
@@ -364,8 +364,8 @@
   }
 
   .card-tilt:hover {
-    transform: rotateX(5deg) rotateY(5deg) translateY(-5px);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+    transform: rotateX(1deg) rotateY(1deg) translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   }
 
   /* Modern input styles */
@@ -374,8 +374,8 @@
   }
 
   .input-glass:focus {
-    transform: translateY(-1px);
-    box-shadow: var(--glass-shadow-strong);
+    transform: translateY(-0.5px);
+    box-shadow: var(--glass-shadow-soft);
   }
 
   /* Micro-interactions */
@@ -384,7 +384,7 @@
   }
 
   .micro-bounce:active {
-    transform: scale(0.95);
+    transform: scale(0.98);
   }
 
   .micro-lift {
@@ -392,7 +392,7 @@
   }
 
   .micro-lift:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
   }
 
   /* Modern scrollbar */
@@ -421,7 +421,7 @@
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(5px);
   }
   to {
     opacity: 1;
@@ -432,7 +432,7 @@
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(15px);
   }
   to {
     opacity: 1;
@@ -445,13 +445,13 @@
     transform: translateY(0);
   }
   40%, 43% {
-    transform: translateY(-15px);
+    transform: translateY(-8px);
   }
   70% {
-    transform: translateY(-7px);
+    transform: translateY(-4px);
   }
   90% {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
   }
 }
 
@@ -460,14 +460,14 @@
     transform: translateY(0px);
   }
   50% {
-    transform: translateY(-10px);
+    transform: translateY(-5px);
   }
 }
 
 @keyframes slideInLeft {
   from {
     opacity: 0;
-    transform: translateX(-30px);
+    transform: translateX(-15px);
   }
   to {
     opacity: 1;
@@ -478,7 +478,7 @@
 @keyframes slideInRight {
   from {
     opacity: 0;
-    transform: translateX(30px);
+    transform: translateX(15px);
   }
   to {
     opacity: 1;

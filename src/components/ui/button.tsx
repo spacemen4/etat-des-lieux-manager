@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 transform hover:-translate-y-0.5",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 transform hover:-translate-y-px",
   {
     variants: {
       variant: {
@@ -19,13 +19,13 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         glass: "glass text-foreground hover:shadow-xl transition-all duration-300",
-        gradient: "bg-gradient-primary text-white hover:shadow-xl border-0 hover:scale-105",
-        "gradient-warm": "bg-gradient-warm text-white hover:shadow-xl border-0 hover:scale-105",
-        "gradient-cool": "bg-gradient-cool text-white hover:shadow-xl border-0 hover:scale-105",
-        "gradient-neon": "bg-gradient-neon text-white hover:shadow-xl border-0 hover:scale-105 animate-glow",
-        "gradient-aurora": "bg-gradient-aurora text-white hover:shadow-xl border-0 hover:scale-105",
-        "gradient-cyberpunk": "bg-gradient-cyberpunk text-white hover:shadow-xl border-0 hover:scale-105",
-        "gradient-sunset": "bg-gradient-sunset text-white hover:shadow-xl border-0 hover:scale-105",
+        gradient: "bg-gradient-primary text-white hover:shadow-lg border-0 hover:scale-101",
+        "gradient-warm": "bg-gradient-warm text-white hover:shadow-lg border-0 hover:scale-101",
+        "gradient-cool": "bg-gradient-cool text-white hover:shadow-lg border-0 hover:scale-101",
+        "gradient-neon": "bg-gradient-neon text-white hover:shadow-lg border-0 hover:scale-101",
+        "gradient-aurora": "bg-gradient-aurora text-white hover:shadow-lg border-0 hover:scale-101",
+        "gradient-cyberpunk": "bg-gradient-cyberpunk text-white hover:shadow-lg border-0 hover:scale-101",
+        "gradient-sunset": "bg-gradient-sunset text-white hover:shadow-lg border-0 hover:scale-101",
       },
       size: {
         default: "h-10 px-4 py-2",
