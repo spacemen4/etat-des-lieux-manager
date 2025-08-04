@@ -35,10 +35,13 @@ const AuthRoutes = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Chargement...</p>
-          {error && <p className="text-red-500 mt-2">Erreur: {error.message}</p>}
+        <div className="glass-card p-8 text-center animate-fade-in">
+          <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-smooth">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          </div>
+          <h3 className="text-lg font-semibold gradient-text mb-2">État des Lieux Manager</h3>
+          <p className="text-muted-foreground">Chargement de l'application...</p>
+          {error && <p className="text-red-500 mt-4">Erreur: {error.message}</p>}
         </div>
       </div>
     );
@@ -47,11 +50,15 @@ const AuthRoutes = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center p-6 max-w-md">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Erreur de chargement</h2>
-          <p className="text-red-500 mb-4">{error.message}</p>
-          <Button onClick={() => window.location.reload()}>Réessayer</Button>
+        <div className="glass-card p-8 text-center max-w-md animate-fade-in">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="h-8 w-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold gradient-text mb-2">Erreur de chargement</h2>
+          <p className="text-red-500 mb-6">{error.message}</p>
+          <Button variant="gradient" onClick={() => window.location.reload()}>
+            Réessayer
+          </Button>
         </div>
       </div>
     );
@@ -96,8 +103,10 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <LoginForm onSuccess={handleLoginSuccess} />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+      <div className="animate-fade-in">
+        <LoginForm onSuccess={handleLoginSuccess} />
+      </div>
     </div>
   );
 };
@@ -110,8 +119,10 @@ const SignUpPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <SignUpForm onSuccess={handleSignUpSuccess} />
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
+      <div className="animate-slide-up">
+        <SignUpForm onSuccess={handleSignUpSuccess} />
+      </div>
     </div>
   );
 };

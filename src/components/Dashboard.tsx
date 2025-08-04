@@ -28,16 +28,28 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex items-center justify-center min-h-[400px] animate-fade-in">
+        <div className="glass-card p-8 text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Chargement des données...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-600">Erreur lors du chargement des données: {error.message}</p>
+      <div className="text-center py-8 animate-fade-in">
+        <div className="glass-card p-8 max-w-md mx-auto">
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FileText className="h-6 w-6 text-red-600" />
+          </div>
+          <h3 className="font-semibold text-gray-900 mb-2">Erreur de chargement</h3>
+          <p className="text-red-600 mb-4">{error.message}</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Réessayer
+          </Button>
+        </div>
       </div>
     );
   }
@@ -258,25 +270,25 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">
+        <div className="animate-slide-up">
+          <h2 className="text-2xl sm:text-3xl font-bold gradient-text mb-1">
             Tableau de bord
           </h2>
           <p className="text-slate-600 text-sm sm:text-base">
             Gérez vos états des lieux d'entrée et de sortie
           </p>
         </div>
-        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button asChild className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-initial">
+        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto animate-slide-up">
+          <Button asChild variant="gradient" className="flex-1 sm:flex-initial">
             <a href="/new-etat-des-lieux?type=entree" className="flex items-center justify-center gap-2">
               <LogIn className="h-4 w-4" />
               <span className="hidden sm:inline">État d'entrée</span>
               <span className="sm:hidden">Entrée</span>
             </a>
           </Button>
-          <Button asChild className="bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-initial">
+          <Button asChild variant="gradient-cool" className="flex-1 sm:flex-initial">
             <a href="/new-etat-des-lieux?type=sortie" className="flex items-center justify-center gap-2">
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">État de sortie</span>
@@ -421,11 +433,27 @@ const Dashboard = () => {
         </div>
 
         {etatsDesLieux?.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-600">Aucun état des lieux trouvé</p>
-              <p className="text-slate-500 text-sm">Commencez par créer votre premier état des lieux</p>
+          <Card className="glass-card">
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 bg-gradient-cool rounded-full flex items-center justify-center mx-auto mb-6 animate-float">
+                <FileText className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Aucun état des lieux</h3>
+              <p className="text-slate-600 mb-6">Commencez par créer votre premier état des lieux</p>
+              <div className="flex gap-3 justify-center">
+                <Button asChild variant="gradient" size="sm">
+                  <a href="/new-etat-des-lieux?type=entree">
+                    <LogIn className="h-4 w-4 mr-2" />
+                    État d'entrée
+                  </a>
+                </Button>
+                <Button asChild variant="gradient-cool" size="sm">
+                  <a href="/new-etat-des-lieux?type=sortie">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    État de sortie
+                  </a>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : (
