@@ -35,13 +35,13 @@ const AuthRoutes = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="glass-card p-8 text-center animate-fade-in">
-          <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-smooth">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+        <div className="glass-heavy p-10 text-center animate-fade-in">
+          <div className="w-20 h-20 bg-gradient-neon rounded-full flex items-center justify-center mx-auto mb-8 animate-bounce-smooth animate-glow">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-3 border-white"></div>
           </div>
-          <h3 className="text-lg font-semibold gradient-text mb-2">État des Lieux Manager</h3>
-          <p className="text-muted-foreground">Chargement de l'application...</p>
-          {error && <p className="text-red-500 mt-4">Erreur: {error.message}</p>}
+          <h3 className="text-xl font-bold gradient-text mb-3 animate-pulse-soft">État des Lieux Manager</h3>
+          <p className="text-muted-foreground/80 backdrop-blur-sm">Chargement de l'application...</p>
+          {error && <p className="text-red-500 mt-4 animate-fade-in">Erreur: {error.message}</p>}
         </div>
       </div>
     );
@@ -50,13 +50,13 @@ const AuthRoutes = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="glass-card p-8 text-center max-w-md animate-fade-in">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <AlertCircle className="h-8 w-8 text-red-500" />
+        <div className="glass-heavy p-10 text-center max-w-md animate-fade-in">
+          <div className="w-20 h-20 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse-soft">
+            <AlertCircle className="h-10 w-10 text-white" />
           </div>
-          <h2 className="text-xl font-bold gradient-text mb-2">Erreur de chargement</h2>
-          <p className="text-red-500 mb-6">{error.message}</p>
-          <Button variant="gradient" onClick={() => window.location.reload()}>
+          <h2 className="text-xl font-bold gradient-text mb-3 animate-glow">Erreur de chargement</h2>
+          <p className="text-red-500/80 mb-8 backdrop-blur-sm">{error.message}</p>
+          <Button variant="gradient-aurora" className="micro-bounce" onClick={() => window.location.reload()}>
             Réessayer
           </Button>
         </div>
@@ -103,8 +103,9 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="animate-fade-in">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/10 to-transparent animate-shimmer"></div>
+      <div className="animate-slide-up z-10">
         <LoginForm onSuccess={handleLoginSuccess} />
       </div>
     </div>
@@ -119,8 +120,9 @@ const SignUpPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
-      <div className="animate-slide-up">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/10 to-transparent animate-shimmer" style={{animationDelay: '1s'}}></div>
+      <div className="animate-slide-in-left z-10">
         <SignUpForm onSuccess={handleSignUpSuccess} />
       </div>
     </div>

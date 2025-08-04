@@ -270,25 +270,25 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in custom-scrollbar">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="animate-slide-up">
-          <h2 className="text-2xl sm:text-3xl font-bold gradient-text mb-1">
+          <h2 className="text-2xl sm:text-3xl font-bold gradient-text mb-1 animate-glow">
             Tableau de bord
           </h2>
-          <p className="text-slate-600 text-sm sm:text-base">
+          <p className="text-slate-600/80 text-sm sm:text-base backdrop-blur-sm">
             Gérez vos états des lieux d'entrée et de sortie
           </p>
         </div>
-        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto animate-slide-up">
-          <Button asChild variant="gradient" className="flex-1 sm:flex-initial">
+        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto animate-slide-in-right">
+          <Button asChild variant="gradient-aurora" className="flex-1 sm:flex-initial micro-bounce">
             <a href="/new-etat-des-lieux?type=entree" className="flex items-center justify-center gap-2">
               <LogIn className="h-4 w-4" />
               <span className="hidden sm:inline">État d'entrée</span>
               <span className="sm:hidden">Entrée</span>
             </a>
           </Button>
-          <Button asChild variant="gradient-cool" className="flex-1 sm:flex-initial">
+          <Button asChild variant="gradient-cyberpunk" className="flex-1 sm:flex-initial micro-bounce">
             <a href="/new-etat-des-lieux?type=sortie" className="flex items-center justify-center gap-2">
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">État de sortie</span>
@@ -299,53 +299,61 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="glass-heavy card-tilt animate-slide-in-left">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total des biens</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium gradient-text">Total des biens</CardTitle>
+            <div className="p-2 rounded-lg bg-gradient-primary animate-float">
+              <FileText className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{etatsDesLieux?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold gradient-text animate-pulse-soft">{etatsDesLieux?.length || 0}</div>
+            <p className="text-xs text-muted-foreground/70">
               États des lieux
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-heavy card-tilt animate-slide-in-left" style={{animationDelay: '0.1s'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">En cours</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium gradient-text">En cours</CardTitle>
+            <div className="p-2 rounded-lg bg-gradient-warm animate-float" style={{animationDelay: '0.5s'}}>
+              <Calendar className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{etatsEnCours.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-orange-500 animate-pulse-soft">{etatsEnCours.length}</div>
+            <p className="text-xs text-muted-foreground/70">
               Locations actives
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-heavy card-tilt animate-slide-in-right" style={{animationDelay: '0.1s'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Terminés</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium gradient-text">Terminés</CardTitle>
+            <div className="p-2 rounded-lg bg-gradient-cool animate-float" style={{animationDelay: '1s'}}>
+              <User className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{etatsTermines.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-green-500 animate-pulse-soft">{etatsTermines.length}</div>
+            <p className="text-xs text-muted-foreground/70">
               États finalisés
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-heavy card-tilt animate-slide-in-right">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rendez-vous</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium gradient-text">Rendez-vous</CardTitle>
+            <div className="p-2 rounded-lg bg-gradient-sunset animate-float" style={{animationDelay: '1.5s'}}>
+              <Clock className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{rendezVousPlanifies.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-blue-500 animate-pulse-soft">{rendezVousPlanifies.length}</div>
+            <p className="text-xs text-muted-foreground/70">
               Rendez-vous planifiés
             </p>
           </CardContent>
@@ -359,8 +367,8 @@ const Dashboard = () => {
             Rendez-vous planifiés
           </h3>
           <div className="grid gap-4">
-            {rendezVousPlanifies.map((rdv) => (
-              <Card key={rdv.id} className="hover:shadow-md transition-shadow border-orange-200">
+            {rendezVousPlanifies.map((rdv, index) => (
+              <Card key={rdv.id} className="glass-light card-hover-subtle animate-slide-in-left border-orange-200/30" style={{animationDelay: `${index * 0.1}s`}}>
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div className="space-y-2 flex-grow">
@@ -403,7 +411,8 @@ const Dashboard = () => {
                         <Button 
                           size="sm" 
                           asChild
-                          className="bg-orange-600 hover:bg-orange-700 w-full"
+                          variant="gradient-sunset"
+                          className="w-full micro-bounce"
                         >
                           <a href={`/new-etat-des-lieux?type=${rdv.type_etat_des_lieux}&rdv=${rdv.id}`} className="flex items-center justify-center gap-1">
                             <FileText className="h-3 w-3" />
@@ -433,21 +442,21 @@ const Dashboard = () => {
         </div>
 
         {etatsDesLieux?.length === 0 ? (
-          <Card className="glass-card">
+          <Card className="glass-heavy animate-fade-in">
             <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-gradient-cool rounded-full flex items-center justify-center mx-auto mb-6 animate-float">
-                <FileText className="h-8 w-8 text-white" />
+              <div className="w-20 h-20 bg-gradient-neon rounded-full flex items-center justify-center mx-auto mb-8 animate-float">
+                <FileText className="h-10 w-10 text-white" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Aucun état des lieux</h3>
-              <p className="text-slate-600 mb-6">Commencez par créer votre premier état des lieux</p>
-              <div className="flex gap-3 justify-center">
-                <Button asChild variant="gradient" size="sm">
+              <h3 className="text-xl font-bold gradient-text mb-3 animate-pulse-soft">Aucun état des lieux</h3>
+              <p className="text-slate-600/80 mb-8 backdrop-blur-sm">Commencez par créer votre premier état des lieux</p>
+              <div className="flex gap-4 justify-center">
+                <Button asChild variant="gradient-aurora" size="sm" className="micro-bounce">
                   <a href="/new-etat-des-lieux?type=entree">
                     <LogIn className="h-4 w-4 mr-2" />
                     État d'entrée
                   </a>
                 </Button>
-                <Button asChild variant="gradient-cool" size="sm">
+                <Button asChild variant="gradient-cyberpunk" size="sm" className="micro-bounce">
                   <a href="/new-etat-des-lieux?type=sortie">
                     <LogOut className="h-4 w-4 mr-2" />
                     État de sortie
@@ -458,8 +467,8 @@ const Dashboard = () => {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {etatsDesLieux?.map((etat) => (
-              <Card key={etat.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleViewEtat(etat.id)}>
+            {etatsDesLieux?.map((etat, index) => (
+              <Card key={etat.id} className="glass-light card-hover cursor-pointer animate-slide-up" style={{animationDelay: `${index * 0.05}s`}} onClick={() => handleViewEtat(etat.id)}>
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div className="space-y-2 flex-grow">
