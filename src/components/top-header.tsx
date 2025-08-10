@@ -21,7 +21,7 @@ export const Header: React.FC = () => {
           <User2 className="w-4 h-4 text-muted-foreground" />
           <Select
             value={selectedEmployeId ?? ''}
-            onValueChange={(value) => setSelectedEmployeId(value === '' ? null : value)}
+            onValueChange={(value) => setSelectedEmployeId(value === 'none' ? null : value)}
           >
             <SelectTrigger className="w-[220px] md:w-[260px]">
               <SelectValue placeholder={loading ? 'Chargement...' : 'Sélectionner un employé (optionnel)'} />
@@ -29,7 +29,7 @@ export const Header: React.FC = () => {
             <SelectContent>
               <SelectGroup>
                 <SelectLabel>Employé</SelectLabel>
-                <SelectItem value="">Aucun (par défaut)</SelectItem>
+                <SelectItem value="none">Aucun (par défaut)</SelectItem>
                 {employes.map((e) => (
                   <SelectItem key={e.id} value={e.id}>
                     {e.prenom} {e.nom}
