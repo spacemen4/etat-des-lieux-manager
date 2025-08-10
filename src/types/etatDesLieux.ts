@@ -206,11 +206,11 @@ export type Database = {
           fonction: string | null
           id: string
           nom: string
-          organisation_id: string
           prenom: string
           telephone: string | null
           updated_at: string | null
           updated_by: string | null
+          user_id: string
         }
         Insert: {
           actif?: boolean | null
@@ -220,11 +220,11 @@ export type Database = {
           fonction?: string | null
           id?: string
           nom: string
-          organisation_id: string
           prenom: string
           telephone?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          user_id: string
         }
         Update: {
           actif?: boolean | null
@@ -234,11 +234,11 @@ export type Database = {
           fonction?: string | null
           id?: string
           nom?: string
-          organisation_id?: string
           prenom?: string
           telephone?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -249,15 +249,15 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "employes_organisation_id_fkey"
-            columns: ["organisation_id"]
+            foreignKeyName: "employes_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
-            referencedRelation: "organisations"
+            referencedRelation: "utilisateurs"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "employes_updated_by_fkey"
-            columns: ["updated_by"]
+            foreignKeyName: "employes_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "utilisateurs"
             referencedColumns: ["id"]

@@ -30,9 +30,9 @@ CREATE TABLE public.autres_equipements (
   user_id uuid,
   employe_id uuid,
   CONSTRAINT autres_equipements_pkey PRIMARY KEY (id),
-  CONSTRAINT autres_equipements_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id),
   CONSTRAINT autres_equipements_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
-  CONSTRAINT autres_equipements_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+  CONSTRAINT autres_equipements_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT autres_equipements_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id)
 );
 CREATE TABLE public.cles (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -56,14 +56,14 @@ CREATE TABLE public.employes (
   email text,
   telephone text,
   fonction text,
-  organisation_id uuid NOT NULL,
+  user_id uuid NOT NULL,
   actif boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   created_by uuid,
   updated_by uuid,
   CONSTRAINT employes_pkey PRIMARY KEY (id),
-  CONSTRAINT employes_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id),
+  CONSTRAINT employes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.utilisateurs(id),
   CONSTRAINT employes_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.utilisateurs(id),
   CONSTRAINT employes_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.utilisateurs(id)
 );
@@ -85,8 +85,8 @@ CREATE TABLE public.equipements_chauffage (
   employe_id uuid,
   CONSTRAINT equipements_chauffage_pkey PRIMARY KEY (id),
   CONSTRAINT equipements_chauffage_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id),
-  CONSTRAINT equipements_chauffage_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
-  CONSTRAINT equipements_chauffage_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+  CONSTRAINT equipements_chauffage_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT equipements_chauffage_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id)
 );
 CREATE TABLE public.equipements_energetiques (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -103,8 +103,8 @@ CREATE TABLE public.equipements_energetiques (
   user_id uuid,
   employe_id uuid,
   CONSTRAINT equipements_energetiques_pkey PRIMARY KEY (id),
-  CONSTRAINT equipements_energetiques_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
   CONSTRAINT equipements_energetiques_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id),
+  CONSTRAINT equipements_energetiques_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
   CONSTRAINT equipements_energetiques_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id)
 );
 CREATE TABLE public.etat_des_lieux (
@@ -156,10 +156,10 @@ CREATE TABLE public.invitations (
   statut text DEFAULT 'en_attente'::text CHECK (statut = ANY (ARRAY['en_attente'::text, 'accepte'::text, 'expire'::text, 'revoque'::text])),
   employe_id uuid,
   CONSTRAINT invitations_pkey PRIMARY KEY (id),
-  CONSTRAINT invitations_accepted_by_fkey FOREIGN KEY (accepted_by) REFERENCES public.utilisateurs(id),
   CONSTRAINT invitations_invite_par_fkey FOREIGN KEY (invite_par) REFERENCES public.utilisateurs(id),
   CONSTRAINT invitations_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id),
-  CONSTRAINT invitations_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id)
+  CONSTRAINT invitations_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id),
+  CONSTRAINT invitations_accepted_by_fkey FOREIGN KEY (accepted_by) REFERENCES public.utilisateurs(id)
 );
 CREATE TABLE public.invoices (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -220,10 +220,10 @@ CREATE TABLE public.permissions_partage (
   expires_at timestamp with time zone,
   employe_id uuid,
   CONSTRAINT permissions_partage_pkey PRIMARY KEY (id),
-  CONSTRAINT permissions_partage_accorde_par_fkey FOREIGN KEY (accorde_par) REFERENCES public.utilisateurs(id),
   CONSTRAINT permissions_partage_utilisateur_id_fkey FOREIGN KEY (utilisateur_id) REFERENCES public.utilisateurs(id),
   CONSTRAINT permissions_partage_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
-  CONSTRAINT permissions_partage_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id)
+  CONSTRAINT permissions_partage_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id),
+  CONSTRAINT permissions_partage_accorde_par_fkey FOREIGN KEY (accorde_par) REFERENCES public.utilisateurs(id)
 );
 CREATE TABLE public.pieces (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -248,9 +248,9 @@ CREATE TABLE public.pieces (
   user_id uuid,
   employe_id uuid,
   CONSTRAINT pieces_pkey PRIMARY KEY (id),
-  CONSTRAINT pieces_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id),
   CONSTRAINT pieces_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
-  CONSTRAINT pieces_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+  CONSTRAINT pieces_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT pieces_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id)
 );
 CREATE TABLE public.plan_limits (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -370,9 +370,9 @@ CREATE TABLE public.subscriptions (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT subscriptions_pkey PRIMARY KEY (id),
-  CONSTRAINT subscriptions_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id),
   CONSTRAINT subscriptions_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.subscription_plans(id),
-  CONSTRAINT subscriptions_utilisateur_id_fkey FOREIGN KEY (utilisateur_id) REFERENCES public.utilisateurs(id)
+  CONSTRAINT subscriptions_utilisateur_id_fkey FOREIGN KEY (utilisateur_id) REFERENCES public.utilisateurs(id),
+  CONSTRAINT subscriptions_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id)
 );
 CREATE TABLE public.utilisateurs (
   id uuid NOT NULL,

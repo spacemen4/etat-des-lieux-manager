@@ -7,6 +7,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Users, Building, UserPlus, Shield, Mail, Phone, MapPin, Settings, LogOut, Crown, UserCheck, User } from 'lucide-react';
 import { supabase } from './lib/supabase';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogHeader as DialogHeaderUI, DialogTitle as DialogTitleUI, DialogTrigger } from '@/components/ui/dialog';
+import type { Tables, TablesInsert } from '@/types/etatDesLieux';
 
 // Contexte d'authentification
 const AuthContext = createContext(null);
@@ -228,13 +232,292 @@ export const UserProfile = () => {
 
 // Placeholder for TeamManagement component
 export const TeamManagement = () => {
+  // Scope by current user's id (table `employes.user_id`)
+  const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
+  const [loadingUser, setLoadingUser] = React.useState<boolean>(true);
+  const [loadingList, setLoadingList] = React.useState<boolean>(false);
+  const [submitting, setSubmitting] = React.useState<boolean>(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const [prenom, setPrenom] = React.useState('');
+  const [nom, setNom] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [telephone, setTelephone] = React.useState('');
+  const [fonction, setFonction] = React.useState('');
+  const [actif, setActif] = React.useState(true);
+
+  const [employes, setEmployes] = React.useState<Tables<'employes'>[]>([]);
+
+  // Dialog state for creating a new employee
+  const [isAddOpen, setIsAddOpen] = React.useState(false);
+
+  // Track whether a matching row exists in `utilisateurs`
+  const [hasUtilisateurRow, setHasUtilisateurRow] = React.useState<boolean | null>(null);
+  const ensureUtilisateurRow = React.useCallback(async (authUser: { id: string; email?: string | null; user_metadata?: any }) => {
+    try {
+      // 1) Check existence
+      const { data, error } = await supabase
+        .from('utilisateurs')
+        .select('id')
+        .eq('id', authUser.id)
+        .single();
+      if (error) {
+        // PGRST116 = No rows
+        if ((error as any).code === 'PGRST116') {
+          // 2) Create minimal utilisateur row
+          const prenom = authUser.user_metadata?.prenom || authUser.user_metadata?.first_name || 'Utilisateur';
+          const nom = authUser.user_metadata?.nom || authUser.user_metadata?.last_name || 'Courant';
+          const email = authUser.email || `${authUser.id}@local`;
+          const { error: insertError } = await supabase
+            .from('utilisateurs')
+            .insert({ id: authUser.id, email, prenom, nom });
+          if (insertError) throw insertError;
+          setHasUtilisateurRow(true);
+          return true;
+        }
+        throw error;
+      }
+      setHasUtilisateurRow(!!data);
+      return !!data;
+    } catch (e) {
+      setError((e as any)?.message ?? "Impossible d'initialiser l'utilisateur");
+      setHasUtilisateurRow(null);
+      return false;
+    }
+  }, []);
+
+  // Load current user id and ensure a row exists in `utilisateurs`
+  React.useEffect(() => {
+    let isMounted = true;
+    const load = async () => {
+      try {
+        setLoadingUser(true);
+        const { data: authData } = await supabase.auth.getUser();
+        const user = authData?.user;
+        if (!user) throw new Error('Utilisateur non authentifié');
+        // Ensure presence in `utilisateurs` to satisfy FKs
+        await ensureUtilisateurRow(user as any);
+        if (isMounted) setCurrentUserId(user.id);
+      } catch (e: any) {
+        if (isMounted) setError(e.message ?? "Erreur d'authentification");
+      } finally {
+        if (isMounted) setLoadingUser(false);
+      }
+    };
+    load();
+    return () => { isMounted = false; };
+  }, [ensureUtilisateurRow]);
+
+  const loadEmployes = React.useCallback(async (userId: string) => {
+    setLoadingList(true);
+    try {
+      const { data, error } = await supabase
+        .from('employes')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setEmployes(data ?? []);
+    } catch (e: any) {
+      setError(e.message ?? 'Erreur lors du chargement des employés');
+    } finally {
+      setLoadingList(false);
+    }
+  }, []);
+
+  // Load employees when currentUserId is known
+  React.useEffect(() => {
+    if (currentUserId) {
+      loadEmployes(currentUserId);
+    }
+  }, [currentUserId, loadEmployes]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!prenom.trim() || !nom.trim()) {
+      setError('Prénom et Nom sont requis');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error('Utilisateur non authentifié');
+      // Safety: block if FK target does not exist
+      if (!hasUtilisateurRow) {
+        throw new Error("Votre compte n'est pas initialisé dans 'utilisateurs'. Veuillez contacter l'administrateur.");
+      }
+
+      const newEmploye: TablesInsert<'employes'> = {
+        prenom: prenom.trim(),
+        nom: nom.trim(),
+        email: email.trim() || null,
+        telephone: telephone.trim() || null,
+        fonction: fonction.trim() || null,
+        user_id: user.id,
+        actif,
+      };
+
+      const { data, error } = await supabase
+        .from('employes')
+        .insert(newEmploye)
+        .select()
+        .single();
+      if (error) throw error;
+
+      // Reset form and refresh list
+      setPrenom('');
+      setNom('');
+      setEmail('');
+      setTelephone('');
+      setFonction('');
+      setActif(true);
+
+      setEmployes((prev) => [data as Tables<'employes'>, ...prev]);
+      // Close dialog after successful creation
+      setIsAddOpen(false);
+    } catch (e: any) {
+      setError(e.message ?? "Erreur lors de l'ajout de l'employé");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Gestion de l'équipe</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="h-5 w-5" /> Gestion de l'équipe
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <p>La fonctionnalité de gestion de l'équipe est en cours de développement.</p>
+      <CardContent className="space-y-6">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Bouton + Ajouter un employé */}
+        <div className="flex justify-end">
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger asChild>
+              <Button
+                className="min-w-48"
+                disabled={loadingUser || !currentUserId}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <UserPlus className="h-4 w-4" /> + Ajouter un employé
+                </span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeaderUI>
+                <DialogTitleUI>Ajouter un employé</DialogTitleUI>
+              </DialogHeaderUI>
+
+              {hasUtilisateurRow === false ? (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    Votre compte n'est pas initialisé dans 'utilisateurs'. Veuillez contacter l'administrateur.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="prenom">Prénom</Label>
+                      <Input id="prenom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="nom">Nom</Label>
+                      <Input id="nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="email">Email</Label>
+                      <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="exemple@domaine.com" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="telephone">Téléphone</Label>
+                      <Input id="telephone" value={telephone} onChange={(e) => setTelephone(e.target.value)} placeholder="06 12 34 56 78" />
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="fonction">Fonction</Label>
+                      <Input id="fonction" value={fonction} onChange={(e) => setFonction(e.target.value)} placeholder="Ex: Agent immobilier" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Switch id="actif" checked={actif} onCheckedChange={setActif} />
+                    <Label htmlFor="actif">Actif</Label>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
+                      Annuler
+                    </Button>
+                    <Button type="submit" disabled={submitting || loadingUser} className="min-w-32">
+                      {submitting ? "Ajout en cours..." : "Ajouter"}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Liste des employés */}
+        {!loadingUser && currentUserId && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Membres</h3>
+            {loadingList && <span className="text-sm text-muted-foreground">Chargement...</span>}
+          </div>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nom</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Fonction</TableHead>
+                  <TableHead>Statut</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {employes.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">
+                      {loadingUser || loadingList
+                        ? 'Chargement...'
+                        : "Aucun employé pour l'instant. Ajoutez votre premier membre."}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  employes.map((emp) => (
+                    <TableRow key={emp.id}>
+                      <TableCell className="font-medium">{emp.prenom} {emp.nom}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          {emp.email && <span className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> {emp.email}</span>}
+                          {emp.telephone && <span className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" /> {emp.telephone}</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell>{emp.fonction ?? '-'}</TableCell>
+                      <TableCell>
+                        {emp.actif ? (
+                          <Badge variant="secondary">Actif</Badge>
+                        ) : (
+                          <Badge variant="outline">Inactif</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+        )}
       </CardContent>
     </Card>
   );
