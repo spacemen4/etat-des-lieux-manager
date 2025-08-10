@@ -13,9 +13,11 @@ CREATE TABLE public.audit_log (
   created_at timestamp with time zone DEFAULT now(),
   ip_address inet,
   user_agent text,
+  employe_id uuid,
   CONSTRAINT audit_log_pkey PRIMARY KEY (id),
   CONSTRAINT audit_log_utilisateur_id_fkey FOREIGN KEY (utilisateur_id) REFERENCES public.utilisateurs(id),
-  CONSTRAINT audit_log_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id)
+  CONSTRAINT audit_log_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id),
+  CONSTRAINT audit_log_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id)
 );
 CREATE TABLE public.autres_equipements (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -26,9 +28,11 @@ CREATE TABLE public.autres_equipements (
   commentaires text,
   photos jsonb DEFAULT '[]'::jsonb,
   user_id uuid,
+  employe_id uuid,
   CONSTRAINT autres_equipements_pkey PRIMARY KEY (id),
-  CONSTRAINT autres_equipements_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT autres_equipements_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id)
+  CONSTRAINT autres_equipements_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id),
+  CONSTRAINT autres_equipements_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
+  CONSTRAINT autres_equipements_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.cles (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -39,9 +43,29 @@ CREATE TABLE public.cles (
   commentaires text,
   photos jsonb DEFAULT '[]'::jsonb,
   user_id uuid,
+  employe_id uuid,
   CONSTRAINT cles_pkey PRIMARY KEY (id),
+  CONSTRAINT cles_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
   CONSTRAINT cles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT cles_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id)
+  CONSTRAINT cles_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id)
+);
+CREATE TABLE public.employes (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  prenom text NOT NULL,
+  nom text NOT NULL,
+  email text,
+  telephone text,
+  fonction text,
+  organisation_id uuid NOT NULL,
+  actif boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  created_by uuid,
+  updated_by uuid,
+  CONSTRAINT employes_pkey PRIMARY KEY (id),
+  CONSTRAINT employes_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id),
+  CONSTRAINT employes_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.utilisateurs(id),
+  CONSTRAINT employes_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.utilisateurs(id)
 );
 CREATE TABLE public.equipements_chauffage (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -58,7 +82,9 @@ CREATE TABLE public.equipements_chauffage (
   commentaires text,
   photos jsonb DEFAULT '[]'::jsonb,
   user_id uuid,
+  employe_id uuid,
   CONSTRAINT equipements_chauffage_pkey PRIMARY KEY (id),
+  CONSTRAINT equipements_chauffage_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id),
   CONSTRAINT equipements_chauffage_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
   CONSTRAINT equipements_chauffage_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
@@ -75,14 +101,12 @@ CREATE TABLE public.equipements_energetiques (
   commentaires text,
   photos jsonb DEFAULT '[]'::jsonb,
   user_id uuid,
+  employe_id uuid,
   CONSTRAINT equipements_energetiques_pkey PRIMARY KEY (id),
-  CONSTRAINT equipements_energetiques_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
-  CONSTRAINT equipements_energetiques_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+  CONSTRAINT equipements_energetiques_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT equipements_energetiques_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id),
+  CONSTRAINT equipements_energetiques_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id)
 );
-ALTER TABLE public.equipements_energetiques ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all access to own equipements_energetiques" ON public.equipements_energetiques FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
-
 CREATE TABLE public.etat_des_lieux (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   date_entree date,
@@ -109,12 +133,14 @@ CREATE TABLE public.etat_des_lieux (
   organization_id uuid,
   signature_locataire text,
   signature_proprietaire_agent text,
+  employe_id uuid,
   CONSTRAINT etat_des_lieux_pkey PRIMARY KEY (id),
-  CONSTRAINT fk_etat_des_lieux_rendez_vous FOREIGN KEY (rendez_vous_id) REFERENCES public.rendez_vous(id),
-  CONSTRAINT etat_des_lieux_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id),
+  CONSTRAINT etat_des_lieux_rendez_vous_id_fkey FOREIGN KEY (rendez_vous_id) REFERENCES public.rendez_vous(id),
   CONSTRAINT etat_des_lieux_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.utilisateurs(id),
+  CONSTRAINT etat_des_lieux_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id),
   CONSTRAINT etat_des_lieux_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.utilisateurs(id),
-  CONSTRAINT etat_des_lieux_rendez_vous_id_fkey FOREIGN KEY (rendez_vous_id) REFERENCES public.rendez_vous(id)
+  CONSTRAINT etat_des_lieux_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id),
+  CONSTRAINT fk_etat_des_lieux_rendez_vous FOREIGN KEY (rendez_vous_id) REFERENCES public.rendez_vous(id)
 );
 CREATE TABLE public.invitations (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -128,10 +154,30 @@ CREATE TABLE public.invitations (
   accepted_by uuid,
   created_at timestamp with time zone DEFAULT now(),
   statut text DEFAULT 'en_attente'::text CHECK (statut = ANY (ARRAY['en_attente'::text, 'accepte'::text, 'expire'::text, 'revoque'::text])),
+  employe_id uuid,
   CONSTRAINT invitations_pkey PRIMARY KEY (id),
-  CONSTRAINT invitations_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id),
+  CONSTRAINT invitations_accepted_by_fkey FOREIGN KEY (accepted_by) REFERENCES public.utilisateurs(id),
   CONSTRAINT invitations_invite_par_fkey FOREIGN KEY (invite_par) REFERENCES public.utilisateurs(id),
-  CONSTRAINT invitations_accepted_by_fkey FOREIGN KEY (accepted_by) REFERENCES public.utilisateurs(id)
+  CONSTRAINT invitations_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id),
+  CONSTRAINT invitations_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id)
+);
+CREATE TABLE public.invoices (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  subscription_id uuid NOT NULL,
+  stripe_invoice_id text NOT NULL UNIQUE,
+  status text NOT NULL CHECK (status = ANY (ARRAY['draft'::text, 'open'::text, 'paid'::text, 'uncollectible'::text, 'void'::text])),
+  amount_paid integer NOT NULL DEFAULT 0,
+  amount_due integer NOT NULL DEFAULT 0,
+  currency text NOT NULL DEFAULT 'eur'::text,
+  invoice_pdf text,
+  invoice_number text,
+  period_start timestamp with time zone,
+  period_end timestamp with time zone,
+  paid_at timestamp with time zone,
+  due_date timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT invoices_pkey PRIMARY KEY (id),
+  CONSTRAINT invoices_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id)
 );
 CREATE TABLE public.organisations (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -144,7 +190,9 @@ CREATE TABLE public.organisations (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   active boolean DEFAULT true,
-  CONSTRAINT organisations_pkey PRIMARY KEY (id)
+  subscription_id uuid,
+  CONSTRAINT organisations_pkey PRIMARY KEY (id),
+  CONSTRAINT organisations_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id)
 );
 CREATE TABLE public.parties_privatives (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -156,9 +204,11 @@ CREATE TABLE public.parties_privatives (
   commentaires text,
   photos jsonb DEFAULT '[]'::jsonb,
   user_id uuid,
+  employe_id uuid,
   CONSTRAINT parties_privatives_pkey PRIMARY KEY (id),
-  CONSTRAINT parties_privatives_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT parties_privatives_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id)
+  CONSTRAINT parties_privatives_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
+  CONSTRAINT parties_privatives_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id),
+  CONSTRAINT parties_privatives_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.permissions_partage (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -168,10 +218,12 @@ CREATE TABLE public.permissions_partage (
   accorde_par uuid NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   expires_at timestamp with time zone,
+  employe_id uuid,
   CONSTRAINT permissions_partage_pkey PRIMARY KEY (id),
-  CONSTRAINT permissions_partage_utilisateur_id_fkey FOREIGN KEY (utilisateur_id) REFERENCES public.utilisateurs(id),
   CONSTRAINT permissions_partage_accorde_par_fkey FOREIGN KEY (accorde_par) REFERENCES public.utilisateurs(id),
-  CONSTRAINT permissions_partage_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id)
+  CONSTRAINT permissions_partage_utilisateur_id_fkey FOREIGN KEY (utilisateur_id) REFERENCES public.utilisateurs(id),
+  CONSTRAINT permissions_partage_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
+  CONSTRAINT permissions_partage_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id)
 );
 CREATE TABLE public.pieces (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -194,9 +246,20 @@ CREATE TABLE public.pieces (
   commentaires text,
   photos jsonb DEFAULT '[]'::jsonb,
   user_id uuid,
+  employe_id uuid,
   CONSTRAINT pieces_pkey PRIMARY KEY (id),
+  CONSTRAINT pieces_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id),
   CONSTRAINT pieces_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
   CONSTRAINT pieces_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.plan_limits (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  plan_id uuid NOT NULL,
+  feature_name text NOT NULL,
+  limit_value integer NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT plan_limits_pkey PRIMARY KEY (id),
+  CONSTRAINT plan_limits_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.subscription_plans(id)
 );
 CREATE TABLE public.releve_compteurs (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -211,14 +274,12 @@ CREATE TABLE public.releve_compteurs (
   eau_froide_m3 text,
   photos jsonb DEFAULT '[]'::jsonb,
   user_id uuid,
+  employe_id uuid,
   CONSTRAINT releve_compteurs_pkey PRIMARY KEY (id),
   CONSTRAINT releve_compteurs_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
-  CONSTRAINT releve_compteurs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+  CONSTRAINT releve_compteurs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT releve_compteurs_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id)
 );
-
-ALTER TABLE public.releve_compteurs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all access to own releve_compteurs" ON public.releve_compteurs FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
 CREATE TABLE public.rendez_vous (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   date date NOT NULL,
@@ -246,12 +307,72 @@ CREATE TABLE public.rendez_vous (
   updated_at timestamp with time zone DEFAULT now(),
   user_id uuid,
   organization_id uuid,
+  employe_id uuid,
   CONSTRAINT rendez_vous_pkey PRIMARY KEY (id),
-  CONSTRAINT rendez_vous_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.utilisateurs(id),
-  CONSTRAINT rendez_vous_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
-  CONSTRAINT rendez_vous_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.utilisateurs(id),
+  CONSTRAINT rendez_vous_employe_id_fkey FOREIGN KEY (employe_id) REFERENCES public.employes(id),
+  CONSTRAINT fk_rendez_vous_etat_des_lieux FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id),
   CONSTRAINT rendez_vous_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id),
-  CONSTRAINT fk_rendez_vous_etat_des_lieux FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id)
+  CONSTRAINT rendez_vous_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.utilisateurs(id),
+  CONSTRAINT rendez_vous_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.utilisateurs(id),
+  CONSTRAINT rendez_vous_etat_des_lieux_id_fkey FOREIGN KEY (etat_des_lieux_id) REFERENCES public.etat_des_lieux(id)
+);
+CREATE TABLE public.stripe_customers (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  utilisateur_id uuid NOT NULL,
+  stripe_customer_id text NOT NULL UNIQUE,
+  email text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT stripe_customers_pkey PRIMARY KEY (id),
+  CONSTRAINT stripe_customers_utilisateur_id_fkey FOREIGN KEY (utilisateur_id) REFERENCES public.utilisateurs(id)
+);
+CREATE TABLE public.stripe_webhooks (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  stripe_event_id text NOT NULL UNIQUE,
+  event_type text NOT NULL,
+  processed boolean DEFAULT false,
+  data jsonb NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  processed_at timestamp with time zone,
+  CONSTRAINT stripe_webhooks_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.subscription_plans (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name text NOT NULL,
+  description text,
+  stripe_price_id text NOT NULL UNIQUE,
+  stripe_product_id text NOT NULL,
+  amount integer NOT NULL,
+  currency text NOT NULL DEFAULT 'eur'::text,
+  interval text NOT NULL CHECK ("interval" = ANY (ARRAY['month'::text, 'year'::text])),
+  interval_count integer NOT NULL DEFAULT 1,
+  features jsonb DEFAULT '[]'::jsonb,
+  active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT subscription_plans_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.subscriptions (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  utilisateur_id uuid NOT NULL,
+  organisation_id uuid,
+  stripe_subscription_id text NOT NULL UNIQUE,
+  stripe_customer_id text NOT NULL,
+  plan_id uuid NOT NULL,
+  status text NOT NULL CHECK (status = ANY (ARRAY['active'::text, 'canceled'::text, 'incomplete'::text, 'incomplete_expired'::text, 'past_due'::text, 'trialing'::text, 'unpaid'::text])),
+  current_period_start timestamp with time zone,
+  current_period_end timestamp with time zone,
+  cancel_at_period_end boolean DEFAULT false,
+  canceled_at timestamp with time zone,
+  trial_start timestamp with time zone,
+  trial_end timestamp with time zone,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT subscriptions_pkey PRIMARY KEY (id),
+  CONSTRAINT subscriptions_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id),
+  CONSTRAINT subscriptions_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.subscription_plans(id),
+  CONSTRAINT subscriptions_utilisateur_id_fkey FOREIGN KEY (utilisateur_id) REFERENCES public.utilisateurs(id)
 );
 CREATE TABLE public.utilisateurs (
   id uuid NOT NULL,
@@ -271,8 +392,8 @@ CREATE TABLE public.utilisateurs (
   activated_by uuid,
   activated_at timestamp with time zone,
   CONSTRAINT utilisateurs_pkey PRIMARY KEY (id),
-  CONSTRAINT utilisateurs_activated_by_fkey FOREIGN KEY (activated_by) REFERENCES public.utilisateurs(id),
   CONSTRAINT utilisateurs_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
   CONSTRAINT utilisateurs_organisation_id_fkey FOREIGN KEY (organisation_id) REFERENCES public.organisations(id),
-  CONSTRAINT utilisateurs_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.utilisateurs(id)
+  CONSTRAINT utilisateurs_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.utilisateurs(id),
+  CONSTRAINT utilisateurs_activated_by_fkey FOREIGN KEY (activated_by) REFERENCES public.utilisateurs(id)
 );
