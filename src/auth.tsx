@@ -254,6 +254,7 @@ export const TeamManagement = () => {
   // Track whether a matching row exists in `utilisateurs`
   const [hasUtilisateurRow, setHasUtilisateurRow] = React.useState<boolean | null>(null);
   const ensureUtilisateurRow = React.useCallback(async (authUser: { id: string; email?: string | null; user_metadata?: any }) => {
+    console.log('[TeamManagement] ensureUtilisateurRow: start', { authUser });
     try {
       // 1) Check existence
       const { data, error } = await supabase
@@ -268,19 +269,23 @@ export const TeamManagement = () => {
           const prenom = authUser.user_metadata?.prenom || authUser.user_metadata?.first_name || 'Utilisateur';
           const nom = authUser.user_metadata?.nom || authUser.user_metadata?.last_name || 'Courant';
           const email = authUser.email || `${authUser.id}@local`;
+          console.log('[TeamManagement] ensureUtilisateurRow: inserting row in utilisateurs', { id: authUser.id, email, prenom, nom });
           const { error: insertError } = await supabase
             .from('utilisateurs')
             .insert({ id: authUser.id, email, prenom, nom });
           if (insertError) throw insertError;
           setHasUtilisateurRow(true);
+          console.log('[TeamManagement] ensureUtilisateurRow: created utilisateurs row');
           return true;
         }
         throw error;
       }
       setHasUtilisateurRow(!!data);
+      console.log('[TeamManagement] ensureUtilisateurRow: utilisateurs row exists?', { exists: !!data });
       return !!data;
     } catch (e) {
       setError((e as any)?.message ?? "Impossible d'initialiser l'utilisateur");
+      console.error('[TeamManagement] ensureUtilisateurRow: error', e);
       setHasUtilisateurRow(null);
       return false;
     }
@@ -297,7 +302,10 @@ export const TeamManagement = () => {
         if (!user) throw new Error('Utilisateur non authentifié');
         // Ensure presence in `utilisateurs` to satisfy FKs
         await ensureUtilisateurRow(user as any);
-        if (isMounted) setCurrentUserId(user.id);
+        if (isMounted) {
+          setCurrentUserId(user.id);
+          console.log('[TeamManagement] Loaded auth user', { userId: user.id });
+        }
       } catch (e: any) {
         if (isMounted) setError(e.message ?? "Erreur d'authentification");
       } finally {
@@ -310,6 +318,7 @@ export const TeamManagement = () => {
 
   const loadEmployes = React.useCallback(async (userId: string) => {
     setLoadingList(true);
+    console.log('[TeamManagement] loadEmployes: start', { userId });
     try {
       const { data, error } = await supabase
         .from('employes')
@@ -318,8 +327,10 @@ export const TeamManagement = () => {
         .order('created_at', { ascending: false });
       if (error) throw error;
       setEmployes(data ?? []);
+      console.log('[TeamManagement] loadEmployes: success', { count: data?.length ?? 0 });
     } catch (e: any) {
       setError(e.message ?? 'Erreur lors du chargement des employés');
+      console.error('[TeamManagement] loadEmployes: error', e);
     } finally {
       setLoadingList(false);
     }
@@ -328,9 +339,22 @@ export const TeamManagement = () => {
   // Load employees when currentUserId is known
   React.useEffect(() => {
     if (currentUserId) {
+      console.log('[TeamManagement] currentUserId ready, loading employees');
       loadEmployes(currentUserId);
     }
   }, [currentUserId, loadEmployes]);
+
+  // Trace key state changes
+  React.useEffect(() => {
+    console.log('[TeamManagement] state changed', {
+      currentUserId,
+      hasUtilisateurRow,
+      loadingUser,
+      loadingList,
+      submitting,
+      isAddOpen,
+    });
+  }, [currentUserId, hasUtilisateurRow, loadingUser, loadingList, submitting, isAddOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -342,12 +366,20 @@ export const TeamManagement = () => {
 
     setSubmitting(true);
     try {
+      console.log('[TeamManagement] handleSubmit: start', { prenom, nom, email, telephone, fonction, actif });
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      console.log('[TeamManagement] handleSubmit: current auth user', { userId: user?.id });
       if (!user) throw new Error('Utilisateur non authentifié');
-      // Safety: block if FK target does not exist
-      if (!hasUtilisateurRow) {
+      // Ensure FK target exists; retry ensure if state is false/null
+      let ensureOk = hasUtilisateurRow === true;
+      if (!ensureOk) {
+        console.warn('[TeamManagement] handleSubmit: ensuring utilisateurs row now. Previous state:', { hasUtilisateurRow });
+        ensureOk = await ensureUtilisateurRow(user as any);
+        console.log('[TeamManagement] handleSubmit: ensureUtilisateurRow result', { ensureOk });
+      }
+      if (!ensureOk) {
         throw new Error("Votre compte n'est pas initialisé dans 'utilisateurs'. Veuillez contacter l'administrateur.");
       }
 
@@ -360,6 +392,7 @@ export const TeamManagement = () => {
         user_id: user.id,
         actif,
       };
+      console.log('[TeamManagement] handleSubmit: inserting employe', newEmploye);
 
       const { data, error } = await supabase
         .from('employes')
@@ -367,6 +400,7 @@ export const TeamManagement = () => {
         .select()
         .single();
       if (error) throw error;
+      console.log('[TeamManagement] handleSubmit: insert success', { created: data });
 
       // Reset form and refresh list
       setPrenom('');
@@ -378,11 +412,14 @@ export const TeamManagement = () => {
 
       setEmployes((prev) => [data as Tables<'employes'>, ...prev]);
       // Close dialog after successful creation
+      console.log('[TeamManagement] handleSubmit: closing dialog');
       setIsAddOpen(false);
     } catch (e: any) {
       setError(e.message ?? "Erreur lors de l'ajout de l'employé");
+      console.error('[TeamManagement] handleSubmit: error', e);
     } finally {
       setSubmitting(false);
+      console.log('[TeamManagement] handleSubmit: end');
     }
   };
 
@@ -402,11 +439,26 @@ export const TeamManagement = () => {
 
         {/* Bouton + Ajouter un employé */}
         <div className="flex justify-end">
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <Dialog open={isAddOpen} onOpenChange={async (open) => { 
+              console.log('[TeamManagement] Dialog onOpenChange', { open }); 
+              setIsAddOpen(open); 
+              if (open) {
+                try {
+                  const { data: authData } = await supabase.auth.getUser();
+                  const u = authData?.user;
+                  if (u) {
+                    await ensureUtilisateurRow(u as any);
+                  }
+                } catch (err) {
+                  console.error('[TeamManagement] ensureUtilisateurRow on dialog open: error', err);
+                }
+              }
+            }}>
             <DialogTrigger asChild>
               <Button
                 className="min-w-48"
                 disabled={loadingUser || !currentUserId}
+                onClick={() => { console.log('[TeamManagement] Add employee button clicked'); }}
               >
                 <span className="inline-flex items-center gap-2">
                   <UserPlus className="h-4 w-4" /> + Ajouter un employé

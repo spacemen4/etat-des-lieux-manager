@@ -40,17 +40,21 @@ export const EmployeProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const prenom = authUser.user_metadata?.prenom || authUser.user_metadata?.first_name || 'Utilisateur';
           const nom = authUser.user_metadata?.nom || authUser.user_metadata?.last_name || 'Courant';
           const email = authUser.email || `${authUser.id}@local`;
+          console.log('[EmployeContext] ensureUtilisateurRow: inserting utilisateurs row', { id: authUser.id, email, prenom, nom });
           const { error: insertError } = await supabase
             .from('utilisateurs')
             .insert({ id: authUser.id, email, prenom, nom });
           if (insertError) throw insertError;
+          console.log('[EmployeContext] ensureUtilisateurRow: created utilisateurs row');
           return true;
         }
         throw error;
       }
+      console.log('[EmployeContext] ensureUtilisateurRow: utilisateurs row exists?', { exists: !!data });
       return !!data;
     } catch (e: any) {
       setError(e.message ?? "Impossible d'initialiser l'utilisateur");
+      console.error('[EmployeContext] ensureUtilisateurRow: error', e);
       return false;
     }
   }, [authUser]);
@@ -68,8 +72,10 @@ export const EmployeProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .order('created_at', { ascending: false });
       if (error) throw error;
       setEmployes(data ?? []);
+      console.log('[EmployeContext] refreshEmployes: loaded', { count: data?.length ?? 0 });
     } catch (e: any) {
       setError(e.message ?? 'Erreur lors du chargement des employés');
+      console.error('[EmployeContext] refreshEmployes: error', e);
     } finally {
       setLoading(false);
     }
@@ -96,6 +102,7 @@ export const EmployeProvider: React.FC<{ children: React.ReactNode }> = ({ child
         actif: payload.actif ?? true,
         user_id: payload.user_id ?? userUuid,
       };
+      console.log('[EmployeContext] addEmploye: inserting', newEmploye);
       const { data, error } = await supabase
         .from('employes')
         .insert(newEmploye)
@@ -104,9 +111,11 @@ export const EmployeProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (error) throw error;
       const created = data as Employe;
       setEmployes((prev) => [created, ...prev]);
+      console.log('[EmployeContext] addEmploye: success', { created });
       return created;
     } catch (e: any) {
       setError(e.message ?? "Erreur lors de l'ajout de l'employé");
+      console.error('[EmployeContext] addEmploye: error', e);
       throw e;
     } finally {
       setLoading(false);
