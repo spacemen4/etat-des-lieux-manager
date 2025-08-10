@@ -26,45 +26,14 @@ export const EmployeProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [error, setError] = useState<string | null>(null);
   const [employes, setEmployes] = useState<Employe[]>([]);
 
-  const ensureUtilisateurRow = useCallback(async () => {
-    if (!authUser?.id) return false;
-    try {
-      const { data, error } = await supabase
-        .from('utilisateurs')
-        .select('id')
-        .eq('id', authUser.id)
-        .single();
-
-      if (error) {
-        if ((error as any).code === 'PGRST116') {
-          const prenom = authUser.user_metadata?.prenom || authUser.user_metadata?.first_name || 'Utilisateur';
-          const nom = authUser.user_metadata?.nom || authUser.user_metadata?.last_name || 'Courant';
-          const email = authUser.email || `${authUser.id}@local`;
-          console.log('[EmployeContext] ensureUtilisateurRow: inserting utilisateurs row', { id: authUser.id, email, prenom, nom });
-          const { error: insertError } = await supabase
-            .from('utilisateurs')
-            .insert({ id: authUser.id, email, prenom, nom });
-          if (insertError) throw insertError;
-          console.log('[EmployeContext] ensureUtilisateurRow: created utilisateurs row');
-          return true;
-        }
-        throw error;
-      }
-      console.log('[EmployeContext] ensureUtilisateurRow: utilisateurs row exists?', { exists: !!data });
-      return !!data;
-    } catch (e: any) {
-      setError(e.message ?? "Impossible d'initialiser l'utilisateur");
-      console.error('[EmployeContext] ensureUtilisateurRow: error', e);
-      return false;
-    }
-  }, [authUser]);
+  // Plus de synchronisation avec la table `utilisateurs` depuis que `employes.user_id`
+  // référence `auth.users.id`.
 
   const refreshEmployes = useCallback(async () => {
     if (!userUuid) return;
     setLoading(true);
     setError(null);
     try {
-      await ensureUtilisateurRow();
       const { data, error } = await supabase
         .from('employes')
         .select('*')
@@ -79,7 +48,7 @@ export const EmployeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       setLoading(false);
     }
-  }, [userUuid, ensureUtilisateurRow]);
+  }, [userUuid]);
 
   useEffect(() => {
     if (!loadingUserId && userUuid) {
@@ -92,7 +61,6 @@ export const EmployeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setError(null);
     setLoading(true);
     try {
-      await ensureUtilisateurRow();
       const newEmploye: TablesInsert<'employes'> = {
         prenom: payload.prenom?.trim() ?? '',
         nom: payload.nom?.trim() ?? '',
@@ -120,7 +88,7 @@ export const EmployeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       setLoading(false);
     }
-  }, [userUuid, ensureUtilisateurRow]);
+  }, [userUuid]);
 
   const updateEmploye: EmployeContextValue['updateEmploye'] = useCallback(async (id, updates) => {
     if (!id) throw new Error('Identifiant manquant');

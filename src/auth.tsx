@@ -251,47 +251,10 @@ export const TeamManagement = () => {
   // Dialog state for creating a new employee
   const [isAddOpen, setIsAddOpen] = React.useState(false);
 
-  // Track whether a matching row exists in `utilisateurs`
-  const [hasUtilisateurRow, setHasUtilisateurRow] = React.useState<boolean | null>(null);
-  const ensureUtilisateurRow = React.useCallback(async (authUser: { id: string; email?: string | null; user_metadata?: any }) => {
-    console.log('[TeamManagement] ensureUtilisateurRow: start', { authUser });
-    try {
-      // 1) Check existence
-      const { data, error } = await supabase
-        .from('utilisateurs')
-        .select('id')
-        .eq('id', authUser.id)
-        .single();
-      if (error) {
-        // PGRST116 = No rows
-        if ((error as any).code === 'PGRST116') {
-          // 2) Create minimal utilisateur row
-          const prenom = authUser.user_metadata?.prenom || authUser.user_metadata?.first_name || 'Utilisateur';
-          const nom = authUser.user_metadata?.nom || authUser.user_metadata?.last_name || 'Courant';
-          const email = authUser.email || `${authUser.id}@local`;
-          console.log('[TeamManagement] ensureUtilisateurRow: inserting row in utilisateurs', { id: authUser.id, email, prenom, nom });
-          const { error: insertError } = await supabase
-            .from('utilisateurs')
-            .insert({ id: authUser.id, email, prenom, nom });
-          if (insertError) throw insertError;
-          setHasUtilisateurRow(true);
-          console.log('[TeamManagement] ensureUtilisateurRow: created utilisateurs row');
-          return true;
-        }
-        throw error;
-      }
-      setHasUtilisateurRow(!!data);
-      console.log('[TeamManagement] ensureUtilisateurRow: utilisateurs row exists?', { exists: !!data });
-      return !!data;
-    } catch (e) {
-      setError((e as any)?.message ?? "Impossible d'initialiser l'utilisateur");
-      console.error('[TeamManagement] ensureUtilisateurRow: error', e);
-      setHasUtilisateurRow(null);
-      return false;
-    }
-  }, []);
+  // Plus de dépendance à la table `utilisateurs` depuis que `employes.user_id`
+  // référence `auth.users.id` directement.
 
-  // Load current user id and ensure a row exists in `utilisateurs`
+  // Load current user id
   React.useEffect(() => {
     let isMounted = true;
     const load = async () => {
@@ -300,8 +263,6 @@ export const TeamManagement = () => {
         const { data: authData } = await supabase.auth.getUser();
         const user = authData?.user;
         if (!user) throw new Error('Utilisateur non authentifié');
-        // Ensure presence in `utilisateurs` to satisfy FKs
-        await ensureUtilisateurRow(user as any);
         if (isMounted) {
           setCurrentUserId(user.id);
           console.log('[TeamManagement] Loaded auth user', { userId: user.id });
@@ -314,7 +275,7 @@ export const TeamManagement = () => {
     };
     load();
     return () => { isMounted = false; };
-  }, [ensureUtilisateurRow]);
+  }, []);
 
   const loadEmployes = React.useCallback(async (userId: string) => {
     setLoadingList(true);
@@ -348,13 +309,12 @@ export const TeamManagement = () => {
   React.useEffect(() => {
     console.log('[TeamManagement] state changed', {
       currentUserId,
-      hasUtilisateurRow,
       loadingUser,
       loadingList,
       submitting,
       isAddOpen,
     });
-  }, [currentUserId, hasUtilisateurRow, loadingUser, loadingList, submitting, isAddOpen]);
+  }, [currentUserId, loadingUser, loadingList, submitting, isAddOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -372,16 +332,7 @@ export const TeamManagement = () => {
       } = await supabase.auth.getUser();
       console.log('[TeamManagement] handleSubmit: current auth user', { userId: user?.id });
       if (!user) throw new Error('Utilisateur non authentifié');
-      // Ensure FK target exists; retry ensure if state is false/null
-      let ensureOk = hasUtilisateurRow === true;
-      if (!ensureOk) {
-        console.warn('[TeamManagement] handleSubmit: ensuring utilisateurs row now. Previous state:', { hasUtilisateurRow });
-        ensureOk = await ensureUtilisateurRow(user as any);
-        console.log('[TeamManagement] handleSubmit: ensureUtilisateurRow result', { ensureOk });
-      }
-      if (!ensureOk) {
-        throw new Error("Votre compte n'est pas initialisé dans 'utilisateurs'. Veuillez contacter l'administrateur.");
-      }
+      // Plus besoin de vérifier la présence dans `utilisateurs`
 
       const newEmploye: TablesInsert<'employes'> = {
         prenom: prenom.trim(),
@@ -442,17 +393,6 @@ export const TeamManagement = () => {
           <Dialog open={isAddOpen} onOpenChange={async (open) => { 
               console.log('[TeamManagement] Dialog onOpenChange', { open }); 
               setIsAddOpen(open); 
-              if (open) {
-                try {
-                  const { data: authData } = await supabase.auth.getUser();
-                  const u = authData?.user;
-                  if (u) {
-                    await ensureUtilisateurRow(u as any);
-                  }
-                } catch (err) {
-                  console.error('[TeamManagement] ensureUtilisateurRow on dialog open: error', err);
-                }
-              }
             }}>
             <DialogTrigger asChild>
               <Button
@@ -470,14 +410,7 @@ export const TeamManagement = () => {
                 <DialogTitleUI>Ajouter un employé</DialogTitleUI>
               </DialogHeaderUI>
 
-              {hasUtilisateurRow === false ? (
-                <Alert variant="destructive">
-                  <AlertDescription>
-                    Votre compte n'est pas initialisé dans 'utilisateurs'. Veuillez contacter l'administrateur.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label htmlFor="prenom">Prénom</Label>
@@ -513,7 +446,6 @@ export const TeamManagement = () => {
                     </Button>
                   </div>
                 </form>
-              )}
             </DialogContent>
           </Dialog>
         </div>
