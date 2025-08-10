@@ -1,6 +1,7 @@
 import React from 'react';
 import { AuthProvider, useAuth } from './auth';
 import { UserProvider } from './context/UserContext';
+import { EmployeProvider } from './context/EmployeContext';
 import { LoginForm, SignUpForm, UserProfile, TeamManagement } from './auth';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from './components/layout';
@@ -74,7 +75,7 @@ const AuthRoutes = () => {
         </>
       ) : (
         <>
-          <Route path="/" element={<DashboardLayout><Outlet /></DashboardLayout>}>
+          <Route path="/" element={<EmployeProvider><DashboardLayout><Outlet /></DashboardLayout></EmployeProvider>}>
             <Route index element={<Index />} />
             <Route path="new-etat-des-lieux" element={<NewEtatDesLieux />} />
             <Route path="sortie/:id" element={<EtatSortie />} />
