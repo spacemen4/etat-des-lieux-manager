@@ -10,6 +10,9 @@ export type EmployeContextValue = {
   loading: boolean;
   error: string | null;
   employes: Employe[];
+  selectedEmployeId: string | null;
+  selectedEmploye: Employe | null;
+  setSelectedEmployeId: (id: string | null) => void;
   refreshEmployes: () => Promise<void>;
   addEmploye: (payload: Omit<TablesInsert<'employes'>, 'user_id'> & Partial<Pick<TablesInsert<'employes'>, 'user_id'>>) => Promise<Employe>;
   updateEmploye: (id: string, updates: TablesUpdate<'employes'>) => Promise<Employe>;
@@ -25,6 +28,27 @@ export const EmployeProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [employes, setEmployes] = useState<Employe[]>([]);
+  const [selectedEmployeId, setSelectedEmployeIdState] = useState<string | null>(null);
+
+  // Persistance légère de la sélection (scopée par l'utilisateur connecté)
+  useEffect(() => {
+    if (!userUuid) {
+      setSelectedEmployeIdState(null);
+      return;
+    }
+    const stored = localStorage.getItem(`selectedEmployeId:${userUuid}`);
+    if (stored) {
+      setSelectedEmployeIdState(stored);
+    }
+  }, [userUuid]);
+
+  const setSelectedEmployeId = useCallback((id: string | null) => {
+    setSelectedEmployeIdState(id);
+    if (userUuid) {
+      if (id) localStorage.setItem(`selectedEmployeId:${userUuid}`, id);
+      else localStorage.removeItem(`selectedEmployeId:${userUuid}`);
+    }
+  }, [userUuid]);
 
   // Plus de synchronisation avec la table `utilisateurs` depuis que `employes.user_id`
   // référence `auth.users.id`.
@@ -136,11 +160,14 @@ export const EmployeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     loading,
     error,
     employes,
+    selectedEmployeId,
+    selectedEmploye: employes.find(e => e.id === selectedEmployeId) ?? null,
+    setSelectedEmployeId,
     refreshEmployes,
     addEmploye,
     updateEmploye,
     removeEmploye,
-  }), [loading, error, employes, refreshEmployes, addEmploye, updateEmploye, removeEmploye]);
+  }), [loading, error, employes, selectedEmployeId, setSelectedEmployeId, refreshEmployes, addEmploye, updateEmploye, removeEmploye]);
 
   return (
     <EmployeContext.Provider value={value}>
