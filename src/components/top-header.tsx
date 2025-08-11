@@ -1,9 +1,10 @@
 import React from 'react';
 import { useEmployes } from '@/context/EmployeContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { User2 } from 'lucide-react';
+import { LogOut, User2 } from 'lucide-react';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 
 export const Header: React.FC = () => {
   const { employes, selectedEmployeId, setSelectedEmployeId, selectedEmploye, loading } = useEmployes();
@@ -38,6 +39,11 @@ export const Header: React.FC = () => {
               </SelectGroup>
             </SelectContent>
           </Select>
+          <Separator orientation="vertical" className="h-6" />
+          <Button variant="ghost" size="sm" className="gap-2">
+            <LogOut className="w-4 h-4" />
+            <span className="hidden md:inline">Se déconnecter</span>
+          </Button>
         </div>
       </div>
     </div>
