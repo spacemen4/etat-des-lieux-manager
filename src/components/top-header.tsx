@@ -73,7 +73,7 @@ export const Header: React.FC = () => {
                         <div className="text-sm font-medium text-gray-900 truncate">
                           {selectedEmploye.prenom} {selectedEmploye.nom}
                         </div>
-                        <div className="text-xs text-gray-500">Employé sélectionné</div>
+                        <div className="text-xs text-gray-500 hidden md:block">Employé sélectionné</div>
                       </div>
                     ) : (
                       <div>
