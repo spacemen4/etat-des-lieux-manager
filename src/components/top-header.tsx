@@ -78,7 +78,7 @@ export const Header: React.FC = () => {
                     ) : (
                       <div>
                         <div className="text-sm font-medium text-gray-600">Aucun employé</div>
-                        <div className="text-xs text-gray-400">Cliquer pour sélectionner</div>
+                        <div className="text-xs text-gray-400 hidden md:block">Cliquer pour sélectionner</div>
                       </div>
                     )}
                   </div>

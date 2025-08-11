@@ -34,7 +34,7 @@ export const Sidebar = () => {
         <Button
           variant="ghost"
           size="sm"
-          className="fixed top-4 left-4 z-50 md:hidden glass-light"
+          className="fixed top-4 left-4 z-[60] md:hidden glass-light"
           onClick={() => setIsOpen(!isOpen)}
         >
           {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
