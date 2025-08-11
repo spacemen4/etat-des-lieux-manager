@@ -8,6 +8,7 @@ import { useClesByEtatId, useCreateCle, useUpdateCle, useDeleteCle } from '@/hoo
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Plus, Trash2, Camera, X, Upload, Image as ImageIcon, KeyRound, AlertCircle } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
+import { useEmployes } from '@/context/EmployeContext';
 
 // Configuration Supabase (simulée, adaptez avec votre vraie configuration)
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
@@ -68,6 +69,7 @@ interface ClesStepProps {
 }
 
 const ClesStep = forwardRef<StepRef, ClesStepProps>(({ etatId }, ref) => {
+  const { selectedEmployeId } = useEmployes();
   const { data: clesData, refetch, isLoading: isLoadingData } = useClesByEtatId(etatId);
   const createCleMutation = useCreateCle();
   const updateCleMutation = useUpdateCle();
@@ -248,6 +250,8 @@ const ClesStep = forwardRef<StepRef, ClesStepProps>(({ etatId }, ref) => {
           photos: allPhotos,
           etat_des_lieux_id: etatId,
           nombre: Number(cle.nombre) || 1, // Ensure 'nombre' is a number
+          // @ts-ignore
+          employe_id: selectedEmployeId ?? null,
         };
 
         if (cle.id) { // Update existing cle

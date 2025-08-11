@@ -9,6 +9,7 @@ import { useEtatDesLieuxById, useUpdateEtatDesLieux, useRendezVousById } from '@
 import { Camera, X, Upload, Image as ImageIcon, Info, FileText, AlertCircle } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useEmployes } from '@/context/EmployeContext';
 
 // Configuration Supabase (simulée)
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
@@ -87,6 +88,7 @@ interface GeneralStepProps {
 }
 
 const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
+  const { selectedEmployeId } = useEmployes();
   const { data: etatDesLieuxInitial, isLoading, refetch } = useEtatDesLieuxById(etatId, '');
   const { data: rendezVousData } = useRendezVousById(etatDesLieuxInitial?.rendez_vous_id || null);
   const { mutate: updateEtatDesLieux, isPending: isUpdatingMutation } = useUpdateEtatDesLieux();
@@ -290,6 +292,7 @@ const GeneralStep = forwardRef<StepRef, GeneralStepProps>(({ etatId }, ref) => {
         date_sortie: formData.date_sortie || null,
         statut: newStatut,
         photos: allPhotos,
+        employe_id: selectedEmployeId ?? null,
       };
 
       updateEtatDesLieux(validatedData, {

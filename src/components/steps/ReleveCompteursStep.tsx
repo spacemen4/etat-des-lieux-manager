@@ -8,6 +8,7 @@ import { Zap, Flame, Droplets, User, Camera, X, Upload, Image as ImageIcon, Refr
 import type { StepRef } from '../EtatSortieForm';
 import { supabase } from '@/lib/supabase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useEmployes } from '@/context/EmployeContext';
 
 interface Photo {
   id: string;
@@ -40,6 +41,7 @@ interface ReleveCompteursStepProps {
 
 const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ etatId = '1' }, ref) => {
   console.log('[ReleveCompteursStep] Render - etatId:', etatId);
+  const { selectedEmployeId } = useEmployes();
   
   const [releveCompteurs, setReleveCompteurs] = useState<ReleveCompteurs | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -359,6 +361,7 @@ const ReleveCompteursStep = forwardRef<StepRef, ReleveCompteursStepProps>(({ eta
         ...formData,
         etat_des_lieux_id: etatId,
         photos: allPhotos,
+        employe_id: selectedEmployeId ?? null,
       };
 
       console.log('📝 Données à sauvegarder:', dataToSave);

@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
 import { MapPin, Search } from 'lucide-react';
+import { useEmployes } from '@/context/EmployeContext';
 
 interface RendezVous {
   id?: string;
@@ -201,6 +202,7 @@ const MapSelector = ({
 
 export default function RendezVousCalendar({ userUuid }) {
   console.log("[RENDEZVOUS] Initialisation du composant");
+  const { selectedEmployeId } = useEmployes();
   
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
@@ -352,7 +354,8 @@ export default function RendezVousCalendar({ userUuid }) {
       type_bien: typeBien,
       statut: statut,
       created_at: new Date(),
-      user_id: userUuid
+      user_id: userUuid,
+      employe_id: selectedEmployeId ?? undefined,
     };
 
     try {

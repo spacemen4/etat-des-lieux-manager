@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Thermometer, Camera, X, Upload, Image as ImageIcon, Flame } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
 import { supabase } from '@/lib/supabase';
+import { useEmployes } from '@/context/EmployeContext';
 
 interface Photo {
   id: string;
@@ -129,6 +130,7 @@ const useUpdateEquipementChauffage = () => {
 };
 
 const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepProps>(({ etatId }, ref) => {
+  const { selectedEmployeId } = useEmployes();
   const { data: equipementsChauffageData, refetch, isLoading: isLoadingData } = useEquipementsChauffageByEtatId(etatId);
   const createEquipementChauffageMutation = useCreateEquipementChauffage();
   const updateEquipementChauffageMutation = useUpdateEquipementChauffage();
@@ -309,6 +311,7 @@ const EquipementsChauffageStep = forwardRef<StepRef, EquipementsChauffageStepPro
         ...equipementChauffage,
         photos: allPhotos,
         etat_des_lieux_id: etatId,
+        employe_id: selectedEmployeId ?? null,
         // Nettoyer les champs date vides (PostgreSQL n'accepte pas "" pour une date)
         chaudiere_date_dernier_entretien: equipementChauffage.chaudiere_date_dernier_entretien || null,
         // Nettoyer les champs texte vides

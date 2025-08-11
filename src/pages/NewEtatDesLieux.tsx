@@ -11,6 +11,7 @@ import { ArrowLeft, Save, Calendar, MapPin, User, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import EtatDesLieuxTypeSelector from '@/components/EtatDesLieuxTypeSelector';
 import { useUser } from '@/context/UserContext';
+import { useEmployes } from '@/context/EmployeContext';
 
 interface RendezVous {
   id: string;
@@ -72,6 +73,7 @@ const NewEtatDesLieux = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { userUuid } = useUser();
+  const { selectedEmployeId } = useEmployes();
   const [isLoading, setIsLoading] = useState(false);
   const [typeEtatDesLieux, setTypeEtatDesLieux] = useState<'entree' | 'sortie'>('entree');
   const [typeBien, setTypeBien] = useState<'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires'>('studio');
@@ -161,7 +163,8 @@ const NewEtatDesLieux = () => {
         locataire_nom: formData.locataire_nom || null,
         locataire_adresse: formData.locataire_adresse || null,
         statut: 'en_cours',
-        rendez_vous_id: selectedRendezVous?.id || null // Lier au rendez-vous si applicable
+        rendez_vous_id: selectedRendezVous?.id || null, // Lier au rendez-vous si applicable
+        employe_id: selectedEmployeId ?? null,
       };
 
       const { data, error } = await supabase
@@ -178,7 +181,8 @@ const NewEtatDesLieux = () => {
           .from('rendez_vous')
           .update({ 
             statut: 'realise',
-            etat_des_lieux_id: data.id
+            etat_des_lieux_id: data.id,
+            employe_id: selectedEmployeId ?? null,
           })
           .eq('id', selectedRendezVous.id);
 

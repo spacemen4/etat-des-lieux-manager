@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useMemo } from 'react';
+import { useEmployes } from '@/context/EmployeContext';
 
 // Interface pour le relevé compteurs
 interface ReleveCompteurs {
@@ -18,6 +19,7 @@ interface ReleveCompteurs {
   photos_electricite?: any[];
   photos_eau?: any[];
   photos_gaz?: any[];
+  employe_id?: string | null;
 }
 
 // Fonction pour récupérer tous les états des lieux (simplifiée)
@@ -158,6 +160,7 @@ export const useUpdateEtatDesLieux = () => {
       date_entree: string;
       date_sortie: string;
       statut: string;
+      employe_id?: string | null;
     }) => {
       const { id, ...rest } = updates;
       const { data, error } = await supabase
@@ -190,6 +193,7 @@ export const useUpdateEtatSortie = () => {
       description_travaux?: string | null;
       signature_locataire?: string | null;
       signature_proprietaire_agent?: string | null;
+      employe_id?: string | null;
     }) => {
       const { id, ...rest } = updates;
       const { data, error } = await supabase
@@ -254,6 +258,7 @@ export const useCreatePiece = () => {
     mutationFn: async (piece: {
       etat_des_lieux_id: string;
       nom_piece: string;
+      employe_id?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('pieces')
@@ -342,12 +347,14 @@ export const useReleveCompteursByEtatId = (etatId: string) => {
 
 export const useUpdateReleveCompteurs = () => {
   const queryClient = useQueryClient();
+  const { selectedEmployeId } = useEmployes();
 
   return useMutation({
     mutationFn: async (releve: ReleveCompteurs) => {
+      const payload = { ...releve, employe_id: selectedEmployeId ?? null };
       const { data, error } = await supabase
         .from('releve_compteurs')
-        .upsert(releve)
+        .upsert(payload)
         .select()
         .single();
 
@@ -363,6 +370,7 @@ export const useUpdateReleveCompteurs = () => {
 // Hook pour ajouter des photos à un type spécifique
 export const useAddPhotoToReleveCompteurs = () => {
   const queryClient = useQueryClient();
+  const { selectedEmployeId } = useEmployes();
 
   return useMutation({
     mutationFn: async ({ 
@@ -400,6 +408,7 @@ export const useAddPhotoToReleveCompteurs = () => {
       const updateData = existingData ? {
         ...existingData,
         [photoType]: updatedPhotos,
+        employe_id: selectedEmployeId ?? existingData.employe_id ?? null,
       } : {
         etat_des_lieux_id: etatId,
         [photoType]: updatedPhotos,
@@ -416,6 +425,7 @@ export const useAddPhotoToReleveCompteurs = () => {
         photos_electricite: photoType === 'photos_electricite' ? updatedPhotos : [],
         photos_eau: photoType === 'photos_eau' ? updatedPhotos : [],
         photos_gaz: photoType === 'photos_gaz' ? updatedPhotos : [],
+        employe_id: selectedEmployeId ?? null,
       };
 
       console.log('💾 Données à sauvegarder:', updateData);
@@ -443,6 +453,7 @@ export const useAddPhotoToReleveCompteurs = () => {
 // Hook pour supprimer une photo d'un type spécifique
 export const useDeletePhotoFromReleveCompteurs = () => {
   const queryClient = useQueryClient();
+  const { selectedEmployeId } = useEmployes();
 
   return useMutation({
     mutationFn: async ({ 
@@ -480,6 +491,7 @@ export const useDeletePhotoFromReleveCompteurs = () => {
       const updateData = {
         ...existingData,
         [photoType]: updatedPhotos,
+        employe_id: selectedEmployeId ?? existingData?.employe_id ?? null,
       };
 
       console.log('💾 Données à sauvegarder:', updateData);

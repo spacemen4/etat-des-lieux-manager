@@ -9,6 +9,7 @@ import { usePartiesPrivativesByEtatId, useCreatePartiePrivative, useUpdatePartie
 import { toast } from 'sonner';
 import { Plus, Trash2, Camera, X, Upload, Image as ImageIcon, Building2 } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
+import { useEmployes } from '@/context/EmployeContext';
 
 // Configuration Supabase (simulée)
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
@@ -70,6 +71,7 @@ interface PartiesPrivativesStepProps {
 }
 
 const PartiesPrivativesStep = forwardRef<StepRef, PartiesPrivativesStepProps>(({ etatId }, ref) => {
+  const { selectedEmployeId } = useEmployes();
   const { data: partiesPrivativesData, refetch, isLoading: isLoadingData } = usePartiesPrivativesByEtatId(etatId);
   const createPartiePrivativeMutation = useCreatePartiePrivative();
   const updatePartiePrivativeMutation = useUpdatePartiePrivative();
@@ -210,7 +212,7 @@ const PartiesPrivativesStep = forwardRef<StepRef, PartiesPrivativesStepProps>(({
         const partieIdForPath = partie.id || `new_partie_${Date.now()}_${i}`;
         const newlyUploadedPhotos = await _uploadPhotos(i, partieIdForPath);
         const allPhotos = [...(partie.photos || []), ...newlyUploadedPhotos];
-        const dataToSave = { ...partie, photos: allPhotos, etat_des_lieux_id: etatId };
+        const dataToSave = { ...partie, photos: allPhotos, etat_des_lieux_id: etatId, employe_id: selectedEmployeId ?? null };
 
         if (partie.id) {
           results.push(updatePartiePrivativeMutation.mutateAsync(dataToSave));

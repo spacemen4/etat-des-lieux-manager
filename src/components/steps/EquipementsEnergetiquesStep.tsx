@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Camera, X, Upload, Image as ImageIcon, Zap, Leaf } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { useEmployes } from '@/context/EmployeContext';
 import type { StepRef } from '../EtatSortieForm';
 
 interface Photo {
@@ -43,6 +44,7 @@ interface EquipementsEnergetiquesStepProps {
 
 const EquipementsEnergetiquesStep = forwardRef<StepRef, EquipementsEnergetiquesStepProps>(({ etatId }, ref) => {
   const { toast } = useToast();
+  const { selectedEmployeId } = useEmployes();
   
   // État local pour simuler les données
   const [isLoading, setIsLoading] = useState(true);
@@ -256,6 +258,10 @@ const EquipementsEnergetiquesStep = forwardRef<StepRef, EquipementsEnergetiquesS
         id: equipementsEnergetiquesData?.id,
         etat_des_lieux_id: etatId,
         photos: allPhotos,
+        // rattache l'action à l'employé sélectionné si présent
+        // (la colonne existe dans le schéma)
+        //@ts-ignore
+        employe_id: selectedEmployeId ?? null,
       };
 
       let savedData;

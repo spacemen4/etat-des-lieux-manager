@@ -11,6 +11,7 @@ import type { StepRef } from '../EtatSortieForm';
 import { supabase } from '@/lib/supabase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
+import { useEmployes } from '@/context/EmployeContext';
 
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zcXB2eXJjdGxoYWd0emtic3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjg1NjYsImV4cCI6MjA2NjYwNDU2Nn0.4APWILaWXOtXCwdFYTk4MDithvZhp55ZJB6PnVn8D1w';
@@ -227,6 +228,7 @@ const getFieldsForPiece = (pieceName) => {
 };
 
 const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-etat' }, ref) => {
+  const { selectedEmployeId } = useEmployes();
   const [pieces, setPieces] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPiece, setSelectedPiece] = useState(null);
@@ -439,6 +441,7 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
       const pieceDataToSave = {
         ...formData, // Contient les autres champs de la pièce
         photos: allPhotosForPiece, // Le tableau complet des métadonnées des photos
+        employe_id: selectedEmployeId ?? null,
       };
       
       // 4. Mettre à jour la pièce dans la base de données
@@ -479,6 +482,7 @@ const PiecesStep = forwardRef<StepRef, { etatId?: string }>(({ etatId = 'demo-et
         etat_des_lieux_id: etatId,
         nom_piece: newPieceName.trim(),
         photos: [], // Initialize with an empty array for photos
+        employe_id: selectedEmployeId ?? null,
       };
       const newPiece = await supabaseClient.pieces.create(newPieceData);
 

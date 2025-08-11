@@ -9,6 +9,7 @@ import { useAutresEquipementsByEtatId, useUpdateAutreEquipement, useCreateAutreE
 import { toast } from 'sonner';
 import { Plus, Trash2, Camera, X, Upload, Image as ImageIcon } from 'lucide-react';
 import type { StepRef } from '../EtatSortieForm';
+import { useEmployes } from '@/context/EmployeContext';
 
 // Configuration Supabase (simulée, adaptez avec votre vraie configuration)
 const SUPABASE_URL = 'https://osqpvyrctlhagtzkbspv.supabase.co';
@@ -69,6 +70,7 @@ interface AutresEquipementsStepProps {
 }
 
 const AutresEquipementsStep = forwardRef<StepRef, AutresEquipementsStepProps>(({ etatId }, ref) => {
+  const { selectedEmployeId } = useEmployes();
   const { data: autresEquipementsData, refetch, isLoading: isLoadingData } = useAutresEquipementsByEtatId(etatId);
   const createAutreEquipementMutation = useCreateAutreEquipement();
   const updateAutreEquipementMutation = useUpdateAutreEquipement();
@@ -281,6 +283,7 @@ const AutresEquipementsStep = forwardRef<StepRef, AutresEquipementsStepProps>(({
           ...equipement,
           photos: allPhotos,
           etat_des_lieux_id: etatId, // Assurer que etatId est toujours là
+          employe_id: selectedEmployeId ?? null,
         };
 
         if (equipement.id) { // Mise à jour
