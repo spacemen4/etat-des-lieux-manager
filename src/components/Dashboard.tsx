@@ -289,22 +289,22 @@ const Dashboard = () => {
             Gérez vos états des lieux d'entrée et de sortie
           </p>
         </div>
-        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button asChild variant="gradient-aurora" className="flex-1 sm:flex-initial">
-            <a href="/new-etat-des-lieux?type=entree" className="flex items-center justify-center gap-2">
-              <LogIn className="h-4 w-4" />
-              <span className="hidden sm:inline">État d'entrée</span>
-              <span className="sm:hidden">Entrée</span>
-            </a>
-          </Button>
-          <Button asChild variant="gradient-cyberpunk" className="flex-1 sm:flex-initial">
-            <a href="/new-etat-des-lieux?type=sortie" className="flex items-center justify-center gap-2">
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">État de sortie</span>
-              <span className="sm:hidden">Sortie</span>
-            </a>
-          </Button>
-        </div>
+                  <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+            <Button asChild variant="success" className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700">
+              <a href="/new-etat-des-lieux?type=entree" className="flex items-center justify-center gap-2">
+                <LogIn className="h-4 w-4" />
+                <span className="hidden sm:inline">État d'entrée</span>
+                <span className="sm:hidden">Entrée</span>
+              </a>
+            </Button>
+            <Button asChild variant="primary" className="flex-1 sm:flex-initial bg-blue-600 hover:bg-blue-700">
+              <a href="/new-etat-des-lieux?type=sortie" className="flex items-center justify-center gap-2">
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">État de sortie</span>
+                <span className="sm:hidden">Sortie</span>
+              </a>
+            </Button>
+          </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
