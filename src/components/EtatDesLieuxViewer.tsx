@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, User, Building2, Calendar, FileText, Wrench, Image } from 'lucide-react';
+import { useEmployes } from '@/context/EmployeContext';
 import { 
   useEtatDesLieuxById, 
   usePiecesByEtatId, 
@@ -31,6 +32,7 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
   const { data: autresEquipements } = useAutresEquipementsByEtatId(etatId || '');
   const { data: equipementsEnergetiques } = useEquipementsEnergetiquesByEtatId(etatId || '');
   const { data: equipementsChauffage } = useEquipementsChauffageByEtatId(etatId || '');
+  const { employes } = useEmployes();
 
   if (!etatDesLieux) return null;
 
@@ -46,6 +48,13 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
       'pieces_supplementaires': 'Pièces supplémentaires'
     };
     return labels[typeBien] || typeBien;
+  };
+
+  const getEmployeLabel = (employeId?: string | null) => {
+    if (!employeId) return null;
+    const e = employes.find(emp => emp.id === employeId);
+    if (!e) return null;
+    return `${e.prenom ?? ''} ${e.nom ?? ''}`.trim();
   };
 
   return (
@@ -122,6 +131,12 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                     Travaux à prévoir
                   </Badge>
                 )}
+                {getEmployeLabel(etatDesLieux.employe_id) && (
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    {getEmployeLabel(etatDesLieux.employe_id)}
+                  </Badge>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -130,7 +145,14 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
           {releveCompteurs && (
             <Card>
               <CardHeader>
-                <CardTitle>Relevé des compteurs</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Relevé des compteurs
+                  {getEmployeLabel((releveCompteurs as any).employe_id) && (
+                    <Badge variant="outline" className="ml-2">
+                      <User className="h-3 w-3 mr-1" /> {getEmployeLabel((releveCompteurs as any).employe_id)}
+                    </Badge>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -165,6 +187,11 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                   {pieces.map((piece) => (
                     <div key={piece.id} className="border rounded-lg p-4">
                       <h4 className="font-medium mb-2">{piece.nom_piece}</h4>
+                      {getEmployeLabel((piece as any).employe_id) && (
+                        <div className="text-xs text-slate-500 mb-2 flex items-center gap-1">
+                          <User className="h-3 w-3" /> {getEmployeLabel((piece as any).employe_id)}
+                        </div>
+                      )}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                         <div>
                           <span className="font-medium">Revêtements sols:</span> {piece.revetements_sols_sortie || piece.revetements_sols_entree || 'Non renseigné'}
@@ -193,6 +220,9 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                       <span className="font-medium">{cle.type_cle_badge}</span>
                       <span>Nombre: {cle.nombre}</span>
                       {cle.commentaires && <span className="text-slate-600">({cle.commentaires})</span>}
+                      {getEmployeLabel((cle as any).employe_id) && (
+                        <span className="text-xs text-slate-500">• {getEmployeLabel((cle as any).employe_id)}</span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -204,7 +234,14 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
           {equipementsEnergetiques && (
             <Card>
               <CardHeader>
-                <CardTitle>Équipements énergétiques</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Équipements énergétiques
+                  {getEmployeLabel((equipementsEnergetiques as any).employe_id) && (
+                    <Badge variant="outline" className="ml-2">
+                      <User className="h-3 w-3 mr-1" /> {getEmployeLabel((equipementsEnergetiques as any).employe_id)}
+                    </Badge>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -223,7 +260,14 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
           {equipementsChauffage && (
             <Card>
               <CardHeader>
-                <CardTitle>Équipements de chauffage</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Équipements de chauffage
+                  {getEmployeLabel((equipementsChauffage as any).employe_id) && (
+                    <Badge variant="outline" className="ml-2">
+                      <User className="h-3 w-3 mr-1" /> {getEmployeLabel((equipementsChauffage as any).employe_id)}
+                    </Badge>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -363,9 +407,14 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                     <div>
                       <h3 className="text-lg font-semibold mb-3">Parties privatives</h3>
                       <div className="space-y-4">
-                        {partiesPrivatives.filter(partie => partie.photos?.length > 0).map((partie) => (
+                {partiesPrivatives.filter(partie => partie.photos?.length > 0).map((partie) => (
                           <div key={partie.id}>
-                            <h4 className="font-medium mb-2">{partie.type_partie} {partie.numero && `- ${partie.numero}`}</h4>
+                    <h4 className="font-medium mb-2">
+                      {partie.type_partie} {partie.numero && `- ${partie.numero}`}
+                      {getEmployeLabel((partie as any).employe_id) && (
+                        <span className="ml-2 text-xs font-normal text-slate-500">({getEmployeLabel((partie as any).employe_id)})</span>
+                      )}
+                    </h4>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                               {partie.photos.map((photo: any, index: number) => (
                                 <div key={index} className="relative">
@@ -388,9 +437,14 @@ const EtatDesLieuxViewer: React.FC<EtatDesLieuxViewerProps> = ({ etatId, isOpen,
                     <div>
                       <h3 className="text-lg font-semibold mb-3">Autres équipements</h3>
                       <div className="space-y-4">
-                        {autresEquipements.filter(equipement => equipement.photos?.length > 0).map((equipement) => (
+                {autresEquipements.filter(equipement => equipement.photos?.length > 0).map((equipement) => (
                           <div key={equipement.id}>
-                            <h4 className="font-medium mb-2">{equipement.equipement}</h4>
+                    <h4 className="font-medium mb-2">
+                      {equipement.equipement}
+                      {getEmployeLabel((equipement as any).employe_id) && (
+                        <span className="ml-2 text-xs font-normal text-slate-500">({getEmployeLabel((equipement as any).employe_id)})</span>
+                      )}
+                    </h4>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                               {equipement.photos.map((photo: any, index: number) => (
                                 <div key={index} className="relative">

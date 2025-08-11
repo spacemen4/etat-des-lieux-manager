@@ -13,6 +13,7 @@ import { AuthProvider } from '@/auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import html2pdf from 'html2pdf.js';
 import { toast } from 'sonner';
+import { useEmployes } from '@/context/EmployeContext';
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ const Dashboard = () => {
   const { userUuid } = useUser();
   const { data: etatsDesLieux, isLoading: isLoadingEtats, error: errorEtats } = useEtatDesLieux(userUuid);
   const { data: rendezVous, isLoading: isLoadingRdv, error: errorRdv } = useRendezVous(userUuid);
+  const { employes } = useEmployes();
   const [selectedEtatId, setSelectedEtatId] = useState<string | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
 
@@ -70,6 +72,13 @@ const Dashboard = () => {
       'pieces_supplementaires': 'Pièces supplémentaires',
     };
     return labels[typeBien] || typeBien;
+  };
+
+  const getEmployeLabel = (employeId?: string | null) => {
+    if (!employeId) return null;
+    const e = employes.find(emp => emp.id === employeId);
+    if (!e) return null;
+    return `${e.prenom ?? ''} ${e.nom ?? ''}`.trim();
   };
 
   const handleViewEtat = (etatId: string) => {
@@ -388,6 +397,12 @@ const Dashboard = () => {
                         <User className="h-4 w-4 text-slate-500" />
                         <span className="text-slate-600">{rdv.nom_contact}</span>
                       </div>
+                      {rdv.employe_id && getEmployeLabel(rdv.employe_id) && (
+                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                          <User className="h-3 w-3" />
+                          <span>Assigné: {getEmployeLabel(rdv.employe_id)}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 text-sm">
                         <Building2 className="h-4 w-4 text-slate-500" />
                         <span className="text-slate-600">{getTypeBienLabel(rdv.type_bien)}</span>
@@ -494,6 +509,12 @@ const Dashboard = () => {
                           <span>Sortie: {new Date(etat.date_sortie).toLocaleDateString()}</span>
                         )}
                       </div>
+                      {etat.employe_id && getEmployeLabel(etat.employe_id) && (
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                          <User className="h-3 w-3" />
+                          <span>Dernière action par {getEmployeLabel(etat.employe_id)}</span>
+                        </div>
+                      )}
                       {etat.rendez_vous_id && (() => {
                         const rdvAssocie = rendezVous?.find(rdv => rdv.id === etat.rendez_vous_id);
                         if (rdvAssocie) {
