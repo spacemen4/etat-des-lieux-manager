@@ -11,19 +11,20 @@ export const DashboardLayout = ({ children }) => {
   return (
     <div className="flex min-h-screen w-full">
       <Sidebar />
-      <main className={`
-        flex-1 
-        ${isMobile ? 'p-4 pt-20' : 'p-4 md:p-6 lg:p-8'} 
-        bg-gradient-to-br from-background via-background/95 to-background
-        min-h-screen
-        overflow-x-hidden
-        transition-all duration-300
-      `}>
+      <div className="flex-1 flex flex-col">
         <Header />
-        <div className="max-w-full mx-auto">
-          {children || <Outlet />}
-        </div>
-      </main>
+        <main className={`
+          flex-1 
+          ${isMobile ? 'p-4' : 'p-4 md:p-6 lg:p-8'} 
+          bg-gradient-to-br from-background via-background/95 to-background
+          overflow-x-hidden
+          transition-all duration-300
+        `}>
+          <div className="max-w-full mx-auto">
+            {children || <Outlet />}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };
