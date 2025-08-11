@@ -64,7 +64,8 @@ export const Sidebar = () => {
                   key={item.path}
                   to={item.path}
                   className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 text-sm font-medium ${
-                    location.pathname.startsWith(item.path)
+                    (item.path === '/' && location.pathname === '/') || 
+                    (item.path !== '/' && location.pathname.startsWith(item.path))
                       ? 'glass text-primary shadow-md'
                       : 'text-muted-foreground hover:glass hover:text-foreground'
                   }`}
@@ -114,7 +115,8 @@ export const Sidebar = () => {
             key={item.path}
             to={item.path}
             className={`flex items-center gap-3 p-2 lg:p-3 rounded-lg transition-all duration-200 text-sm font-medium ${
-              location.pathname.startsWith(item.path)
+              (item.path === '/' && location.pathname === '/') || 
+              (item.path !== '/' && location.pathname.startsWith(item.path))
                 ? 'glass text-primary shadow-md'
                 : 'text-muted-foreground hover:glass hover:text-foreground'
             }`}
