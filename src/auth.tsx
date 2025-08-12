@@ -196,6 +196,7 @@ export const SignUpForm = ({ onSuccess }) => {
     const [nom, setNom] = useState('');
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSignUp = async (e) => {
         e.preventDefault();
@@ -245,7 +246,24 @@ export const SignUpForm = ({ onSuccess }) => {
                     </div>
                     <div className="space-y-1">
                         <Label htmlFor="password">Mot de passe</Label>
-                        <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                        <div className="relative">
+                          <Input
+                            id="password"
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            className="pr-10 focus:ring-2 focus:ring-blue-500 transition-shadow duration-300"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
+                            aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                          >
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
+                        </div>
                     </div>
                     <Button type="submit" className="w-full" disabled={loading}>
                         {loading ? 'Inscription...' : 'S\'inscrire'}
