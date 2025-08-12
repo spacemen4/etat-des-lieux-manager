@@ -115,26 +115,45 @@ export const LoginForm = ({ onSuccess }) => {
   };
 
   return (
-    <Card className="w-full max-w-md animate-fade-in">
-      <CardHeader>
-        <CardTitle>Connexion</CardTitle>
+    <Card className="w-full max-w-md glass-heavy backdrop-blur-xl border border-white/20 rounded-2xl overflow-hidden animate-fade-in shadow-2xl">
+      <CardHeader className="gradient-primary text-white p-6 text-center">
+        <CardTitle className="text-2xl font-bold flex items-center justify-center gap-3">
+          <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+            <Shield className="w-6 h-6" />
+          </div>
+          Connexion
+        </CardTitle>
+        <p className="text-white/80 text-sm mt-2">Accédez à votre espace personnel</p>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleLogin} className="space-y-4">
-          {error && <Alert variant="destructive" className="animate-fade-in-fast"><AlertDescription>{error}</AlertDescription></Alert>}
-          <div className="space-y-1">
-            <Label htmlFor="email">Email</Label>
+      <CardContent className="p-6">
+        <form onSubmit={handleLogin} className="space-y-6">
+          {error && (
+            <Alert variant="destructive" className="glass-light backdrop-blur-sm border border-red-200/50 animate-slide-up">
+              <AlertDescription className="text-red-700 font-medium">{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <Mail className="w-4 h-4" />
+              Email
+            </Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="focus:ring-2 focus:ring-blue-500 transition-shadow duration-300"
+              placeholder="votre@email.com"
+              className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-12"
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="password">Mot de passe</Label>
+          
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <Shield className="w-4 h-4" />
+              Mot de passe
+            </Label>
             <div className="relative">
               <Input
                 id="password"
@@ -142,46 +161,78 @@ export const LoginForm = ({ onSuccess }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="pr-10 focus:ring-2 focus:ring-blue-500 transition-shadow duration-300"
+                placeholder="••••••••"
+                className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-12 pr-12"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-slate-700 transition-colors duration-300 micro-bounce"
                 aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
               >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
               </button>
             </div>
           </div>
 
           <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center space-x-2">
-              <Checkbox id="remember" checked={rememberMe} onCheckedChange={setRememberMe} />
-              <Label htmlFor="remember">Se souvenir de moi</Label>
+            <div className="flex items-center space-x-3">
+              <Checkbox 
+                id="remember" 
+                checked={rememberMe} 
+                onCheckedChange={setRememberMe}
+                className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+              />
+              <Label htmlFor="remember" className="text-slate-600 cursor-pointer">Se souvenir de moi</Label>
             </div>
-            <a href="/forgot-password" className="font-medium text-blue-600 hover:underline">
+            <a href="/forgot-password" className="font-semibold gradient-text hover:opacity-80 transition-opacity duration-300">
               Mot de passe oublié ?
             </a>
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Connexion...' : 'Se connecter'}
+          <Button 
+            type="submit" 
+            className="w-full btn-gradient h-12 text-lg font-semibold micro-bounce shadow-xl" 
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Connexion...
+              </div>
+            ) : (
+              'Se connecter'
+            )}
           </Button>
         </form>
-        <div className="mt-4 text-center text-sm">
+        
+        <div className="mt-6 space-y-4">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-white px-3 text-slate-500">ou</span>
+            </div>
+          </div>
+          
           <a href="/signup">
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full glass border-slate-200/50 hover:glass-heavy transition-all duration-300 h-11 micro-bounce">
+              <UserPlus className="w-4 h-4 mr-2" />
               Vous n'avez pas de compte ? Inscrivez-vous
             </Button>
           </a>
-        </div>
-        <div className="mt-4 text-center">
-            <a href="https://www.etatdelux.com" target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" className="w-full">
-                    Retour au site
-                </Button>
-            </a>
+          
+          <a href="https://www.etatdelux.com" target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" className="w-full glass border-slate-200/50 hover:glass-heavy transition-all duration-300 h-11 micro-bounce">
+              <Building className="w-4 h-4 mr-2" />
+              Retour au site
+            </Button>
+          </a>
         </div>
       </CardContent>
     </Card>
@@ -225,27 +276,73 @@ export const SignUpForm = ({ onSuccess }) => {
     };
 
     return (
-        <Card className="w-full max-w-md">
-            <CardHeader>
-                <CardTitle>Inscription</CardTitle>
+        <Card className="w-full max-w-md glass-heavy backdrop-blur-xl border border-white/20 rounded-2xl overflow-hidden animate-fade-in shadow-2xl">
+            <CardHeader className="gradient-secondary text-white p-6 text-center">
+                <CardTitle className="text-2xl font-bold flex items-center justify-center gap-3">
+                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                        <UserPlus className="w-6 h-6" />
+                    </div>
+                    Inscription
+                </CardTitle>
+                <p className="text-white/80 text-sm mt-2">Créez votre compte professionnel</p>
             </CardHeader>
-            <CardContent>
-                <form onSubmit={handleSignUp} className="space-y-4">
-                    {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-                    <div className="space-y-1">
-                        <Label htmlFor="prenom">Prénom</Label>
-                        <Input id="prenom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required />
+            <CardContent className="p-6">
+                <form onSubmit={handleSignUp} className="space-y-5">
+                    {error && (
+                        <Alert variant="destructive" className="glass-light backdrop-blur-sm border border-red-200/50 animate-slide-up">
+                            <AlertDescription className="text-red-700 font-medium">{error}</AlertDescription>
+                        </Alert>
+                    )}
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="prenom" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                                <User className="w-4 h-4" />
+                                Prénom
+                            </Label>
+                            <Input 
+                                id="prenom" 
+                                value={prenom} 
+                                onChange={(e) => setPrenom(e.target.value)} 
+                                required 
+                                placeholder="Jean"
+                                className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-11"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="nom" className="text-sm font-semibold text-slate-700">Nom</Label>
+                            <Input 
+                                id="nom" 
+                                value={nom} 
+                                onChange={(e) => setNom(e.target.value)} 
+                                required 
+                                placeholder="Dupont"
+                                className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-11"
+                            />
+                        </div>
                     </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="nom">Nom</Label>
-                        <Input id="nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
+                    
+                    <div className="space-y-2">
+                        <Label htmlFor="email" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                            <Mail className="w-4 h-4" />
+                            Email
+                        </Label>
+                        <Input 
+                            id="email" 
+                            type="email" 
+                            value={email} 
+                            onChange={(e) => setEmail(e.target.value)} 
+                            required 
+                            placeholder="jean.dupont@email.com"
+                            className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-11"
+                        />
                     </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                    </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="password">Mot de passe</Label>
+                    
+                    <div className="space-y-2">
+                        <Label htmlFor="password" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                            <Shield className="w-4 h-4" />
+                            Mot de passe
+                        </Label>
                         <div className="relative">
                           <Input
                             id="password"
@@ -253,22 +350,59 @@ export const SignUpForm = ({ onSuccess }) => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            className="pr-10 focus:ring-2 focus:ring-blue-500 transition-shadow duration-300"
+                            placeholder="••••••••"
+                            className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-11 pr-12"
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
+                            className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-slate-700 transition-colors duration-300 micro-bounce"
                             aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                           >
-                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            {showPassword ? (
+                                <EyeOff className="h-5 w-5" />
+                            ) : (
+                                <Eye className="h-5 w-5" />
+                            )}
                           </button>
                         </div>
                     </div>
-                    <Button type="submit" className="w-full" disabled={loading}>
-                        {loading ? 'Inscription...' : 'S\'inscrire'}
+                    
+                    <Button 
+                        type="submit" 
+                        className="w-full btn-gradient h-12 text-lg font-semibold micro-bounce shadow-xl" 
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                Inscription...
+                            </div>
+                        ) : (
+                            'S\'inscrire'
+                        )}
                     </Button>
                 </form>
+                
+                <div className="mt-6 text-center">
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-slate-200"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="bg-white px-3 text-slate-500">Déjà inscrit ?</span>
+                        </div>
+                    </div>
+                    
+                    <div className="mt-4">
+                        <a href="/login">
+                            <Button variant="outline" className="w-full glass border-slate-200/50 hover:glass-heavy transition-all duration-300 h-11 micro-bounce">
+                                <Shield className="w-4 h-4 mr-2" />
+                                Se connecter
+                            </Button>
+                        </a>
+                    </div>
+                </div>
             </CardContent>
         </Card>
     );
