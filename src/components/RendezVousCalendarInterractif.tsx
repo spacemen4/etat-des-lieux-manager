@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, User, Phone, Mail, Edit3, Trash2, Plus, MoreVertical } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, User, Phone, Mail, Edit3, Trash2, Plus, MoreVertical } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { toast } from '@/components/ui/use-toast';
+import { useEmployes } from '@/context/EmployeContext';
 
 interface RendezVous {
-  id: string;
-  date: Date;
+  id?: string;
+  date: string;
   heure: string;
   duree?: string;
   description?: string;
@@ -23,20 +26,28 @@ interface RendezVous {
   telephone_contact: string;
   email_contact: string;
   note_personnelle?: string;
-  type_etat_des_lieux: string;
-  type_bien: string;
-  statut: string;
-  created_at: Date;
-  user_id: string;
+  type_etat_des_lieux?: string;
+  type_bien?: string;
+  statut?: string;
+  created_at?: string | null;
+  created_by_auth_user_id?: string | null;
+  updated_at?: string | null;
+  updated_by_auth_user_id?: string | null;
+  user_id?: string | null;
+  employe_id?: string | null;
+  organisation_id?: string | null;
+  organization_id?: string | null;
+  etat_des_lieux_id?: string | null;
+  photos?: any;
 }
 
-const RendezVousCalendar = ({ rendezVousData }: { rendezVousData: RendezVous[] }) => {
+const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
+  const { selectedEmployeId } = useEmployes();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [rendezVous, setRendezVous] = useState<RendezVous[]>(rendezVousData);
+  const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
   const [selectedRendezVous, setSelectedRendezVous] = useState<RendezVous | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
 
   // État pour le formulaire d'édition
@@ -63,6 +74,34 @@ const RendezVousCalendar = ({ rendezVousData }: { rendezVousData: RendezVous[] }
   ];
 
   const daysOfWeek = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+  // Charger les rendez-vous depuis Supabase
+  useEffect(() => {
+    if (userUuid) {
+      fetchRendezVous();
+    }
+  }, [userUuid]);
+
+  const fetchRendezVous = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('rendez_vous')
+        .select('*')
+        .eq('user_id', userUuid)
+        .order('date', { ascending: true });
+
+      if (error) throw error;
+
+      setRendezVous(data || []);
+    } catch (error) {
+      console.error('Erreur lors du chargement des rendez-vous:', error);
+      toast({
+        title: "Erreur de chargement",
+        description: "Impossible de charger les rendez-vous.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getStatutColor = (statut: string) => {
     switch(statut) {
@@ -161,7 +200,7 @@ const RendezVousCalendar = ({ rendezVousData }: { rendezVousData: RendezVous[] }
   const openEditModal = (rdv: RendezVous) => {
     setSelectedRendezVous(rdv);
     setEditForm({
-      date: rdv.date.toISOString().split('T')[0],
+      date: new Date(rdv.date).toISOString().split('T')[0],
       heure: rdv.heure,
       duree: rdv.duree || '',
       description: rdv.description || '',
@@ -179,41 +218,83 @@ const RendezVousCalendar = ({ rendezVousData }: { rendezVousData: RendezVous[] }
     setIsEditModalOpen(true);
   };
 
-  const saveEditRendezVous = () => {
-    if (!selectedRendezVous) return;
+  const saveEditRendezVous = async () => {
+    if (!selectedRendezVous || !selectedRendezVous.id) return;
 
     const updatedRendezVous = {
-      ...selectedRendezVous,
-      date: new Date(editForm.date + 'T' + editForm.heure),
+      date: editForm.date,
       heure: editForm.heure,
-      duree: editForm.duree || undefined,
-      description: editForm.description || undefined,
+      duree: editForm.duree || null,
+      description: editForm.description || null,
       adresse: editForm.adresse,
       code_postal: editForm.code_postal,
       ville: editForm.ville,
       nom_contact: editForm.nom_contact,
       telephone_contact: editForm.telephone_contact,
       email_contact: editForm.email_contact,
-      note_personnelle: editForm.note_personnelle || undefined,
+      note_personnelle: editForm.note_personnelle || null,
       type_etat_des_lieux: editForm.type_etat_des_lieux,
       type_bien: editForm.type_bien,
-      statut: editForm.statut
+      statut: editForm.statut,
+      updated_at: new Date().toISOString(),
+      updated_by_auth_user_id: userUuid
     };
 
-    setRendezVous(prev => prev.map(rdv => 
-      rdv.id === selectedRendezVous.id ? updatedRendezVous : rdv
-    ));
+    try {
+      const { error } = await supabase
+        .from('rendez_vous')
+        .update(updatedRendezVous)
+        .eq('id', selectedRendezVous.id);
 
-    setIsEditModalOpen(false);
-    setSelectedRendezVous(null);
+      if (error) throw error;
+
+      setRendezVous(prev => prev.map(rdv => 
+        rdv.id === selectedRendezVous.id ? { ...selectedRendezVous, ...updatedRendezVous } : rdv
+      ));
+
+      toast({
+        title: "Succès",
+        description: "Rendez-vous modifié avec succès!",
+      });
+
+      setIsEditModalOpen(false);
+      setSelectedRendezVous(null);
+    } catch (error) {
+      console.error('Erreur lors de la modification:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la modification du rendez-vous",
+        variant: "destructive",
+      });
+    }
   };
 
-  const deleteRendezVous = (id: string) => {
-    setRendezVous(prev => prev.filter(rdv => rdv.id !== id));
+  const deleteRendezVous = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('rendez_vous')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setRendezVous(prev => prev.filter(rdv => rdv.id !== id));
+      
+      toast({
+        title: "Succès",
+        description: "Rendez-vous supprimé avec succès!",
+      });
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la suppression du rendez-vous",
+        variant: "destructive",
+      });
+    }
   };
 
   const openCreateModal = (date: Date) => {
-    setSelectedDate(date);
     setEditForm({
       date: date.toISOString().split('T')[0],
       heure: '09:00',
@@ -233,30 +314,53 @@ const RendezVousCalendar = ({ rendezVousData }: { rendezVousData: RendezVous[] }
     setIsCreateModalOpen(true);
   };
 
-  const createRendezVous = () => {
-    const newRendezVous: RendezVous = {
-      id: Date.now().toString(),
-      date: new Date(editForm.date + 'T' + editForm.heure),
+  const createRendezVous = async () => {
+    const newRendezVousData = {
+      date: editForm.date,
       heure: editForm.heure,
-      duree: editForm.duree || undefined,
-      description: editForm.description || undefined,
+      duree: editForm.duree || null,
+      description: editForm.description || null,
       adresse: editForm.adresse,
       code_postal: editForm.code_postal,
       ville: editForm.ville,
       nom_contact: editForm.nom_contact,
       telephone_contact: editForm.telephone_contact,
       email_contact: editForm.email_contact,
-      note_personnelle: editForm.note_personnelle || undefined,
+      note_personnelle: editForm.note_personnelle || null,
       type_etat_des_lieux: editForm.type_etat_des_lieux,
       type_bien: editForm.type_bien,
       statut: editForm.statut,
-      created_at: new Date(),
-      user_id: 'user1'
+      user_id: userUuid,
+      employe_id: selectedEmployeId,
+      created_at: new Date().toISOString(),
+      created_by_auth_user_id: userUuid
     };
 
-    setRendezVous(prev => [...prev, newRendezVous]);
-    setIsCreateModalOpen(false);
-    setSelectedDate(null);
+    try {
+      const { data, error } = await supabase
+        .from('rendez_vous')
+        .insert([newRendezVousData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setRendezVous(prev => [...prev, data]);
+      
+      toast({
+        title: "Succès",
+        description: `Rendez-vous du ${editForm.date} à ${editForm.heure} créé avec succès!`,
+      });
+
+      setIsCreateModalOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la création:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la création du rendez-vous",
+        variant: "destructive",
+      });
+    }
   };
 
   const renderMonthView = () => {
@@ -767,7 +871,7 @@ const RendezVousCalendar = ({ rendezVousData }: { rendezVousData: RendezVous[] }
               <div className="flex items-center space-x-2">
                 <CalendarIcon className="w-5 h-5 text-gray-500" />
                 <span>
-                  {selectedRendezVous.date.toLocaleDateString('fr-FR', { 
+                  {new Date(selectedRendezVous.date).toLocaleDateString('fr-FR', { 
                     weekday: 'long', 
                     day: 'numeric', 
                     month: 'long' 
