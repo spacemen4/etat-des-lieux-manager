@@ -365,14 +365,14 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
                     : isWeekend 
                       ? 'bg-slate-50/10' 
                       : 'bg-white/5 hover:bg-white/10'
-                } ${isToday ? 'glass-heavy ring-2 ring-blue-400/50 bg-blue-50/20 animate-glow' : ''}`}
+                } ${isToday ? 'glass-heavy ring-2 ring-blue-400/50 bg-blue-50/20' : ''}`}
                 onClick={() => openCreateModal(dayInfo.date)}
                 style={{animationDelay: `${index * 0.02}s`}}
               >
                 <div className="flex items-center justify-between mb-2 sm:mb-3">
                   <div className={`text-sm sm:text-base font-semibold transition-all duration-300 micro-bounce ${
                     isToday 
-                      ? 'gradient-primary text-white w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg animate-pulse-soft' 
+                      ? 'gradient-primary text-white w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg' 
                       : dayInfo.isCurrentMonth
                         ? 'text-slate-900 hover:text-blue-600'
                         : 'text-slate-400'
@@ -380,7 +380,7 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
                     {dayInfo.date.getDate()}
                   </div>
                   {dayRendezVous.length > 0 && (
-                    <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 gradient-neon rounded-full opacity-60 group-hover:opacity-100 transition-all duration-300 animate-pulse"></div>
+                    <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 gradient-neon rounded-full opacity-60 group-hover:opacity-100 transition-all duration-300"></div>
                   )}
                 </div>
                 
