@@ -11,6 +11,7 @@ import Index from './pages/Index';
 import NewEtatDesLieux from './pages/NewEtatDesLieux';
 import EtatSortie from './pages/EtatSortie';
 import MonCalendrierPage from './pages/MonCalendrier';
+import UpdatePasswordPage from './pages/UpdatePassword';
 
 const App = () => {
   return (
@@ -27,6 +28,11 @@ const App = () => {
 
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from './lib/supabase';
 
 const AuthRoutes = () => {
   const { user, loading, error } = useAuth();
@@ -67,6 +73,7 @@ const AuthRoutes = () => {
   
   return (
     <Routes>
+      <Route path="/update-password" element={<UpdatePasswordPage />} />
       {!user ? (
         <>
           <Route path="/login" element={<LoginPage />} />
@@ -115,15 +122,70 @@ const LoginPage = () => {
 };
 
 const ForgotPasswordPage = () => {
+  const [email, setEmail] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [success, setSuccess] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
   const navigate = useNavigate();
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/update-password`,
+    });
+
+    setLoading(false);
+    if (error) {
+      setError("Erreur lors de la réinitialisation du mot de passe. Veuillez vérifier l'email et réessayer.");
+    } else {
+      setSuccess("Si un compte existe pour cet email, un lien de réinitialisation a été envoyé.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md text-center">
-        <h1 className="text-2xl font-bold mb-4">Réinitialisation du mot de passe</h1>
-        <p className="mb-6">Cette fonctionnalité est en cours de développement.</p>
-        <Button onClick={() => navigate('/login')}>Retour à la connexion</Button>
-      </div>
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Mot de passe oublié</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handlePasswordReset} className="space-y-4">
+            {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+            {success && <Alert variant="default"><AlertDescription>{success}</AlertDescription></Alert>}
+
+            <p className="text-sm text-gray-600">
+              Entrez votre email pour recevoir un lien de réinitialisation de mot de passe.
+            </p>
+
+            {!success && (
+              <div className="space-y-1">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            )}
+
+            {!success && (
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Envoi en cours...' : 'Envoyer le lien'}
+              </Button>
+            )}
+
+            <Button variant="outline" className="w-full" onClick={() => navigate('/login')}>
+              Retour à la connexion
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };
