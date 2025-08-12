@@ -545,7 +545,7 @@ const Dashboard = () => {
                           <Button 
                             size="sm" 
                             asChild
-                            className={etat.type_etat_des_lieux === 'entree' ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"}
+                            className={etat.type_etat_des_lieux === 'entree' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"}
                             onClick={(e) => e.stopPropagation()}
                           >
                             <a href={`/sortie/${etat.id}`} className="flex items-center justify-center gap-1">
