@@ -280,16 +280,16 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8 animate-fade-in custom-scrollbar">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-wrap">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold gradient-text mb-1">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text mb-1">
             Tableau de bord
           </h2>
-          <p className="text-slate-600/80 text-sm sm:text-base">
+          <p className="text-slate-600/80 text-sm">
             Gérez vos états des lieux d'entrée et de sortie
           </p>
         </div>
-                  <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             <Button asChild variant="success" className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700">
               <a href="/new-etat-des-lieux?type=entree" className="flex items-center justify-center gap-2">
                 <LogIn className="h-4 w-4" />
@@ -307,7 +307,7 @@ const Dashboard = () => {
           </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="glass-heavy">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Total des biens</CardTitle>

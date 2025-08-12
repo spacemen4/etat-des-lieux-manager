@@ -312,7 +312,7 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
@@ -323,7 +323,7 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
             Retour
           </Button>
           <div>
-            <h2 className="text-3xl font-bold text-slate-900">
+            <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-900">
               {initialEtatDesLieux?.date_sortie ? 'Modifier l\'état des lieux de sortie' : 'État des lieux de sortie'}
             </h2>
             <p className="text-slate-600">
