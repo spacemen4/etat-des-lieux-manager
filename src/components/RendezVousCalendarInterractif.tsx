@@ -2,11 +2,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, User, Phone, Mail, Edit3, Trash2, Plus, MoreVertical } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { useEmployes } from '@/context/EmployeContext';
@@ -50,7 +47,6 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
 
-  // État pour le formulaire d'édition
   const [editForm, setEditForm] = useState({
     date: '',
     heure: '',
@@ -75,7 +71,6 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
 
   const daysOfWeek = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
-  // Charger les rendez-vous depuis Supabase
   useEffect(() => {
     if (userUuid) {
       fetchRendezVous();
@@ -113,16 +108,6 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
     }
   };
 
-  const getStatutLabel = (statut: string) => {
-    switch(statut) {
-      case 'planifie': return 'Planifié';
-      case 'realise': return 'Réalisé';
-      case 'annule': return 'Annulé';
-      case 'reporte': return 'Reporté';
-      default: return statut;
-    }
-  };
-
   const getTypeEtatLabel = (type: string) => {
     return type === 'entree' ? 'EDL Entrée' : 'EDL Sortie';
   };
@@ -151,42 +136,24 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = (firstDay.getDay() + 6) % 7; // Ajusté pour commencer par lundi
+    const startingDayOfWeek = (firstDay.getDay() + 6) % 7;
 
     const days = [];
     
-    // Jours du mois précédent
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
       const prevDate = new Date(year, month, -i);
       days.push({ date: prevDate, isCurrentMonth: false });
     }
     
-    // Jours du mois actuel
     for (let day = 1; day <= daysInMonth; day++) {
       days.push({ date: new Date(year, month, day), isCurrentMonth: true });
     }
     
-    // Jours du mois suivant pour compléter la grille
     const remainingDays = 42 - days.length;
     for (let day = 1; day <= remainingDays; day++) {
       days.push({ date: new Date(year, month + 1, day), isCurrentMonth: false });
     }
     
-    return days;
-  };
-
-  const getWeekDays = (date: Date) => {
-    const startOfWeek = new Date(date);
-    const day = startOfWeek.getDay();
-    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Ajusté pour commencer par lundi
-    startOfWeek.setDate(diff);
-
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const weekDay = new Date(startOfWeek);
-      weekDay.setDate(startOfWeek.getDate() + i);
-      days.push(weekDay);
-    }
     return days;
   };
 
@@ -211,9 +178,9 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
       telephone_contact: rdv.telephone_contact,
       email_contact: rdv.email_contact,
       note_personnelle: rdv.note_personnelle || '',
-      type_etat_des_lieux: rdv.type_etat_des_lieux,
-      type_bien: rdv.type_bien,
-      statut: rdv.statut
+      type_etat_des_lieux: rdv.type_etat_des_lieux || '',
+      type_bien: rdv.type_bien || '',
+      statut: rdv.statut || 'planifie'
     });
     setIsEditModalOpen(true);
   };
@@ -367,107 +334,84 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
     const days = getDaysInMonth(currentDate);
     
     return (
-      <div className="grid grid-cols-7 gap-1">
-        {daysOfWeek.map(day => (
-          <div key={day} className="p-2 text-center font-semibold text-gray-600 bg-gray-50">
-            {day}
-          </div>
-        ))}
-        {days.map((dayInfo, index) => {
-          const dayRendezVous = getRendezVousForDate(dayInfo.date);
-          const isToday = dayInfo.date.toDateString() === new Date().toDateString();
-          
-          return (
-            <div
-              key={index}
-              className={`min-h-24 p-1 border border-gray-200 cursor-pointer hover:bg-gray-50 ${
-                !dayInfo.isCurrentMonth ? 'text-gray-400 bg-gray-50' : 'bg-white'
-              } ${isToday ? 'bg-blue-50 border-blue-300' : ''}`}
-              onClick={() => openCreateModal(dayInfo.date)}
-            >
-              <div className={`text-sm font-medium mb-1 ${isToday ? 'text-blue-600' : ''}`}>
-                {dayInfo.date.getDate()}
-              </div>
-              <div className="space-y-1">
-                {dayRendezVous.slice(0, 3).map(rdv => (
-                  <div
-                    key={rdv.id}
-                    className={`text-xs p-1 rounded text-white truncate cursor-pointer hover:opacity-80 ${getStatutColor(rdv.statut)}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditModal(rdv);
-                    }}
-                  >
-                    {rdv.heure} - {getTypeEtatLabel(rdv.type_etat_des_lieux)}
-                  </div>
-                ))}
-                {dayRendezVous.length > 3 && (
-                  <div className="text-xs text-gray-500">
-                    +{dayRendezVous.length - 3} autres
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const renderWeekView = () => {
-    const weekDays = getWeekDays(currentDate);
-    const timeSlots = Array.from({ length: 24 }, (_, i) => 
-      `${i.toString().padStart(2, '0')}:00`
-    );
-    
-    return (
-      <div className="flex">
-        <div className="w-16 flex-shrink-0">
-          <div className="h-12 border-b border-gray-200"></div>
-          {timeSlots.map(time => (
-            <div key={time} className="h-12 border-b border-gray-100 text-xs text-gray-500 px-2 py-1">
-              {time}
+      <div className="overflow-hidden">
+        <div className="grid grid-cols-7 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
+          {daysOfWeek.map(day => (
+            <div key={day} className="p-2 sm:p-4 text-center font-semibold text-gray-700 text-xs sm:text-sm uppercase tracking-wide">
+              <span className="hidden sm:inline">{day}</span>
+              <span className="sm:hidden">{day.slice(0, 1)}</span>
             </div>
           ))}
         </div>
-        <div className="flex-1 grid grid-cols-7">
-          {weekDays.map(day => {
-            const dayRendezVous = getRendezVousForDate(day);
-            const isToday = day.toDateString() === new Date().toDateString();
+        
+        <div className="grid grid-cols-7">
+          {days.map((dayInfo, index) => {
+            const dayRendezVous = getRendezVousForDate(dayInfo.date);
+            const isToday = dayInfo.date.toDateString() === new Date().toDateString();
+            const isWeekend = dayInfo.date.getDay() === 0 || dayInfo.date.getDay() === 6;
             
             return (
-              <div key={day.toDateString()} className="border-l border-gray-200">
-                <div className={`h-12 border-b border-gray-200 p-2 text-center ${isToday ? 'bg-blue-50' : ''}`}>
-                  <div className="text-xs text-gray-600">{daysOfWeek[day.getDay() === 0 ? 6 : day.getDay() - 1]}</div>
-                  <div className={`text-sm font-medium ${isToday ? 'text-blue-600' : ''}`}>
-                    {day.getDate()}
+              <div
+                key={index}
+                className={`min-h-20 sm:min-h-28 p-1 sm:p-2 border-r border-b border-gray-100 cursor-pointer transition-all duration-200 hover:bg-blue-50/50 group ${
+                  !dayInfo.isCurrentMonth 
+                    ? 'text-gray-400 bg-gray-50/50' 
+                    : isWeekend 
+                      ? 'bg-gray-50/30' 
+                      : 'bg-white hover:shadow-sm'
+                } ${isToday ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-200' : ''}`}
+                onClick={() => openCreateModal(dayInfo.date)}
+              >
+                <div className="flex items-center justify-between mb-1 sm:mb-2">
+                  <div className={`text-xs sm:text-sm font-medium transition-colors duration-200 ${
+                    isToday 
+                      ? 'bg-blue-600 text-white w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-bold' 
+                      : dayInfo.isCurrentMonth
+                        ? 'text-gray-900'
+                        : 'text-gray-400'
+                  }`}>
+                    {dayInfo.date.getDate()}
                   </div>
+                  {dayRendezVous.length > 0 && (
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  )}
                 </div>
-                <div className="relative">
-                  {timeSlots.map(time => (
+                
+                <div className="space-y-0.5 sm:space-y-1">
+                  {dayRendezVous.slice(0, window.innerWidth < 640 ? 1 : 2).map((rdv) => (
                     <div
-                      key={time}
-                      className="h-12 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
-                      onClick={() => openCreateModal(day)}
-                    />
-                  ))}
-                  {dayRendezVous.map(rdv => {
-                    const startHour = parseInt(rdv.heure.split(':')[0]);
-                    const startMinute = parseInt(rdv.heure.split(':')[1]);
-                    const topPosition = (startHour * 48) + (startMinute * 48 / 60);
-                    
-                    return (
-                      <div
-                        key={rdv.id}
-                        className={`absolute left-1 right-1 ${getStatutColor(rdv.statut)} text-white text-xs p-1 rounded cursor-pointer hover:opacity-80 z-10`}
-                        style={{ top: `${topPosition}px`, height: '36px' }}
-                        onClick={() => openEditModal(rdv)}
-                      >
-                        <div className="font-medium">{rdv.heure}</div>
-                        <div className="truncate">{getTypeEtatLabel(rdv.type_etat_des_lieux)}</div>
+                      key={rdv.id}
+                      className={`text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded-md text-white truncate cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-sm ${getStatutColor(rdv.statut || 'planifie')}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditModal(rdv);
+                      }}
+                      title={`${rdv.heure} - ${getTypeEtatLabel(rdv.type_etat_des_lieux || '')}`}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span className="font-medium text-xs">{rdv.heure}</span>
+                        <span className="opacity-90 hidden sm:inline">·</span>
+                        <span className="truncate text-xs hidden sm:inline">{getTypeEtatLabel(rdv.type_etat_des_lieux || '')}</span>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
+                  
+                  {dayRendezVous.length > (window.innerWidth < 640 ? 1 : 2) && (
+                    <div 
+                      className="text-xs text-blue-600 font-medium cursor-pointer hover:text-blue-700 transition-colors duration-200"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      +{dayRendezVous.length - (window.innerWidth < 640 ? 1 : 2)}
+                    </div>
+                  )}
+                  
+                  {dayRendezVous.length === 0 && (
+                    <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-60 transition-opacity duration-200 italic hidden sm:block">
+                      Cliquer pour ajouter
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -477,113 +421,139 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
     );
   };
 
-  const renderDayView = () => {
-    const dayRendezVous = getRendezVousForDate(currentDate);
-    const timeSlots = Array.from({ length: 24 }, (_, i) => 
-      `${i.toString().padStart(2, '0')}:00`
-    );
-    
-    return (
-      <div className="flex">
-        <div className="w-16 flex-shrink-0">
-          <div className="h-12 border-b border-gray-200"></div>
-          {timeSlots.map(time => (
-            <div key={time} className="h-12 border-b border-gray-100 text-xs text-gray-500 px-2 py-1">
-              {time}
-            </div>
-          ))}
-        </div>
-        <div className="flex-1">
-          <div className="relative h-[1152px]">
-            {timeSlots.map(time => (
-              <div
-                key={time}
-                className="h-12 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
-                onClick={() => openCreateModal(currentDate)}
-              />
-            ))}
-            {dayRendezVous.map(rdv => {
-              const startHour = parseInt(rdv.heure.split(':')[0]);
-              const startMinute = parseInt(rdv.heure.split(':')[1]);
-              const topPosition = (startHour * 48) + (startMinute * 48 / 60);
-              
-              return (
-                <div
-                  key={rdv.id}
-                  className={`absolute left-4 right-4 ${getStatutColor(rdv.statut)} text-white p-2 rounded cursor-pointer hover:opacity-80 z-10`}
-                  style={{ top: `${topPosition}px`, minHeight: '48px' }}
-                  onClick={() => openEditModal(rdv)}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium">{rdv.heure} - {getTypeEtatLabel(rdv.type_etat_des_lieux)}</div>
-                      <div className="text-sm">{rdv.description}</div>
-                    </div>
-                    <div className="text-xs bg-white bg-opacity-20 px-1 rounded">
-                      {rdv.duree}
-                    </div>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="max-w-7xl mx-auto p-3 sm:p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                   </div>
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Calendrier des Rendez-vous</h1>
                 </div>
-              );
-            })}
+              </div>
+              
+              <Button 
+                onClick={() => openCreateModal(new Date())}
+                className="bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 w-full sm:w-auto"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                <span className="hidden xs:inline">Nouveau RDV</span>
+                <span className="xs:hidden">Nouveau</span>
+              </Button>
+            </div>
+            
+            {/* Navigation des vues sur mobile */}
+            <div className="flex items-center justify-center sm:justify-start">
+              <div className="flex items-center space-x-1 bg-gray-50 rounded-lg p-1 w-full sm:w-auto">
+                <Button
+                  variant={viewMode === 'month' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('month')}
+                  className={`${viewMode === 'month' ? 'bg-white shadow-sm' : 'hover:bg-white/50'} transition-all duration-200 flex-1 sm:flex-none text-xs sm:text-sm`}
+                >
+                  Mois
+                </Button>
+                <Button
+                  variant={viewMode === 'week' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('week')}
+                  className={`${viewMode === 'week' ? 'bg-white shadow-sm' : 'hover:bg-white/50'} transition-all duration-200 flex-1 sm:flex-none text-xs sm:text-sm`}
+                >
+                  Semaine
+                </Button>
+                <Button
+                  variant={viewMode === 'day' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('day')}
+                  className={`${viewMode === 'day' ? 'bg-white shadow-sm' : 'hover:bg-white/50'} transition-all duration-200 flex-1 sm:flex-none text-xs sm:text-sm`}
+                >
+                  Jour
+                </Button>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 mb-6">
+          <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center bg-gray-50 rounded-lg p-1 space-x-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigatePeriod('prev')}
+                  className="hover:bg-white hover:shadow-sm transition-all duration-200"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigatePeriod('next')}
+                  className="hover:bg-white hover:shadow-sm transition-all duration-200"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentDate(new Date())}
+                className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 text-xs sm:text-sm"
+              >
+                <span className="hidden sm:inline">Aujourd'hui</span>
+                <span className="sm:hidden">Auj.</span>
+              </Button>
+            </div>
+            
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 text-center sm:text-left">
+              {viewMode === 'month' 
+                ? `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`
+                : currentDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+              }
+            </h2>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+          {renderMonthView()}
         </div>
       </div>
-    );
-  };
 
-  const EditModal = ({ isOpen, onClose, isCreate = false }) => (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {isCreate ? 'Créer un rendez-vous' : 'Modifier le rendez-vous'}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={editForm.date}
-                onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
-              />
+      {/* Modals */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modifier le rendez-vous</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="date">Date</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={editForm.date}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="heure">Heure</Label>
+                <Input
+                  id="heure"
+                  type="time"
+                  value={editForm.heure}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, heure: e.target.value }))}
+                />
+              </div>
             </div>
+            
             <div>
-              <Label htmlFor="heure">Heure</Label>
-              <Input
-                id="heure"
-                type="time"
-                value={editForm.heure}
-                onChange={(e) => setEditForm(prev => ({ ...prev, heure: e.target.value }))}
-              />
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="duree">Durée prévue</Label>
-            <Input
-              id="duree"
-              placeholder="Ex: 1h30"
-              value={editForm.duree}
-              onChange={(e) => setEditForm(prev => ({ ...prev, duree: e.target.value }))}
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              placeholder="Description du rendez-vous"
-              value={editForm.description}
-              onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-            />
-          </div>
-          
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2">
               <Label htmlFor="adresse">Adresse</Label>
               <Input
                 id="adresse"
@@ -593,30 +563,30 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="code_postal">Code postal</Label>
-              <Input
-                id="code_postal"
-                placeholder="75000"
-                value={editForm.code_postal}
-                onChange={(e) => setEditForm(prev => ({ ...prev, code_postal: e.target.value }))}
-                required
-              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="code_postal">Code postal</Label>
+                <Input
+                  id="code_postal"
+                  placeholder="75000"
+                  value={editForm.code_postal}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, code_postal: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="ville">Ville</Label>
+                <Input
+                  id="ville"
+                  placeholder="Paris"
+                  value={editForm.ville}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, ville: e.target.value }))}
+                  required
+                />
+              </div>
             </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="ville">Ville</Label>
-            <Input
-              id="ville"
-              placeholder="Paris"
-              value={editForm.ville}
-              onChange={(e) => setEditForm(prev => ({ ...prev, ville: e.target.value }))}
-              required
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
+            
             <div>
               <Label htmlFor="nom_contact">Nom du contact</Label>
               <Input
@@ -627,318 +597,113 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="telephone_contact">Téléphone</Label>
-              <Input
-                id="telephone_contact"
-                type="tel"
-                placeholder="0612345678"
-                value={editForm.telephone_contact}
-                onChange={(e) => setEditForm(prev => ({ ...prev, telephone_contact: e.target.value }))}
-                required
-              />
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="email_contact">Email du contact</Label>
-            <Input
-              id="email_contact"
-              type="email"
-              placeholder="jean.dupont@example.com"
-              value={editForm.email_contact}
-              onChange={(e) => setEditForm(prev => ({ ...prev, email_contact: e.target.value }))}
-              required
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="type_etat_des_lieux">Type d'état des lieux</Label>
-              <Select 
-                value={editForm.type_etat_des_lieux}
-                onValueChange={(value) => setEditForm(prev => ({ ...prev, type_etat_des_lieux: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="entree">État des lieux d'entrée</SelectItem>
-                  <SelectItem value="sortie">État des lieux de sortie</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="type_bien">Type de bien</Label>
-              <Select 
-                value={editForm.type_bien}
-                onValueChange={(value) => setEditForm(prev => ({ ...prev, type_bien: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un type de bien" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="studio">Studio</SelectItem>
-                  <SelectItem value="t2-t3">T2 – T3</SelectItem>
-                  <SelectItem value="t4-t5">T4 – T5</SelectItem>
-                  <SelectItem value="mobilier">Inventaire du mobilier</SelectItem>
-                  <SelectItem value="bureau">Bureau</SelectItem>
-                  <SelectItem value="local">Local commercial</SelectItem>
-                  <SelectItem value="garage">Garage / Box</SelectItem>
-                  <SelectItem value="pieces-supplementaires">Pièces supplémentaires</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="statut">Statut</Label>
-            <Select 
-              value={editForm.statut}
-              onValueChange={(value) => setEditForm(prev => ({ ...prev, statut: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner un statut" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="planifie">Planifié</SelectItem>
-                <SelectItem value="realise">Réalisé</SelectItem>
-                <SelectItem value="annule">Annulé</SelectItem>
-                <SelectItem value="reporte">Reporté</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div>
-            <Label htmlFor="note_personnelle">Note personnelle</Label>
-            <Textarea
-              id="note_personnelle"
-              placeholder="Ajouter une note..."
-              value={editForm.note_personnelle}
-              onChange={(e) => setEditForm(prev => ({ ...prev, note_personnelle: e.target.value }))}
-            />
-          </div>
-          
-          <div className="flex justify-end space-x-2 pt-4">
-            {!isCreate && (
+            
+            <div className="flex justify-end space-x-2 pt-4">
               <Button 
                 variant="destructive" 
                 onClick={() => {
                   if (selectedRendezVous) {
-                    deleteRendezVous(selectedRendezVous.id);
-                    onClose();
+                    deleteRendezVous(selectedRendezVous.id!);
+                    setIsEditModalOpen(false);
                   }
                 }}
               >
                 Supprimer
               </Button>
-            )}
-            <Button variant="outline" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button onClick={isCreate ? createRendezVous : saveEditRendezVous}>
-              {isCreate ? 'Créer' : 'Sauvegarder'}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-2xl font-bold">Calendrier des Rendez-vous</h1>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant={viewMode === 'month' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('month')}
-            >
-              Mois
-            </Button>
-            <Button
-              variant={viewMode === 'week' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('week')}
-            >
-              Semaine
-            </Button>
-            <Button
-              variant={viewMode === 'day' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('day')}
-            >
-              Jour
-            </Button>
-          </div>
-        </div>
-        
-        <Button onClick={() => openCreateModal(new Date())}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nouveau RDV
-        </Button>
-      </div>
-
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigatePeriod('prev')}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigatePeriod('next')}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-          <h2 className="text-xl font-semibold">
-            {viewMode === 'month' 
-              ? `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`
-              : viewMode === 'week'
-                ? `Semaine du ${getWeekDays(currentDate)[0].getDate()} ${months[getWeekDays(currentDate)[0].getMonth()]} ${getWeekDays(currentDate)[0].getFullYear()}`
-                : `${currentDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`
-            }
-          </h2>
-        </div>
-        
-        <Button
-          variant="outline"
-          onClick={() => setCurrentDate(new Date())}
-        >
-          Aujourd'hui
-        </Button>
-      </div>
-
-      <div className="bg-white rounded-lg border overflow-hidden">
-        {viewMode === 'month' 
-          ? renderMonthView() 
-          : viewMode === 'week' 
-            ? renderWeekView() 
-            : renderDayView()}
-      </div>
-
-      <EditModal 
-        isOpen={isEditModalOpen} 
-        onClose={() => setIsEditModalOpen(false)} 
-      />
-      
-      <EditModal 
-        isOpen={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)}
-        isCreate={true}
-      />
-
-      {selectedRendezVous && (
-        <Dialog open={!!selectedRendezVous} onOpenChange={() => setSelectedRendezVous(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center justify-between">
-                <span>Détails du rendez-vous</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => openEditModal(selectedRendezVous)}>
-                      <Edit3 className="w-4 h-4 mr-2" />
-                      Modifier
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => {
-                        deleteRendezVous(selectedRendezVous.id);
-                        setSelectedRendezVous(null);
-                      }}
-                      className="text-red-600"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Supprimer
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <CalendarIcon className="w-5 h-5 text-gray-500" />
-                <span>
-                  {new Date(selectedRendezVous.date).toLocaleDateString('fr-FR', { 
-                    weekday: 'long', 
-                    day: 'numeric', 
-                    month: 'long' 
-                  })}
-                  {' à '}
-                  {selectedRendezVous.heure}
-                  {selectedRendezVous.duree && ` (${selectedRendezVous.duree})`}
-                </span>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <MapPin className="w-5 h-5 text-gray-500" />
-                <span>
-                  {selectedRendezVous.adresse}, {selectedRendezVous.code_postal} {selectedRendezVous.ville}
-                </span>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <User className="w-5 h-5 text-gray-500" />
-                <span>{selectedRendezVous.nom_contact}</span>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Phone className="w-5 h-5 text-gray-500" />
-                <span>{selectedRendezVous.telephone_contact}</span>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Mail className="w-5 h-5 text-gray-500" />
-                <span>{selectedRendezVous.email_contact}</span>
-              </div>
-              
-              {selectedRendezVous.description && (
-                <div>
-                  <h4 className="font-medium">Description:</h4>
-                  <p>{selectedRendezVous.description}</p>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium">Type d'état des lieux:</h4>
-                  <p>{getTypeEtatLabel(selectedRendezVous.type_etat_des_lieux)}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium">Type de bien:</h4>
-                  <p>{selectedRendezVous.type_bien}</p>
-                </div>
-              </div>
-              
-              <div>
-                <h4 className="font-medium">Statut:</h4>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatutColor(selectedRendezVous.statut)} text-white`}>
-                  {getStatutLabel(selectedRendezVous.statut)}
-                </span>
-              </div>
-              
-              {selectedRendezVous.note_personnelle && (
-                <div>
-                  <h4 className="font-medium">Note personnelle:</h4>
-                  <p className="text-gray-600">{selectedRendezVous.note_personnelle}</p>
-                </div>
-              )}
+              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                Annuler
+              </Button>
+              <Button onClick={saveEditRendezVous}>
+                Sauvegarder
+              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Créer un rendez-vous</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="date">Date</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={editForm.date}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="heure">Heure</Label>
+                <Input
+                  id="heure"
+                  type="time"
+                  value={editForm.heure}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, heure: e.target.value }))}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="adresse">Adresse</Label>
+              <Input
+                id="adresse"
+                placeholder="123 rue de la République"
+                value={editForm.adresse}
+                onChange={(e) => setEditForm(prev => ({ ...prev, adresse: e.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="code_postal">Code postal</Label>
+                <Input
+                  id="code_postal"
+                  placeholder="75000"
+                  value={editForm.code_postal}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, code_postal: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="ville">Ville</Label>
+                <Input
+                  id="ville"
+                  placeholder="Paris"
+                  value={editForm.ville}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, ville: e.target.value }))}
+                  required
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="nom_contact">Nom du contact</Label>
+              <Input
+                id="nom_contact"
+                placeholder="Jean Dupont"
+                value={editForm.nom_contact}
+                onChange={(e) => setEditForm(prev => ({ ...prev, nom_contact: e.target.value }))}
+                required
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+                Annuler
+              </Button>
+              <Button onClick={createRendezVous}>
+                Créer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
