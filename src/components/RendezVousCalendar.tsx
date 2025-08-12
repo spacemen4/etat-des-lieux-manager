@@ -207,7 +207,6 @@ export default function RendezVousCalendar({ userUuid }) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [rendezVous, setRendezVous] = useState<RendezVous[]>([]);
   const [loading, setLoading] = useState(false);
-  const [supabaseConnected, setSupabaseConnected] = useState(false);
   const [description, setDescription] = useState('');
   const [adresse, setAdresse] = useState('');
   const [code_postal, setCode_postal] = useState('');
@@ -239,32 +238,10 @@ export default function RendezVousCalendar({ userUuid }) {
   });
 
   useEffect(() => {
-    checkSupabaseConnection();
     if (userUuid) {
       fetchRendezVous();
     }
   }, [userUuid]);
-
-  const checkSupabaseConnection = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('rendez_vous')
-        .select('*')
-        .limit(1);
-
-      if (error) {
-        console.error("[SUPABASE] Connection error:", error);
-        setSupabaseConnected(false);
-        return;
-      }
-
-      console.log("[SUPABASE] Connected successfully");
-      setSupabaseConnected(true);
-    } catch (error) {
-      console.error("[SUPABASE] Unexpected error:", error);
-      setSupabaseConnected(false);
-    }
-  };
 
   const fetchRendezVous = async () => {
     try {
@@ -486,30 +463,6 @@ export default function RendezVousCalendar({ userUuid }) {
     <div className="container mx-auto p-4 max-w-6xl">
       <h2 className="text-2xl font-bold mb-4">Calendrier des États des Lieux</h2>
       
-      {/* Indicateur de statut Supabase */}
-      <div className={`mb-4 p-4 rounded-md ${supabaseConnected ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-        <div className="flex items-center">
-          <div className={`w-3 h-3 rounded-full mr-2 ${supabaseConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-          <h3 className={`font-semibold ${supabaseConnected ? 'text-green-800' : 'text-red-800'}`}>
-            {supabaseConnected ? '✅ Supabase connecté' : '❌ Supabase non connecté'}
-          </h3>
-        </div>
-        {!supabaseConnected && (
-          <div className="mt-2">
-            <p className="text-sm text-red-700 mb-2">
-              Erreur de connexion à la base de données.
-            </p>
-            <Button 
-              onClick={checkSupabaseConnection} 
-              className="mt-2 bg-red-600 hover:bg-red-700"
-              size="sm"
-            >
-              Réessayer la connexion
-            </Button>
-          </div>
-        )}
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Formulaire */}
         <div className="space-y-4">
