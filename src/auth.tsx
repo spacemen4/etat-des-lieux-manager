@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Users, Building, UserPlus, Shield, Mail, Phone, MapPin, Settings, LogOut, Crown, UserCheck, User } from 'lucide-react';
+import { Users, Building, UserPlus, Shield, Mail, Phone, MapPin, Settings, LogOut, Crown, UserCheck, User, Eye, EyeOff } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from './lib/supabase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
@@ -74,43 +75,96 @@ export const LoginForm = ({ onSuccess }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (!email || !password) {
+      setError("L'email et le mot de passe sont requis.");
+      setLoading(false);
+      return;
+    }
     
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      if (error) {
+        if (error.message === "Invalid login credentials") {
+          setError("Email ou mot de passe incorrect.");
+        } else {
+          setError(error.message);
+        }
+        throw error;
+      }
       
-      // Attendre un peu pour laisser le temps à l'état d'authentification de se mettre à jour
+      // La gestion de la session est gérée par Supabase.
+      // Le "rememberMe" est implicitement géré par le stockage local.
+      // On pourrait ajouter une logique plus fine si nécessaire.
+
       setTimeout(() => {
         onSuccess?.();
       }, 100);
     } catch (error) {
-      setError(error.message);
+      console.error('Login error:', error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-md animate-fade-in">
       <CardHeader>
         <CardTitle>Connexion</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleLogin} className="space-y-4">
-          {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+          {error && <Alert variant="destructive" className="animate-fade-in-fast"><AlertDescription>{error}</AlertDescription></Alert>}
           <div className="space-y-1">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="focus:ring-2 focus:ring-blue-500 transition-shadow duration-300"
+            />
           </div>
           <div className="space-y-1">
             <Label htmlFor="password">Mot de passe</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="pr-10 focus:ring-2 focus:ring-blue-500 transition-shadow duration-300"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
+                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
           </div>
+
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center space-x-2">
+              <Checkbox id="remember" checked={rememberMe} onCheckedChange={setRememberMe} />
+              <Label htmlFor="remember">Se souvenir de moi</Label>
+            </div>
+            <a href="/forgot-password" className="font-medium text-blue-600 hover:underline">
+              Mot de passe oublié ?
+            </a>
+          </div>
+
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Connexion...' : 'Se connecter'}
           </Button>

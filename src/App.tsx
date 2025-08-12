@@ -71,6 +71,7 @@ const AuthRoutes = () => {
         <>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </>
       ) : (
@@ -108,6 +109,20 @@ const LoginPage = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/10 to-transparent animate-shimmer"></div>
       <div className="animate-slide-up z-10 w-full max-w-md mx-auto">
         <LoginForm onSuccess={handleLoginSuccess} />
+      </div>
+    </div>
+  );
+};
+
+const ForgotPasswordPage = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md text-center">
+        <h1 className="text-2xl font-bold mb-4">Réinitialisation du mot de passe</h1>
+        <p className="mb-6">Cette fonctionnalité est en cours de développement.</p>
+        <Button onClick={() => navigate('/login')}>Retour à la connexion</Button>
       </div>
     </div>
   );
