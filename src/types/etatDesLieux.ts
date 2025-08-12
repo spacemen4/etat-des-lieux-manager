@@ -72,13 +72,6 @@ export type Database = {
             referencedRelation: "organisations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "audit_log_utilisateur_id_fkey"
-            columns: ["utilisateur_id"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
-            referencedColumns: ["id"]
-          },
         ]
       }
       autres_equipements: {
@@ -201,7 +194,7 @@ export type Database = {
         Row: {
           actif: boolean | null
           created_at: string | null
-          created_by: string | null
+          created_by_auth_user_id: string | null
           email: string | null
           fonction: string | null
           id: string
@@ -209,13 +202,13 @@ export type Database = {
           prenom: string
           telephone: string | null
           updated_at: string | null
-          updated_by: string | null
+          updated_by_auth_user_id: string | null
           user_id: string
         }
         Insert: {
           actif?: boolean | null
           created_at?: string | null
-          created_by?: string | null
+          created_by_auth_user_id?: string | null
           email?: string | null
           fonction?: string | null
           id?: string
@@ -223,13 +216,13 @@ export type Database = {
           prenom: string
           telephone?: string | null
           updated_at?: string | null
-          updated_by?: string | null
+          updated_by_auth_user_id?: string | null
           user_id: string
         }
         Update: {
           actif?: boolean | null
           created_at?: string | null
-          created_by?: string | null
+          created_by_auth_user_id?: string | null
           email?: string | null
           fonction?: string | null
           id?: string
@@ -237,32 +230,10 @@ export type Database = {
           prenom?: string
           telephone?: string | null
           updated_at?: string | null
-          updated_by?: string | null
+          updated_by_auth_user_id?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "employes_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employes_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       equipements_chauffage: {
         Row: {
@@ -416,7 +387,7 @@ export type Database = {
           bailleur_adresse: string | null
           bailleur_nom: string | null
           created_at: string | null
-          created_by: string | null
+          created_by_auth_user_id: string | null
           date_entree: string | null
           date_sortie: string | null
           description_travaux: string | null
@@ -435,7 +406,7 @@ export type Database = {
           type_bien: string
           type_etat_des_lieux: string
           updated_at: string | null
-          updated_by: string | null
+          updated_by_auth_user_id: string | null
           user_id: string | null
           visibilite: string | null
         }
@@ -444,7 +415,7 @@ export type Database = {
           bailleur_adresse?: string | null
           bailleur_nom?: string | null
           created_at?: string | null
-          created_by?: string | null
+          created_by_auth_user_id?: string | null
           date_entree?: string | null
           date_sortie?: string | null
           description_travaux?: string | null
@@ -463,7 +434,7 @@ export type Database = {
           type_bien: string
           type_etat_des_lieux: string
           updated_at?: string | null
-          updated_by?: string | null
+          updated_by_auth_user_id?: string | null
           user_id?: string | null
           visibilite?: string | null
         }
@@ -472,7 +443,7 @@ export type Database = {
           bailleur_adresse?: string | null
           bailleur_nom?: string | null
           created_at?: string | null
-          created_by?: string | null
+          created_by_auth_user_id?: string | null
           date_entree?: string | null
           date_sortie?: string | null
           description_travaux?: string | null
@@ -491,18 +462,11 @@ export type Database = {
           type_bien?: string
           type_etat_des_lieux?: string
           updated_at?: string | null
-          updated_by?: string | null
+          updated_by_auth_user_id?: string | null
           user_id?: string | null
           visibilite?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "etat_des_lieux_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "etat_des_lieux_employe_id_fkey"
             columns: ["employe_id"]
@@ -525,13 +489,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "etat_des_lieux_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "fk_etat_des_lieux_rendez_vous"
             columns: ["rendez_vous_id"]
             isOneToOne: false
@@ -543,66 +500,55 @@ export type Database = {
       invitations: {
         Row: {
           accepted_at: string | null
-          accepted_by: string | null
+          accepted_by_auth_user_id: string | null
           created_at: string | null
           email: string
           employe_id: string | null
           expires_at: string
           id: string
-          invite_par: string
+          invite_par_auth_user_id: string
           organisation_id: string
           role: string
           statut: string | null
           token: string
+          user_id: string | null
         }
         Insert: {
           accepted_at?: string | null
-          accepted_by?: string | null
+          accepted_by_auth_user_id?: string | null
           created_at?: string | null
           email: string
           employe_id?: string | null
           expires_at: string
           id?: string
-          invite_par: string
+          invite_par_auth_user_id: string
           organisation_id: string
           role?: string
           statut?: string | null
           token: string
+          user_id?: string | null
         }
         Update: {
           accepted_at?: string | null
-          accepted_by?: string | null
+          accepted_by_auth_user_id?: string | null
           created_at?: string | null
           email?: string
           employe_id?: string | null
           expires_at?: string
           id?: string
-          invite_par?: string
+          invite_par_auth_user_id?: string
           organisation_id?: string
           role?: string
           statut?: string | null
           token?: string
+          user_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "invitations_accepted_by_fkey"
-            columns: ["accepted_by"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "invitations_employe_id_fkey"
             columns: ["employe_id"]
             isOneToOne: false
             referencedRelation: "employes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invitations_invite_par_fkey"
-            columns: ["invite_par"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
             referencedColumns: ["id"]
           },
           {
@@ -630,6 +576,7 @@ export type Database = {
           status: string
           stripe_invoice_id: string
           subscription_id: string
+          user_id: string | null
         }
         Insert: {
           amount_due?: number
@@ -646,6 +593,7 @@ export type Database = {
           status: string
           stripe_invoice_id: string
           subscription_id: string
+          user_id?: string | null
         }
         Update: {
           amount_due?: number
@@ -662,6 +610,7 @@ export type Database = {
           status?: string
           stripe_invoice_id?: string
           subscription_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -679,6 +628,7 @@ export type Database = {
           adresse: string | null
           created_at: string | null
           email: string | null
+          employe_id: string | null
           id: string
           logo_url: string | null
           nom: string
@@ -686,12 +636,14 @@ export type Database = {
           subscription_id: string | null
           telephone: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           active?: boolean | null
           adresse?: string | null
           created_at?: string | null
           email?: string | null
+          employe_id?: string | null
           id?: string
           logo_url?: string | null
           nom: string
@@ -699,12 +651,14 @@ export type Database = {
           subscription_id?: string | null
           telephone?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           active?: boolean | null
           adresse?: string | null
           created_at?: string | null
           email?: string | null
+          employe_id?: string | null
           id?: string
           logo_url?: string | null
           nom?: string
@@ -712,8 +666,16 @@ export type Database = {
           subscription_id?: string | null
           telephone?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "organisations_employe_id_fkey"
+            columns: ["employe_id"]
+            isOneToOne: false
+            referencedRelation: "employes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "organisations_subscription_id_fkey"
             columns: ["subscription_id"]
@@ -786,43 +748,39 @@ export type Database = {
       }
       permissions_partage: {
         Row: {
-          accorde_par: string
+          accorde_par_auth_user_id: string
+          auth_user_id: string
           created_at: string | null
           employe_id: string | null
           etat_des_lieux_id: string
           expires_at: string | null
           id: string
           permission: string
-          utilisateur_id: string
+          user_id: string | null
         }
         Insert: {
-          accorde_par: string
+          accorde_par_auth_user_id: string
+          auth_user_id: string
           created_at?: string | null
           employe_id?: string | null
           etat_des_lieux_id: string
           expires_at?: string | null
           id?: string
           permission: string
-          utilisateur_id: string
+          user_id?: string | null
         }
         Update: {
-          accorde_par?: string
+          accorde_par_auth_user_id?: string
+          auth_user_id?: string
           created_at?: string | null
           employe_id?: string | null
           etat_des_lieux_id?: string
           expires_at?: string | null
           id?: string
           permission?: string
-          utilisateur_id?: string
+          user_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "permissions_partage_accorde_par_fkey"
-            columns: ["accorde_par"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "permissions_partage_employe_id_fkey"
             columns: ["employe_id"]
@@ -842,13 +800,6 @@ export type Database = {
             columns: ["etat_des_lieux_id"]
             isOneToOne: false
             referencedRelation: "v_etat_des_lieux_with_permissions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "permissions_partage_utilisateur_id_fkey"
-            columns: ["utilisateur_id"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
             referencedColumns: ["id"]
           },
         ]
@@ -954,6 +905,7 @@ export type Database = {
           id: string
           limit_value: number
           plan_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -961,6 +913,7 @@ export type Database = {
           id?: string
           limit_value: number
           plan_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -968,6 +921,7 @@ export type Database = {
           id?: string
           limit_value?: number
           plan_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -1054,7 +1008,7 @@ export type Database = {
           adresse: string
           code_postal: string
           created_at: string | null
-          created_by: string | null
+          created_by_auth_user_id: string | null
           date: string
           description: string | null
           duree: string | null
@@ -1075,7 +1029,7 @@ export type Database = {
           type_bien: string | null
           type_etat_des_lieux: string | null
           updated_at: string | null
-          updated_by: string | null
+          updated_by_auth_user_id: string | null
           user_id: string | null
           ville: string
         }
@@ -1083,7 +1037,7 @@ export type Database = {
           adresse: string
           code_postal: string
           created_at?: string | null
-          created_by?: string | null
+          created_by_auth_user_id?: string | null
           date: string
           description?: string | null
           duree?: string | null
@@ -1104,7 +1058,7 @@ export type Database = {
           type_bien?: string | null
           type_etat_des_lieux?: string | null
           updated_at?: string | null
-          updated_by?: string | null
+          updated_by_auth_user_id?: string | null
           user_id?: string | null
           ville: string
         }
@@ -1112,7 +1066,7 @@ export type Database = {
           adresse?: string
           code_postal?: string
           created_at?: string | null
-          created_by?: string | null
+          created_by_auth_user_id?: string | null
           date?: string
           description?: string | null
           duree?: string | null
@@ -1133,7 +1087,7 @@ export type Database = {
           type_bien?: string | null
           type_etat_des_lieux?: string | null
           updated_at?: string | null
-          updated_by?: string | null
+          updated_by_auth_user_id?: string | null
           user_id?: string | null
           ville?: string
         }
@@ -1150,13 +1104,6 @@ export type Database = {
             columns: ["etat_des_lieux_id"]
             isOneToOne: false
             referencedRelation: "v_etat_des_lieux_with_permissions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rendez_vous_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
             referencedColumns: ["id"]
           },
           {
@@ -1187,46 +1134,42 @@ export type Database = {
             referencedRelation: "organisations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "rendez_vous_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
-            referencedColumns: ["id"]
-          },
         ]
       }
       stripe_customers: {
         Row: {
           created_at: string | null
           email: string
+          employe_id: string | null
           id: string
           stripe_customer_id: string
           updated_at: string | null
-          utilisateur_id: string
+          user_id: string
         }
         Insert: {
           created_at?: string | null
           email: string
+          employe_id?: string | null
           id?: string
           stripe_customer_id: string
           updated_at?: string | null
-          utilisateur_id: string
+          user_id: string
         }
         Update: {
           created_at?: string | null
           email?: string
+          employe_id?: string | null
           id?: string
           stripe_customer_id?: string
           updated_at?: string | null
-          utilisateur_id?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "stripe_customers_utilisateur_id_fkey"
-            columns: ["utilisateur_id"]
+            foreignKeyName: "stripe_customers_employe_id_fkey"
+            columns: ["employe_id"]
             isOneToOne: false
-            referencedRelation: "utilisateurs"
+            referencedRelation: "employes"
             referencedColumns: ["id"]
           },
         ]
@@ -1240,6 +1183,7 @@ export type Database = {
           processed: boolean | null
           processed_at: string | null
           stripe_event_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1249,6 +1193,7 @@ export type Database = {
           processed?: boolean | null
           processed_at?: string | null
           stripe_event_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1258,6 +1203,7 @@ export type Database = {
           processed?: boolean | null
           processed_at?: string | null
           stripe_event_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1268,6 +1214,7 @@ export type Database = {
           created_at: string | null
           currency: string
           description: string | null
+          employe_id: string | null
           features: Json | null
           id: string
           interval: string
@@ -1276,6 +1223,7 @@ export type Database = {
           stripe_price_id: string
           stripe_product_id: string
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           active?: boolean | null
@@ -1283,6 +1231,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           description?: string | null
+          employe_id?: string | null
           features?: Json | null
           id?: string
           interval: string
@@ -1291,6 +1240,7 @@ export type Database = {
           stripe_price_id: string
           stripe_product_id: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           active?: boolean | null
@@ -1298,6 +1248,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           description?: string | null
+          employe_id?: string | null
           features?: Json | null
           id?: string
           interval?: string
@@ -1306,8 +1257,17 @@ export type Database = {
           stripe_price_id?: string
           stripe_product_id?: string
           updated_at?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "subscription_plans_employe_id_fkey"
+            columns: ["employe_id"]
+            isOneToOne: false
+            referencedRelation: "employes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
@@ -1316,6 +1276,7 @@ export type Database = {
           created_at: string | null
           current_period_end: string | null
           current_period_start: string | null
+          employe_id: string | null
           id: string
           metadata: Json | null
           organisation_id: string | null
@@ -1326,7 +1287,7 @@ export type Database = {
           trial_end: string | null
           trial_start: string | null
           updated_at: string | null
-          utilisateur_id: string
+          user_id: string
         }
         Insert: {
           cancel_at_period_end?: boolean | null
@@ -1334,6 +1295,7 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
+          employe_id?: string | null
           id?: string
           metadata?: Json | null
           organisation_id?: string | null
@@ -1344,7 +1306,7 @@ export type Database = {
           trial_end?: string | null
           trial_start?: string | null
           updated_at?: string | null
-          utilisateur_id: string
+          user_id: string
         }
         Update: {
           cancel_at_period_end?: boolean | null
@@ -1352,6 +1314,7 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
+          employe_id?: string | null
           id?: string
           metadata?: Json | null
           organisation_id?: string | null
@@ -1362,9 +1325,16 @@ export type Database = {
           trial_end?: string | null
           trial_start?: string | null
           updated_at?: string | null
-          utilisateur_id?: string
+          user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "subscriptions_employe_id_fkey"
+            columns: ["employe_id"]
+            isOneToOne: false
+            referencedRelation: "employes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "subscriptions_organisation_id_fkey"
             columns: ["organisation_id"]
@@ -1379,92 +1349,6 @@ export type Database = {
             referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "subscriptions_utilisateur_id_fkey"
-            columns: ["utilisateur_id"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      utilisateurs: {
-        Row: {
-          activated_at: string | null
-          activated_by: string | null
-          avatar_url: string | null
-          created_at: string | null
-          created_by: string | null
-          email: string
-          id: string
-          last_login: string | null
-          nom: string
-          organisation_id: string | null
-          preferences: Json | null
-          prenom: string
-          role: string
-          statut: string
-          telephone: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          activated_at?: string | null
-          activated_by?: string | null
-          avatar_url?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          email: string
-          id: string
-          last_login?: string | null
-          nom: string
-          organisation_id?: string | null
-          preferences?: Json | null
-          prenom: string
-          role?: string
-          statut?: string
-          telephone?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          activated_at?: string | null
-          activated_by?: string | null
-          avatar_url?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          email?: string
-          id?: string
-          last_login?: string | null
-          nom?: string
-          organisation_id?: string | null
-          preferences?: Json | null
-          prenom?: string
-          role?: string
-          statut?: string
-          telephone?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "utilisateurs_activated_by_fkey"
-            columns: ["activated_by"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "utilisateurs_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "utilisateurs_organisation_id_fkey"
-            columns: ["organisation_id"]
-            isOneToOne: false
-            referencedRelation: "organisations"
-            referencedColumns: ["id"]
-          },
         ]
       }
     }
@@ -1475,33 +1359,94 @@ export type Database = {
           bailleur_adresse: string | null
           bailleur_nom: string | null
           created_at: string | null
-          created_by: string | null
-          created_by_name: string | null
+          created_by_auth_user_id: string | null
           date_entree: string | null
           date_sortie: string | null
           description_travaux: string | null
+          employe_id: string | null
           id: string | null
           locataire_adresse: string | null
           locataire_nom: string | null
           organisation_id: string | null
-          organisation_name: string | null
+          organization_id: string | null
+          permission: string | null
           photos: Json | null
           rendez_vous_id: string | null
+          signature_locataire: string | null
+          signature_proprietaire_agent: string | null
           statut: string | null
           travaux_a_faire: boolean | null
           type_bien: string | null
           type_etat_des_lieux: string | null
           updated_at: string | null
-          updated_by: string | null
-          user_permission: string | null
+          updated_by_auth_user_id: string | null
+          user_id: string | null
           visibilite: string | null
+        }
+        Insert: {
+          adresse_bien?: string | null
+          bailleur_adresse?: string | null
+          bailleur_nom?: string | null
+          created_at?: string | null
+          created_by_auth_user_id?: string | null
+          date_entree?: string | null
+          date_sortie?: string | null
+          description_travaux?: string | null
+          employe_id?: string | null
+          id?: string | null
+          locataire_adresse?: string | null
+          locataire_nom?: string | null
+          organisation_id?: string | null
+          organization_id?: string | null
+          permission?: never
+          photos?: Json | null
+          rendez_vous_id?: string | null
+          signature_locataire?: string | null
+          signature_proprietaire_agent?: string | null
+          statut?: string | null
+          travaux_a_faire?: boolean | null
+          type_bien?: string | null
+          type_etat_des_lieux?: string | null
+          updated_at?: string | null
+          updated_by_auth_user_id?: string | null
+          user_id?: string | null
+          visibilite?: string | null
+        }
+        Update: {
+          adresse_bien?: string | null
+          bailleur_adresse?: string | null
+          bailleur_nom?: string | null
+          created_at?: string | null
+          created_by_auth_user_id?: string | null
+          date_entree?: string | null
+          date_sortie?: string | null
+          description_travaux?: string | null
+          employe_id?: string | null
+          id?: string | null
+          locataire_adresse?: string | null
+          locataire_nom?: string | null
+          organisation_id?: string | null
+          organization_id?: string | null
+          permission?: never
+          photos?: Json | null
+          rendez_vous_id?: string | null
+          signature_locataire?: string | null
+          signature_proprietaire_agent?: string | null
+          statut?: string | null
+          travaux_a_faire?: boolean | null
+          type_bien?: string | null
+          type_etat_des_lieux?: string | null
+          updated_at?: string | null
+          updated_by_auth_user_id?: string | null
+          user_id?: string | null
+          visibilite?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "etat_des_lieux_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "etat_des_lieux_employe_id_fkey"
+            columns: ["employe_id"]
             isOneToOne: false
-            referencedRelation: "utilisateurs"
+            referencedRelation: "employes"
             referencedColumns: ["id"]
           },
           {
@@ -1516,13 +1461,6 @@ export type Database = {
             columns: ["rendez_vous_id"]
             isOneToOne: false
             referencedRelation: "rendez_vous"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "etat_des_lieux_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "utilisateurs"
             referencedColumns: ["id"]
           },
           {
