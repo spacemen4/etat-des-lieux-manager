@@ -1,10 +1,10 @@
 import React from 'react';
 import { useEmployes } from '@/context/EmployeContext';
-import { LogOut, User2, ChevronDown, Building2 } from 'lucide-react';
+import { LogOut, User2, ChevronDown, Building2, UserPlus, ArrowRight } from 'lucide-react';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 export const Header: React.FC = () => {
@@ -105,6 +105,26 @@ export const Header: React.FC = () => {
                         </div>
                       </div>
                     </SelectItem>
+                    
+                    {/* Lien vers la page Team si aucun employé */}
+                    {employes.length === 0 && (
+                      <div className="m-1 px-3 py-2">
+                        <Link
+                          to="/team"
+                          className="flex items-center gap-3 p-3 rounded-md transition-all duration-300 hover:bg-blue-50 border border-blue-200/50 bg-gradient-to-r from-blue-50 to-indigo-50"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
+                            <UserPlus className="w-4 h-4 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-semibold text-blue-700">Créer votre premier employé</div>
+                            <div className="text-xs text-blue-500">Gérez votre équipe</div>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-blue-500" />
+                        </Link>
+                      </div>
+                    )}
+                    
                     {employes.map((e) => (
                       <SelectItem 
                         key={e.id} 
