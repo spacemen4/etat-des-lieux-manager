@@ -1,9 +1,7 @@
 import React from 'react';
 import { useEmployes } from '@/context/EmployeContext';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { LogOut, User2, ChevronDown, Building2 } from 'lucide-react';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -11,7 +9,6 @@ import { toast } from 'sonner';
 
 export const Header: React.FC = () => {
   const { employes, selectedEmployeId, setSelectedEmployeId, selectedEmploye, loading } = useEmployes();
-  const isMobile = useIsMobile();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -27,42 +24,45 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl supports-[backdrop-filter]:bg-white/90 border-b border-gray-200/80 shadow-sm">
-      <div className={`flex items-center justify-between ${isMobile ? 'py-3 px-4' : 'h-16 px-6'} max-w-7xl mx-auto`}>
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl supports-[backdrop-filter]:bg-white/90 border-b border-gray-200/80 shadow-sm">
+      <div className="flex items-center justify-between py-3 px-4 md:h-16 md:px-6 max-w-7xl mx-auto">
         {/* Logo et titre */}
         <div className="flex items-center gap-3 min-w-0">
-          <div className="relative">
-            <img 
-              src="/android-chrome-192x192.png" 
-              alt="Logo" 
-              className="w-8 h-8 rounded-lg shadow-sm ring-1 ring-gray-200/50" 
-            />
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-white/20 to-transparent pointer-events-none"></div>
-          </div>
-          <div className="min-w-0">
-            <h1 className="font-bold text-lg md:text-xl text-gray-900 truncate leading-none">
-              État des Lieux Manager
-            </h1>
-            <p className="text-xs text-gray-500 mt-0.5 hidden md:block">
-              Gestion simplifiée de vos états des lieux
-            </p>
+          {/* Mobile menu button is now in Sidebar component */}
+          <div className="flex items-center gap-3">
+            <div className="relative md:hidden">
+              <img
+                src="/android-chrome-192x192.png"
+                alt="Logo"
+                className="w-8 h-8 rounded-lg shadow-sm"
+              />
+            </div>
+            <div className="min-w-0">
+              <h1 className="font-bold text-base md:text-xl text-gray-900 truncate leading-tight">
+                <span className="md:hidden">EDL</span>
+                <span className="hidden md:inline">État des Lieux</span>
+              </h1>
+              <p className="text-xs text-gray-500 mt-0.5 hidden md:block">
+                Gestion simplifiée
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Section utilisateur */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           {/* Sélecteur d'employé avec design amélioré */}
           <div className="relative">
             <Select
               value={selectedEmployeId ?? ''}
               onValueChange={(value) => setSelectedEmployeId(value === 'none' ? null : value)}
             >
-              <SelectTrigger className="w-[180px] md:w-[240px] h-10 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 hover:border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-200 rounded-lg shadow-sm">
+              <SelectTrigger className="w-auto md:w-[240px] h-10 bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200 hover:border-gray-300 focus:ring-2 focus:ring-blue-200 transition-all duration-200 rounded-lg shadow-sm px-2 md:px-3">
                 <div className="flex items-center gap-2 text-left">
                   <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
                     <User2 className="w-3 h-3 text-white" />
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 hidden md:block">
                     {loading ? (
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
@@ -73,24 +73,22 @@ export const Header: React.FC = () => {
                         <div className="text-sm font-medium text-gray-900 truncate">
                           {selectedEmploye.prenom} {selectedEmploye.nom}
                         </div>
-                        <div className="text-xs text-gray-500 hidden md:block">Employé sélectionné</div>
+                        <div className="text-xs text-gray-500">Employé sélectionné</div>
                       </div>
                     ) : (
                       <div>
                         <div className="text-sm font-medium text-gray-600">Aucun employé</div>
-                        <div className="text-xs text-gray-400 hidden md:block">Cliquer pour sélectionner</div>
+                        <div className="text-xs text-gray-400">Sélectionner</div>
                       </div>
                     )}
                   </div>
                 </div>
               </SelectTrigger>
-              <SelectContent className="w-[280px] border border-gray-200 shadow-xl rounded-lg bg-white/95 backdrop-blur-sm">
+              <SelectContent className="w-[280px] border-gray-200 shadow-xl rounded-lg bg-white/95 backdrop-blur-sm">
                 <SelectGroup>
-                  <SelectLabel className="font-semibold text-sm px-4 py-3 text-gray-700 bg-gray-50/80 border-b border-gray-100 rounded-t-lg">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-gray-600" />
-                      Choisir un employé
-                    </div>
+                  <SelectLabel className="font-semibold text-sm px-4 py-3 text-gray-700 bg-gray-50/80 border-b border-gray-100 rounded-t-lg flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-gray-600" />
+                    Choisir un employé
                   </SelectLabel>
                   <div className="p-1">
                     <SelectItem 
@@ -132,30 +130,30 @@ export const Header: React.FC = () => {
             </Select>
           </div>
 
-          {/* Séparateur avec design amélioré */}
-          <div className="hidden md:block w-px h-8 bg-gradient-to-b from-transparent via-gray-300 to-transparent"></div>
+          {/* Séparateur */}
+          <div className="hidden md:block w-px h-8 bg-gray-200/80"></div>
 
-          {/* Bouton déconnexion avec design amélioré */}
+          {/* Bouton déconnexion */}
           <Button 
             variant="ghost" 
-            size="sm" 
-            className="group gap-2 text-gray-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-all duration-200 border border-gray-200 hover:border-red-200 px-4 py-2 rounded-lg bg-white shadow-sm hover:shadow-md"
+            size="icon"
+            className="group text-gray-600 hover:text-red-600 hover:bg-red-50/80 transition-colors duration-200 rounded-full w-10 h-10"
             onClick={handleSignOut}
           >
-            <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
-            <span className="hidden md:inline font-medium">Se déconnecter</span>
+            <LogOut className="w-5 h-5" />
+            <span className="sr-only">Se déconnecter</span>
           </Button>
         </div>
       </div>
 
       {/* Employé sélectionné - Badge mobile amélioré */}
-      {selectedEmploye && isMobile && (
-        <div className="px-4 pb-3">
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-full px-4 py-2 shadow-sm">
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
-              <User2 className="w-3 h-3 text-white" />
+      {selectedEmploye && (
+        <div className="md:hidden px-4 pb-3 -mt-1">
+          <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200/80 rounded-full px-3 py-1.5 text-blue-800">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-inner">
+              <User2 className="w-2.5 h-2.5 text-white" />
             </div>
-            <span className="text-sm font-medium text-blue-800">
+            <span className="text-xs font-medium">
               {selectedEmploye.prenom} {selectedEmploye.nom}
             </span>
           </div>

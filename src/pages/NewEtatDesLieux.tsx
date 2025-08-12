@@ -230,7 +230,7 @@ const NewEtatDesLieux = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <Button
           variant="outline"
           onClick={() => navigate('/')}
@@ -240,7 +240,7 @@ const NewEtatDesLieux = () => {
           Retour
         </Button>
         <div>
-          <h2 className="text-3xl font-bold text-slate-900">
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
             Nouvel état des lieux
           </h2>
           <p className="text-slate-600">

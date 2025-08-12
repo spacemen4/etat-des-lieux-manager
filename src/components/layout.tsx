@@ -1,26 +1,18 @@
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './sidebar';
 import { useAuth } from '../auth';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { Header } from './top-header';
 
 export const DashboardLayout = ({ children }) => {
   const { user, organisation } = useAuth();
-  const isMobile = useIsMobile();
 
   return (
     <div className="flex min-h-screen w-full">
       <Sidebar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        <main className={`
-          flex-1 
-          ${isMobile ? 'p-4' : 'p-4 md:p-6 lg:p-8'} 
-          bg-gradient-to-br from-background via-background/95 to-background
-          overflow-x-hidden
-          transition-all duration-300
-        `}>
-          <div className="max-w-full mx-auto">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 bg-gradient-to-br from-background via-background/95 to-background overflow-y-auto">
+          <div className="max-w-7xl mx-auto">
             {children || <Outlet />}
           </div>
         </main>
