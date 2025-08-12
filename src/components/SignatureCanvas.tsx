@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Eraser, Save, RotateCcw } from 'lucide-react';
+import { Eraser, Save, RotateCcw, PenTool } from 'lucide-react';
 import { debounce } from 'lodash';
 
 interface SignatureCanvasProps {
@@ -151,18 +151,24 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="glass-heavy backdrop-blur-xl border border-white/20 rounded-2xl overflow-hidden animate-fade-in">
+      <CardHeader className="gradient-primary text-white p-6">
         <CardTitle className="flex items-center justify-between">
-          {title}
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <PenTool className="w-5 h-5" />
+            </div>
+            <span className="text-xl font-bold">{title}</span>
+          </div>
+          <div className="flex gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={clearCanvas}
               disabled={isEmpty}
+              className="glass border-white/30 text-white hover:bg-white/20 hover:text-white transition-all duration-300 micro-bounce"
             >
-              <RotateCcw className="h-4 w-4 mr-1" />
+              <RotateCcw className="h-4 w-4 mr-2" />
               Effacer
             </Button>
             {!autoSave && (
@@ -171,19 +177,20 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
                 size="sm"
                 onClick={saveSignature}
                 disabled={isEmpty}
+                className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm transition-all duration-300 micro-bounce"
               >
-                <Save className="h-4 w-4 mr-1" />
+                <Save className="h-4 w-4 mr-2" />
                 Sauvegarder
               </Button>
             )}
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="relative border-2 border-dashed border-gray-300 rounded-lg bg-white">
+      <CardContent className="p-6">
+        <div className="relative glass-light border-2 border-dashed border-white/30 rounded-2xl bg-white/80 backdrop-blur-lg overflow-hidden">
           <canvas
             ref={canvasRef}
-            className="w-full h-48 cursor-crosshair touch-none"
+            className="w-full h-48 cursor-crosshair touch-none transition-all duration-300 hover:bg-white/90"
             style={{ touchAction: 'none' }}
             onMouseDown={startDrawing}
             onMouseMove={draw}
@@ -195,7 +202,18 @@ export const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
           />
           {isEmpty && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <p className="text-gray-500 text-sm">Signez ici avec votre doigt ou stylet</p>
+              <div className="text-center">
+                <PenTool className="w-8 h-8 text-slate-400 mx-auto mb-2 animate-float" />
+                <p className="text-slate-500 text-sm font-medium">Signez ici avec votre doigt ou stylet</p>
+                <p className="text-slate-400 text-xs mt-1">Votre signature sera enregistrée automatiquement</p>
+              </div>
+            </div>
+          )}
+          {!isEmpty && (
+            <div className="absolute top-2 right-2">
+              <div className="glass-light px-2 py-1 rounded-lg backdrop-blur-sm">
+                <span className="text-xs text-slate-600 font-medium">✓ Signé</span>
+              </div>
             </div>
           )}
         </div>

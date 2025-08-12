@@ -335,16 +335,22 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
     
     return (
       <div className="overflow-hidden">
-        <div className="grid grid-cols-7 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
-          {daysOfWeek.map(day => (
-            <div key={day} className="p-2 sm:p-4 text-center font-semibold text-gray-700 text-xs sm:text-sm uppercase tracking-wide">
+        {/* En-têtes des jours avec gradient moderne */}
+        <div className="grid grid-cols-7 gradient-primary border-b border-white/20">
+          {daysOfWeek.map((day, index) => (
+            <div 
+              key={day} 
+              className={`p-3 sm:p-4 text-center font-bold text-white text-xs sm:text-sm uppercase tracking-wider backdrop-blur-sm animate-slide-in-left`}
+              style={{animationDelay: `${index * 0.1}s`}}
+            >
               <span className="hidden sm:inline">{day}</span>
               <span className="sm:hidden">{day.slice(0, 1)}</span>
             </div>
           ))}
         </div>
         
-        <div className="grid grid-cols-7">
+        {/* Grille des jours avec glassmorphism */}
+        <div className="grid grid-cols-7 backdrop-blur-sm">
           {days.map((dayInfo, index) => {
             const dayRendezVous = getRendezVousForDate(dayInfo.date);
             const isToday = dayInfo.date.toDateString() === new Date().toDateString();
@@ -353,62 +359,64 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
             return (
               <div
                 key={index}
-                className={`min-h-20 sm:min-h-28 p-1 sm:p-2 border-r border-b border-gray-100 cursor-pointer transition-all duration-200 hover:bg-blue-50/50 group ${
+                className={`min-h-24 sm:min-h-32 p-2 sm:p-3 border-r border-b border-white/10 cursor-pointer transition-all duration-300 hover:glass-light hover:backdrop-blur-lg group card-hover-subtle animate-fade-in ${
                   !dayInfo.isCurrentMonth 
-                    ? 'text-gray-400 bg-gray-50/50' 
+                    ? 'text-slate-400 bg-slate-50/20' 
                     : isWeekend 
-                      ? 'bg-gray-50/30' 
-                      : 'bg-white hover:shadow-sm'
-                } ${isToday ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-200' : ''}`}
+                      ? 'bg-slate-50/10' 
+                      : 'bg-white/5 hover:bg-white/10'
+                } ${isToday ? 'glass-heavy ring-2 ring-blue-400/50 bg-blue-50/20 animate-glow' : ''}`}
                 onClick={() => openCreateModal(dayInfo.date)}
+                style={{animationDelay: `${index * 0.02}s`}}
               >
-                <div className="flex items-center justify-between mb-1 sm:mb-2">
-                  <div className={`text-xs sm:text-sm font-medium transition-colors duration-200 ${
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <div className={`text-sm sm:text-base font-semibold transition-all duration-300 micro-bounce ${
                     isToday 
-                      ? 'bg-blue-600 text-white w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-bold' 
+                      ? 'gradient-primary text-white w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg animate-pulse-soft' 
                       : dayInfo.isCurrentMonth
-                        ? 'text-gray-900'
-                        : 'text-gray-400'
+                        ? 'text-slate-900 hover:text-blue-600'
+                        : 'text-slate-400'
                   }`}>
                     {dayInfo.date.getDate()}
                   </div>
                   {dayRendezVous.length > 0 && (
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                    <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 gradient-neon rounded-full opacity-60 group-hover:opacity-100 transition-all duration-300 animate-pulse"></div>
                   )}
                 </div>
                 
-                <div className="space-y-0.5 sm:space-y-1">
-                  {dayRendezVous.slice(0, window.innerWidth < 640 ? 1 : 2).map((rdv) => (
+                <div className="space-y-1 sm:space-y-1.5">
+                  {dayRendezVous.slice(0, window.innerWidth < 640 ? 1 : 2).map((rdv, rdvIndex) => (
                     <div
                       key={rdv.id}
-                      className={`text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded-md text-white truncate cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-sm ${getStatutColor(rdv.statut || 'planifie')}`}
+                      className={`text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-white truncate cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg glass-card backdrop-blur-md border border-white/20 animate-slide-up ${getStatutColor(rdv.statut || 'planifie')}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         openEditModal(rdv);
                       }}
                       title={`${rdv.heure} - ${getTypeEtatLabel(rdv.type_etat_des_lieux || '')}`}
+                      style={{animationDelay: `${(index * 0.02) + (rdvIndex * 0.1)}s`}}
                     >
                       <div className="flex items-center space-x-1">
-                        <span className="font-medium text-xs">{rdv.heure}</span>
-                        <span className="opacity-90 hidden sm:inline">·</span>
-                        <span className="truncate text-xs hidden sm:inline">{getTypeEtatLabel(rdv.type_etat_des_lieux || '')}</span>
+                        <span className="font-semibold text-xs">{rdv.heure}</span>
+                        <span className="opacity-80 hidden sm:inline">•</span>
+                        <span className="truncate text-xs hidden sm:inline font-medium">{getTypeEtatLabel(rdv.type_etat_des_lieux || '')}</span>
                       </div>
                     </div>
                   ))}
                   
                   {dayRendezVous.length > (window.innerWidth < 640 ? 1 : 2) && (
                     <div 
-                      className="text-xs text-blue-600 font-medium cursor-pointer hover:text-blue-700 transition-colors duration-200"
+                      className="text-xs gradient-text font-bold cursor-pointer hover:animate-bounce transition-all duration-300 glass-light px-2 py-1 rounded-md backdrop-blur-sm"
                       onClick={(e) => {
                         e.stopPropagation();
                       }}
                     >
-                      +{dayRendezVous.length - (window.innerWidth < 640 ? 1 : 2)}
+                      +{dayRendezVous.length - (window.innerWidth < 640 ? 1 : 2)} autres
                     </div>
                   )}
                   
                   {dayRendezVous.length === 0 && (
-                    <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-60 transition-opacity duration-200 italic hidden sm:block">
+                    <div className="text-xs text-slate-500/60 opacity-0 group-hover:opacity-80 transition-all duration-300 italic hidden sm:block font-medium backdrop-blur-sm">
                       Cliquer pour ajouter
                     </div>
                   )}
@@ -422,23 +430,31 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="max-w-7xl mx-auto p-3 sm:p-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-6">
-          <div className="flex flex-col gap-4">
+    <div className="min-h-screen animate-fade-in">
+      <div className="max-w-7xl mx-auto p-3 sm:p-6 space-y-6">
+        {/* Header Section avec glassmorphism */}
+        <div className="glass-heavy p-6 sm:p-8 rounded-2xl border backdrop-blur-xl">
+          <div className="flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex items-center space-x-4">
+                  <div className="p-3 gradient-primary rounded-xl shadow-lg animate-float">
+                    <CalendarIcon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                   </div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Calendrier des Rendez-vous</h1>
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold gradient-text">
+                      Calendrier des Rendez-vous
+                    </h1>
+                    <p className="text-slate-600/80 text-sm mt-1">
+                      Gérez vos rendez-vous d'état des lieux
+                    </p>
+                  </div>
                 </div>
               </div>
               
               <Button 
                 onClick={() => openCreateModal(new Date())}
-                className="bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 w-full sm:w-auto"
+                className="btn-gradient micro-bounce w-full sm:w-auto shadow-xl"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 <span className="hidden xs:inline">Nouveau RDV</span>
@@ -446,47 +462,62 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
               </Button>
             </div>
             
-            {/* Navigation des vues sur mobile */}
+            {/* Navigation des vues avec design moderne */}
             <div className="flex items-center justify-center sm:justify-start">
-              <div className="flex items-center space-x-1 bg-gray-50 rounded-lg p-1 w-full sm:w-auto">
-                <Button
-                  variant={viewMode === 'month' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('month')}
-                  className={`${viewMode === 'month' ? 'bg-white shadow-sm' : 'hover:bg-white/50'} transition-all duration-200 flex-1 sm:flex-none text-xs sm:text-sm`}
-                >
-                  Mois
-                </Button>
-                <Button
-                  variant={viewMode === 'week' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('week')}
-                  className={`${viewMode === 'week' ? 'bg-white shadow-sm' : 'hover:bg-white/50'} transition-all duration-200 flex-1 sm:flex-none text-xs sm:text-sm`}
-                >
-                  Semaine
-                </Button>
-                <Button
-                  variant={viewMode === 'day' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('day')}
-                  className={`${viewMode === 'day' ? 'bg-white shadow-sm' : 'hover:bg-white/50'} transition-all duration-200 flex-1 sm:flex-none text-xs sm:text-sm`}
-                >
-                  Jour
-                </Button>
+              <div className="glass-light rounded-xl p-2 w-full sm:w-auto backdrop-blur-lg border border-white/20">
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant={viewMode === 'month' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('month')}
+                    className={`${
+                      viewMode === 'month' 
+                        ? 'gradient-primary text-white shadow-md' 
+                        : 'hover:glass-light hover:backdrop-blur-sm'
+                    } transition-all duration-300 flex-1 sm:flex-none text-xs sm:text-sm rounded-lg micro-bounce`}
+                  >
+                    Mois
+                  </Button>
+                  <Button
+                    variant={viewMode === 'week' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('week')}
+                    className={`${
+                      viewMode === 'week' 
+                        ? 'gradient-primary text-white shadow-md' 
+                        : 'hover:glass-light hover:backdrop-blur-sm'
+                    } transition-all duration-300 flex-1 sm:flex-none text-xs sm:text-sm rounded-lg micro-bounce`}
+                  >
+                    Semaine
+                  </Button>
+                  <Button
+                    variant={viewMode === 'day' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('day')}
+                    className={`${
+                      viewMode === 'day' 
+                        ? 'gradient-primary text-white shadow-md' 
+                        : 'hover:glass-light hover:backdrop-blur-sm'
+                    } transition-all duration-300 flex-1 sm:flex-none text-xs sm:text-sm rounded-lg micro-bounce`}
+                  >
+                    Jour
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 mb-6">
-          <div className="flex flex-col gap-3 sm:gap-4">
+        {/* Navigation Section avec design moderne */}
+        <div className="glass-light p-4 sm:p-6 rounded-2xl border backdrop-blur-lg">
+          <div className="flex flex-col gap-4 sm:gap-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center bg-gray-50 rounded-lg p-1 space-x-1">
+              <div className="glass rounded-xl p-2 space-x-2 flex items-center backdrop-blur-md border border-white/30">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => navigatePeriod('prev')}
-                  className="hover:bg-white hover:shadow-sm transition-all duration-200"
+                  className="hover:glass-heavy hover:shadow-md transition-all duration-300 rounded-lg micro-bounce"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
@@ -494,7 +525,7 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
                   variant="ghost"
                   size="sm"
                   onClick={() => navigatePeriod('next')}
-                  className="hover:bg-white hover:shadow-sm transition-all duration-200"
+                  className="hover:glass-heavy hover:shadow-md transition-all duration-300 rounded-lg micro-bounce"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
@@ -504,101 +535,116 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentDate(new Date())}
-                className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 text-xs sm:text-sm"
+                className="glass border-blue-200/50 text-blue-600 hover:gradient-primary hover:text-white hover:border-transparent transition-all duration-300 text-xs sm:text-sm micro-bounce backdrop-blur-sm"
               >
                 <span className="hidden sm:inline">Aujourd'hui</span>
                 <span className="sm:hidden">Auj.</span>
               </Button>
             </div>
             
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900 text-center sm:text-left">
-              {viewMode === 'month' 
-                ? `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`
-                : currentDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-              }
-            </h2>
+            <div className="text-center sm:text-left">
+              <h2 className="text-xl sm:text-2xl font-bold gradient-text animate-pulse-soft">
+                {viewMode === 'month' 
+                  ? `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`
+                  : currentDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                }
+              </h2>
+              <div className="w-16 h-1 gradient-primary rounded-full mx-auto sm:mx-0 mt-2 animate-shimmer"></div>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        {/* Calendar Grid avec glassmorphism */}
+        <div className="glass-heavy rounded-2xl shadow-2xl border border-white/20 overflow-hidden backdrop-blur-xl">
           {renderMonthView()}
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Modals avec design moderne */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Modifier le rendez-vous</DialogTitle>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-heavy backdrop-blur-xl border border-white/20 rounded-2xl">
+          <DialogHeader className="pb-6">
+            <DialogTitle className="text-2xl font-bold gradient-text flex items-center gap-3">
+              <div className="p-2 gradient-primary rounded-lg">
+                <CalendarIcon className="w-5 h-5 text-white" />
+              </div>
+              Modifier le rendez-vous
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="date">Date</Label>
+              <div className="space-y-2">
+                <Label htmlFor="date" className="text-sm font-semibold text-slate-700">Date</Label>
                 <Input
                   id="date"
                   type="date"
                   value={editForm.date}
                   onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
+                  className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300"
                 />
               </div>
-              <div>
-                <Label htmlFor="heure">Heure</Label>
+              <div className="space-y-2">
+                <Label htmlFor="heure" className="text-sm font-semibold text-slate-700">Heure</Label>
                 <Input
                   id="heure"
                   type="time"
                   value={editForm.heure}
                   onChange={(e) => setEditForm(prev => ({ ...prev, heure: e.target.value }))}
+                  className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300"
                 />
               </div>
             </div>
             
-            <div>
-              <Label htmlFor="adresse">Adresse</Label>
+            <div className="space-y-2">
+              <Label htmlFor="adresse" className="text-sm font-semibold text-slate-700">Adresse</Label>
               <Input
                 id="adresse"
                 placeholder="123 rue de la République"
                 value={editForm.adresse}
                 onChange={(e) => setEditForm(prev => ({ ...prev, adresse: e.target.value }))}
                 required
+                className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="code_postal">Code postal</Label>
+              <div className="space-y-2">
+                <Label htmlFor="code_postal" className="text-sm font-semibold text-slate-700">Code postal</Label>
                 <Input
                   id="code_postal"
                   placeholder="75000"
                   value={editForm.code_postal}
                   onChange={(e) => setEditForm(prev => ({ ...prev, code_postal: e.target.value }))}
                   required
+                  className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300"
                 />
               </div>
-              <div>
-                <Label htmlFor="ville">Ville</Label>
+              <div className="space-y-2">
+                <Label htmlFor="ville" className="text-sm font-semibold text-slate-700">Ville</Label>
                 <Input
                   id="ville"
                   placeholder="Paris"
                   value={editForm.ville}
                   onChange={(e) => setEditForm(prev => ({ ...prev, ville: e.target.value }))}
                   required
+                  className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300"
                 />
               </div>
             </div>
             
-            <div>
-              <Label htmlFor="nom_contact">Nom du contact</Label>
+            <div className="space-y-2">
+              <Label htmlFor="nom_contact" className="text-sm font-semibold text-slate-700">Nom du contact</Label>
               <Input
                 id="nom_contact"
                 placeholder="Jean Dupont"
                 value={editForm.nom_contact}
                 onChange={(e) => setEditForm(prev => ({ ...prev, nom_contact: e.target.value }))}
                 required
+                className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300"
               />
             </div>
             
-            <div className="flex justify-end space-x-2 pt-4">
+            <div className="flex justify-end space-x-3 pt-6 border-t border-white/10">
               <Button 
                 variant="destructive" 
                 onClick={() => {
@@ -607,13 +653,21 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
                     setIsEditModalOpen(false);
                   }
                 }}
+                className="bg-red-500 hover:bg-red-600 transition-all duration-300 micro-bounce"
               >
                 Supprimer
               </Button>
-              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditModalOpen(false)}
+                className="glass border-slate-200/50 hover:glass-heavy transition-all duration-300 micro-bounce"
+              >
                 Annuler
               </Button>
-              <Button onClick={saveEditRendezVous}>
+              <Button 
+                onClick={saveEditRendezVous}
+                className="btn-gradient micro-bounce"
+              >
                 Sauvegarder
               </Button>
             </div>
@@ -622,82 +676,100 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
       </Dialog>
       
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Créer un rendez-vous</DialogTitle>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-heavy backdrop-blur-xl border border-white/20 rounded-2xl">
+          <DialogHeader className="pb-6">
+            <DialogTitle className="text-2xl font-bold gradient-text flex items-center gap-3">
+              <div className="p-2 gradient-primary rounded-lg">
+                <Plus className="w-5 h-5 text-white" />
+              </div>
+              Créer un rendez-vous
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="date">Date</Label>
+              <div className="space-y-2">
+                <Label htmlFor="date" className="text-sm font-semibold text-slate-700">Date</Label>
                 <Input
                   id="date"
                   type="date"
                   value={editForm.date}
                   onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
+                  className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300"
                 />
               </div>
-              <div>
-                <Label htmlFor="heure">Heure</Label>
+              <div className="space-y-2">
+                <Label htmlFor="heure" className="text-sm font-semibold text-slate-700">Heure</Label>
                 <Input
                   id="heure"
                   type="time"
                   value={editForm.heure}
                   onChange={(e) => setEditForm(prev => ({ ...prev, heure: e.target.value }))}
+                  className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300"
                 />
               </div>
             </div>
             
-            <div>
-              <Label htmlFor="adresse">Adresse</Label>
+            <div className="space-y-2">
+              <Label htmlFor="adresse" className="text-sm font-semibold text-slate-700">Adresse</Label>
               <Input
                 id="adresse"
                 placeholder="123 rue de la République"
                 value={editForm.adresse}
                 onChange={(e) => setEditForm(prev => ({ ...prev, adresse: e.target.value }))}
                 required
+                className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="code_postal">Code postal</Label>
+              <div className="space-y-2">
+                <Label htmlFor="code_postal" className="text-sm font-semibold text-slate-700">Code postal</Label>
                 <Input
                   id="code_postal"
                   placeholder="75000"
                   value={editForm.code_postal}
                   onChange={(e) => setEditForm(prev => ({ ...prev, code_postal: e.target.value }))}
                   required
+                  className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300"
                 />
               </div>
-              <div>
-                <Label htmlFor="ville">Ville</Label>
+              <div className="space-y-2">
+                <Label htmlFor="ville" className="text-sm font-semibold text-slate-700">Ville</Label>
                 <Input
                   id="ville"
                   placeholder="Paris"
                   value={editForm.ville}
                   onChange={(e) => setEditForm(prev => ({ ...prev, ville: e.target.value }))}
                   required
+                  className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300"
                 />
               </div>
             </div>
             
-            <div>
-              <Label htmlFor="nom_contact">Nom du contact</Label>
+            <div className="space-y-2">
+              <Label htmlFor="nom_contact" className="text-sm font-semibold text-slate-700">Nom du contact</Label>
               <Input
                 id="nom_contact"
                 placeholder="Jean Dupont"
                 value={editForm.nom_contact}
                 onChange={(e) => setEditForm(prev => ({ ...prev, nom_contact: e.target.value }))}
                 required
+                className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300"
               />
             </div>
             
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+            <div className="flex justify-end space-x-3 pt-6 border-t border-white/10">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsCreateModalOpen(false)}
+                className="glass border-slate-200/50 hover:glass-heavy transition-all duration-300 micro-bounce"
+              >
                 Annuler
               </Button>
-              <Button onClick={createRendezVous}>
+              <Button 
+                onClick={createRendezVous}
+                className="btn-gradient micro-bounce"
+              >
                 Créer
               </Button>
             </div>
