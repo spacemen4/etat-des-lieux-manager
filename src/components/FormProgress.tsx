@@ -144,7 +144,7 @@ const DesktopProgress: React.FC<FormProgressProps> = ({ steps }) => {
                 style={{animationDelay: `${stepIdx * 0.1}s`}}
               >
                 <div className="flex flex-col items-center w-full">
-                  <div className="flex items-center justify-center relative w-full">
+                  <div className="relative">
                     <div className={`relative flex ${getStepSize()} items-center justify-center rounded-full transition-all duration-300 step-interactive micro-bounce ${
                       step.completed 
                         ? 'gradient-cool text-white shadow-xl hover:shadow-2xl animate-pulse-soft' 
@@ -159,8 +159,7 @@ const DesktopProgress: React.FC<FormProgressProps> = ({ steps }) => {
                         step.completed ? 'gradient-cool shadow-lg' : 'glass border border-white/20'
                       }`} style={{ 
                         left: `calc(50% + ${steps.length <= 6 ? '24px' : steps.length <= 8 ? '20px' : '18px'})`,
-                        width: getConnectorWidth(),
-                        right: `calc(-50% - ${steps.length <= 6 ? '24px' : steps.length <= 8 ? '20px' : '18px'})`
+                        width: getConnectorWidth()
                       }} />
                     )}
                   </div>
