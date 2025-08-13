@@ -12,17 +12,59 @@ interface FormProgressProps {
   steps: Step[];
 }
 
-const MobileProgress: React.FC<FormProgressProps> = ({ steps }) => {
+// Version simplifiée ultra-compacte pour smartphone
+const SimplifiedMobileProgress: React.FC<FormProgressProps> = ({ steps }) => {
   const currentStepIndex = steps.findIndex(step => step.current);
   const completedSteps = steps.filter(step => step.completed).length;
   const currentStep = steps[currentStepIndex];
   const progressPercentage = ((completedSteps + (currentStep ? 0.5 : 0)) / steps.length) * 100;
   
   return (
-    <nav aria-label="Progress" className="w-full progress-mobile md:hidden animate-fade-in">
+    <nav aria-label="Progress" className="w-full progress-mobile sm:hidden animate-fade-in">
+      {/* Barre compacte avec étape courante et progression */}
+      <div className="glass-light rounded-xl p-3 backdrop-blur-xl border border-white/20">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-2">
+            <div className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300 ${
+              currentStep?.completed 
+                ? 'gradient-cool text-white shadow-lg' 
+                : 'gradient-primary text-white shadow-lg'
+            }`}>
+              {currentStep?.completed ? <Check className="h-4 w-4" /> : <span className="text-xs font-bold">{currentStepIndex + 1}</span>}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold gradient-text truncate">
+                {currentStep ? currentStep.title : 'Terminé'}
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-bold gradient-text shrink-0">{completedSteps}/{steps.length}</span>
+        </div>
+        
+        {/* Barre de progression compacte */}
+        <div className="glass-light rounded-full h-2 overflow-hidden backdrop-blur-lg border border-white/20">
+          <div
+            className="gradient-primary h-2 rounded-full progress-bar-animated shadow-inner"
+            style={{ '--progress-width': `${progressPercentage}%` } as React.CSSProperties}
+          />
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+// Version intermédiaire pour tablettes
+const TabletMobileProgress: React.FC<FormProgressProps> = ({ steps }) => {
+  const currentStepIndex = steps.findIndex(step => step.current);
+  const completedSteps = steps.filter(step => step.completed).length;
+  const currentStep = steps[currentStepIndex];
+  const progressPercentage = ((completedSteps + (currentStep ? 0.5 : 0)) / steps.length) * 100;
+  
+  return (
+    <nav aria-label="Progress" className="w-full progress-mobile hidden sm:block md:hidden animate-fade-in">
       {/* Barre de progression globale avec glassmorphism */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-3">
+      <div className="mb-4">
+        <div className="flex justify-between items-center mb-2">
           <span className="text-sm font-semibold gradient-text">Progression</span>
           <span className="text-sm font-bold gradient-text">{completedSteps}/{steps.length} étapes</span>
         </div>
@@ -36,55 +78,18 @@ const MobileProgress: React.FC<FormProgressProps> = ({ steps }) => {
 
       {/* Étape courante en évidence avec design moderne */}
       {currentStep && (
-        <div className="glass-heavy rounded-2xl p-5 mb-6 current-step-highlight animate-glow border border-white/20 backdrop-blur-xl">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full gradient-primary text-white shadow-2xl animate-float">
-              <span className="text-base font-bold">{currentStepIndex + 1}</span>
+        <div className="glass-heavy rounded-xl p-4 current-step-highlight animate-glow border border-white/20 backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full gradient-primary text-white shadow-2xl">
+              <span className="text-sm font-bold">{currentStepIndex + 1}</span>
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold gradient-text mb-1">Étape actuelle</p>
-              <p className="text-lg font-bold text-slate-900">{currentStep.title}</p>
+              <p className="text-xs font-semibold gradient-text mb-1">Étape actuelle</p>
+              <p className="text-base font-bold text-slate-900">{currentStep.title}</p>
             </div>
           </div>
         </div>
       )}
-
-      {/* Liste déroulante des étapes avec design moderne */}
-      <div className="space-y-3 step-list">
-        {steps.map((step, stepIdx) => (
-          <div 
-            key={step.id} 
-            className={`flex items-center gap-4 step-compact step-interactive transition-all duration-300 rounded-xl p-3 backdrop-blur-sm border animate-slide-up ${
-              step.current 
-                ? 'glass-heavy border-blue-400/50 ring-2 ring-blue-400/20 animate-glow' 
-                : step.completed 
-                  ? 'glass-light border-green-400/50 bg-green-50/20' 
-                  : 'glass border-white/20'
-            }`}
-            style={{animationDelay: `${stepIdx * 0.1}s`}}
-          >
-            <div className={`flex h-8 w-8 items-center justify-center rounded-full shrink-0 transition-all duration-300 micro-bounce ${
-              step.completed 
-                ? 'gradient-cool text-white shadow-lg' 
-                : step.current 
-                  ? 'gradient-primary text-white shadow-lg animate-pulse-soft' 
-                  : 'glass text-slate-600 border border-white/30'
-            }`}>
-              {step.completed ? <Check className="h-4 w-4" /> : <span className="text-sm font-bold">{stepIdx + 1}</span>}
-            </div>
-            <span className={`text-sm font-semibold flex-1 leading-tight transition-colors duration-300 ${
-              step.current 
-                ? 'gradient-text' 
-                : step.completed 
-                  ? 'text-green-700' 
-                  : 'text-slate-600'
-            }`}>
-              {step.title}
-            </span>
-            {step.current && <ChevronRight className="h-5 w-5 gradient-text animate-bounce" />}
-          </div>
-        ))}
-      </div>
     </nav>
   );
 };
@@ -200,7 +205,8 @@ const DesktopProgress: React.FC<FormProgressProps> = ({ steps }) => {
 const FormProgress: React.FC<FormProgressProps> = ({ steps }) => {
   return (
     <>
-      <MobileProgress steps={steps} />
+      <SimplifiedMobileProgress steps={steps} />
+      <TabletMobileProgress steps={steps} />
       <DesktopProgress steps={steps} />
     </>
   );
