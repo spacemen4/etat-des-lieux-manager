@@ -1,12 +1,11 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import Stripe from 'stripe';
+const Stripe = require('stripe');
 
 // Initialize Stripe with the secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16',
 });
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+module.exports = async function handler(req, res) {
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -66,7 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('Session créée avec succès:', session.id);
     console.log('=== FIN CREATE CHECKOUT SESSION ===');
     return res.status(200).json({ sessionId: session.id });
-  } catch (error: any) {
+  } catch (error) {
     console.error('=== ERREUR CREATE CHECKOUT SESSION ===');
     console.error('Type d\'erreur:', typeof error);
     console.error('Erreur complète:', error);
