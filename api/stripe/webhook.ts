@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-06-20',
+  apiVersion: '2023-10-16',
 });
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -21,9 +21,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = req.body;
   const sig = req.headers['stripe-signature'] as string;
 
-  let event;
+  let event: Stripe.Event;
 
   try {
+    if (!endpointSecret) {
+      throw new Error('Webhook secret not configured');
+    }
     event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
   } catch (err: any) {
     console.error('⚠️  Webhook signature verification failed.', err.message);
@@ -64,7 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-async function handleCheckoutCompleted(session: any) {
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   console.log('💰 Checkout session completed:', session.id);
 
   const userId = session.client_reference_id || session.metadata?.userId;
@@ -75,8 +78,8 @@ async function handleCheckoutCompleted(session: any) {
   }
 
   // Récupérer les détails de la subscription
-  const subscription = await stripe.subscriptions.retrieve(session.subscription);
-  const customer = await stripe.customers.retrieve(session.customer);
+  const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+  const customer = await stripe.customers.retrieve(session.customer as string);
 
   // Déterminer le plan basé sur le price ID
   const priceId = subscription.items.data[0].price.id;
@@ -98,7 +101,7 @@ async function handleCheckoutCompleted(session: any) {
       current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
       current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
       stripe_subscription_id: subscription.id,
-      stripe_customer_id: customer.id,
+      stripe_customer_id: typeof customer === 'string' ? customer : customer.id,
     }, {
       onConflict: 'user_id'
     });
@@ -110,7 +113,7 @@ async function handleCheckoutCompleted(session: any) {
   }
 }
 
-async function handleSubscriptionUpdated(subscription: any) {
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   console.log('🔄 Subscription updated:', subscription.id);
 
   // Trouver l'utilisateur via l'abonnement Stripe
@@ -142,7 +145,7 @@ async function handleSubscriptionUpdated(subscription: any) {
   }
 }
 
-async function handleSubscriptionDeleted(subscription: any) {
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   console.log('🗑️ Subscription deleted:', subscription.id);
 
   // Marquer l'abonnement comme annulé
@@ -160,13 +163,13 @@ async function handleSubscriptionDeleted(subscription: any) {
   }
 }
 
-async function handleInvoicePaymentSucceeded(invoice: any) {
+async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   console.log('💳 Invoice payment succeeded:', invoice.id);
   // Ici vous pourriez ajouter de la logique supplémentaire
   // comme l'envoi d'un email de confirmation
 }
 
-async function handleInvoicePaymentFailed(invoice: any) {
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   console.log('❌ Invoice payment failed:', invoice.id);
   
   // Vous pourriez marquer l'abonnement comme en retard de paiement
@@ -175,7 +178,7 @@ async function handleInvoicePaymentFailed(invoice: any) {
     .update({
       status: 'past_due',
     })
-    .eq('stripe_subscription_id', invoice.subscription);
+    .eq('stripe_subscription_id', invoice.subscription as string);
 
   if (error) {
     console.error('❌ Erreur lors de la mise à jour du statut de paiement:', error);
