@@ -1,12 +1,22 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import ReactDOM from 'react-dom/client';
 import { useEtatDesLieux } from '@/hooks/useEtatDesLieux';
-import { useUser } from '@/context/UserContext';
+import { useUser, UserProvider } from '@/context/UserContext';
 import { useEmployes } from '@/context/EmployeContext';
+import { AuthProvider } from '@/auth';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Calendar, MapPin, User, Building2, Clock, Loader2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Calendar, MapPin, User, Building2, Clock, Loader2, ChevronLeft, ChevronRight, Search, Download, Printer, Mail, Lock, FileText, LogIn, LogOut } from 'lucide-react';
+import EtatDesLieuxViewer from '@/components/EtatDesLieuxViewer';
+import EtatDesLieuxPrintable from '@/components/EtatDesLieuxPrintable';
+import { supabase } from '@/lib/supabase';
+import html2pdf from 'html2pdf.js';
+import { toast } from 'sonner';
+
+const queryClient = new QueryClient();
 
 const VueGlobale = () => {
   const { userUuid } = useUser();
@@ -14,6 +24,8 @@ const VueGlobale = () => {
   const { employes } = useEmployes();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedEtatId, setSelectedEtatId] = useState<string | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
   const itemsPerPage = 10;
 
   // Filtrer et trier les états des lieux
@@ -84,6 +96,194 @@ const VueGlobale = () => {
 
   const handleNextPage = () => {
     setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  };
+
+  const handleViewEtat = (etatId: string) => {
+    setSelectedEtatId(etatId);
+    setIsViewerOpen(true);
+  };
+
+  const generatePDF = async (etatId: string) => {
+    toast.info('Préparation du document PDF...');
+
+    const { data: etatData, error } = await supabase
+      .from('etat_des_lieux')
+      .select('type_etat_des_lieux, adresse_bien')
+      .eq('id', etatId)
+      .single();
+
+    if (error || !etatData) {
+      toast.error('Impossible de récupérer les informations pour le nom du fichier.');
+      return;
+    }
+
+    const printableContainer = document.createElement('div');
+    printableContainer.style.position = 'absolute';
+    printableContainer.style.left = '-9999px';
+    document.body.appendChild(printableContainer);
+
+    const root = ReactDOM.createRoot(printableContainer);
+
+    const onReady = () => {
+      const opt = {
+        margin: 0,
+        filename: `etat-des-lieux-${etatData.type_etat_des_lieux}-${etatData.adresse_bien?.replace(/[^a-zA-Z0-9]/g, '-') || 'bien'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().from(printableContainer.firstElementChild).set(opt).save().then(() => {
+        toast.success('PDF généré avec succès!');
+        document.body.removeChild(printableContainer);
+        root.unmount();
+      }).catch((err) => {
+        toast.error('Erreur lors de la génération du PDF.');
+        console.error('Erreur html2pdf:', err);
+        document.body.removeChild(printableContainer);
+        root.unmount();
+      });
+    };
+
+    root.render(
+      <React.StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <UserProvider>
+              <EtatDesLieuxPrintable etatId={etatId} onReady={onReady} />
+            </UserProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </React.StrictMode>
+    );
+  };
+
+  const handleEmail = async (etatId: string) => {
+    const etat = etatsDesLieux?.find(e => e.id === etatId);
+    if (!etat) {
+      toast.error('État des lieux non trouvé.');
+      return;
+    }
+
+    const recipientEmail = prompt('Veuillez entrer l\'adresse e-mail du destinataire :', '');
+
+    if (!recipientEmail) {
+      toast.info('Envoi de l\'e-mail annulé.');
+      return;
+    }
+
+    toast.info('Génération du PDF pour l\'envoi par e-mail...');
+
+    const printableContainer = document.createElement('div');
+    printableContainer.style.position = 'absolute';
+    printableContainer.style.left = '-9999px';
+    document.body.appendChild(printableContainer);
+
+    const root = ReactDOM.createRoot(printableContainer);
+
+    const onReady = () => {
+      const opt = {
+        margin: 0,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().from(printableContainer.firstElementChild).set(opt).output('datauristring').then(async (pdfBase64: any) => {
+        document.body.removeChild(printableContainer);
+        root.unmount();
+
+        toast.info('PDF généré. Envoi de l\'e-mail...');
+
+        const pdfData = pdfBase64.split(',')[1];
+
+        const { error } = await supabase.functions.invoke('send-email', {
+          body: JSON.stringify({
+            to: recipientEmail,
+            subject: `État des lieux pour ${etat.adresse_bien}`,
+            html: `Bonjour,<br><br>Veuillez trouver ci-joint l'état des lieux pour le bien situé à ${etat.adresse_bien}.<br><br>Cordialement.`,
+            attachment: pdfData,
+          }),
+        });
+
+        if (error) {
+          toast.error(`Erreur lors de l'envoi de l'e-mail: ${error.message}`);
+        } else {
+          toast.success('E-mail envoyé avec succès !');
+        }
+      }).catch((err: any) => {
+        toast.error('Erreur lors de la génération du PDF pour l\'e-mail.');
+        console.error('Erreur html2pdf email:', err);
+        document.body.removeChild(printableContainer);
+        root.unmount();
+      });
+    };
+
+    root.render(
+      <React.StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <UserProvider>
+              <EtatDesLieuxPrintable etatId={etatId} onReady={onReady} />
+            </UserProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </React.StrictMode>
+    );
+  };
+
+  const handlePrint = (etatId: string) => {
+    toast.info('Préparation de l\'impression...');
+    const printableContainer = document.createElement('div');
+    printableContainer.style.position = 'absolute';
+    printableContainer.style.left = '-9999px';
+    document.body.appendChild(printableContainer);
+
+    const root = ReactDOM.createRoot(printableContainer);
+
+    const onReady = () => {
+      const printFrame = document.createElement('iframe');
+      printFrame.style.position = 'absolute';
+      printFrame.style.width = '0';
+      printFrame.style.height = '0';
+      printFrame.style.border = '0';
+      document.body.appendChild(printFrame);
+
+      const frameDocument = printFrame.contentWindow?.document;
+      if (frameDocument) {
+        frameDocument.open();
+        frameDocument.write('<html><head><title>État des Lieux</title>');
+        frameDocument.write('</head><body>');
+        frameDocument.write(printableContainer.innerHTML);
+        frameDocument.write('</body></html>');
+        frameDocument.close();
+
+        setTimeout(() => {
+          printFrame.contentWindow?.focus();
+          printFrame.contentWindow?.print();
+          document.body.removeChild(printFrame);
+          document.body.removeChild(printableContainer);
+          root.unmount();
+          toast.success('Impression lancée.');
+        }, 500);
+      } else {
+        toast.error('Impossible de créer le cadre d\'impression.');
+        document.body.removeChild(printableContainer);
+        root.unmount();
+      }
+    };
+
+    root.render(
+      <React.StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <UserProvider>
+              <EtatDesLieuxPrintable etatId={etatId} onReady={onReady} />
+            </UserProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </React.StrictMode>
+    );
   };
 
   if (isLoading) {
@@ -180,7 +380,7 @@ const VueGlobale = () => {
         <>
           <div className="grid gap-4">
             {currentItems.map((etat, index) => (
-              <Card key={etat.id} className="glass-light card-hover animate-slide-up" style={{animationDelay: `${index * 0.05}s`}}>
+              <Card key={etat.id} className="glass-light card-hover cursor-pointer animate-slide-up" style={{animationDelay: `${index * 0.05}s`}} onClick={() => handleViewEtat(etat.id)}>
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div className="space-y-2 flex-grow">
@@ -212,6 +412,9 @@ const VueGlobale = () => {
                           <span>Assigné à {getEmployeLabel(etat.employe_id)}</span>
                         </div>
                       )}
+                      <div className="text-xs text-slate-500 mt-1">
+                        Créé le {new Date(etat.created_at).toLocaleDateString()}
+                      </div>
                     </div>
                     <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
                       <div className="flex gap-2 flex-wrap">
@@ -225,8 +428,100 @@ const VueGlobale = () => {
                           <Badge variant="destructive">Travaux</Badge>
                         )}
                       </div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        Créé le {new Date(etat.created_at).toLocaleDateString()}
+                      
+                      <div className="flex flex-col gap-2 mt-2 w-full sm:w-auto">
+                        {!etat.date_sortie && (
+                          <Button 
+                            size="sm" 
+                            asChild
+                            className={etat.type_etat_des_lieux === 'entree' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <a href={`/sortie/${etat.id}`} className="flex items-center justify-center gap-1">
+                              {etat.type_etat_des_lieux === 'entree' ? (
+                                <>
+                                  <LogIn className="h-3 w-3" />
+                                  Faire l'entrée
+                                </>
+                              ) : (
+                                <>
+                                  <LogOut className="h-3 w-3" />
+                                  Faire la sortie
+                                </>
+                              )}
+                            </a>
+                          </Button>
+                        )}
+                        
+                        {etat.date_sortie && (
+                          <div className="flex flex-col gap-2 w-full">
+                            {etat.signature_locataire && etat.signature_proprietaire_agent ? (
+                              <div className="flex items-center justify-center gap-1 text-slate-500 text-sm py-2">
+                                <Lock className="h-3 w-3" />
+                                <span>Signé et verrouillé</span>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                asChild
+                                variant="outline"
+                                className="border-slate-400 hover:bg-slate-100 text-slate-700"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <a href={`/sortie/${etat.id}`} className="flex items-center justify-center gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  Modifier
+                                </a>
+                              </Button>
+                            )}
+                            
+                            <div className="flex gap-2 w-full">
+                              <Badge 
+                                variant="secondary" 
+                                className="cursor-pointer hover:bg-secondary/80 text-center py-1 px-2 flex-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewEtat(etat.id);
+                                }}
+                              >
+                                Visualiser
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-slate-400 hover:bg-slate-100 text-slate-700 px-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  generatePDF(etat.id);
+                                }}
+                              >
+                                <Download className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-slate-400 hover:bg-slate-100 text-slate-700 px-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePrint(etat.id);
+                                }}
+                              >
+                                <Printer className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-slate-400 hover:bg-slate-100 text-slate-700 px-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEmail(etat.id);
+                                }}
+                              >
+                                <Mail className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -269,6 +564,15 @@ const VueGlobale = () => {
           )}
         </>
       )}
+
+      <EtatDesLieuxViewer 
+        etatId={selectedEtatId}
+        isOpen={isViewerOpen}
+        onClose={() => {
+          setIsViewerOpen(false);
+          setSelectedEtatId(null);
+        }}
+      />
     </div>
   );
 };
