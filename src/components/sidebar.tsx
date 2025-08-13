@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Building, Users, UserCheck, LogOut, Home, FilePlus, Calendar, ExternalLink, Menu, X, List } from 'lucide-react';
+import { Building, Users, UserCheck, LogOut, Home, FilePlus, Calendar, ExternalLink, Menu, X, List, CreditCard } from 'lucide-react';
 import { useAuth } from '../auth';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -13,7 +13,8 @@ const NavContent = ({ onLinkClick }) => {
     { path: '/mon-calendrier', icon: Calendar, label: 'Mon calendrier' },
     { path: '/profile', icon: UserCheck, label: 'Profil' },
     { path: '/team', icon: Users, label: 'Équipe' },
-    { path: '/vue-globale', icon: List, label: 'Vue Globale' }
+    { path: '/vue-globale', icon: List, label: 'Vue Globale' },
+    { path: '/abonnement', icon: CreditCard, label: 'Gérer mon abonnement' }
   ];
 
   return (

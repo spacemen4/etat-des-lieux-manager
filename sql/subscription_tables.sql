@@ -13,13 +13,13 @@ CREATE TABLE IF NOT EXISTS user_subscriptions (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     
     -- Contraintes
-    CONSTRAINT unique_active_subscription_per_user UNIQUE (user_id, status) DEFERRABLE INITIALLY DEFERRED,
-    
-    -- Index
-    INDEX idx_user_subscriptions_user_id (user_id),
-    INDEX idx_user_subscriptions_stripe_subscription_id (stripe_subscription_id),
-    INDEX idx_user_subscriptions_stripe_customer_id (stripe_customer_id)
+    CONSTRAINT unique_active_subscription_per_user UNIQUE (user_id, status) DEFERRABLE INITIALLY DEFERRED
 );
+
+-- Index pour user_subscriptions
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user_id ON user_subscriptions (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_stripe_subscription_id ON user_subscriptions (stripe_subscription_id);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_stripe_customer_id ON user_subscriptions (stripe_customer_id);
 
 -- Fonction pour mettre à jour automatiquement updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -45,13 +45,13 @@ CREATE TABLE IF NOT EXISTS payment_history (
     currency TEXT NOT NULL DEFAULT 'eur',
     status TEXT NOT NULL CHECK (status IN ('succeeded', 'failed', 'pending', 'canceled')),
     description TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    -- Index
-    INDEX idx_payment_history_user_id (user_id),
-    INDEX idx_payment_history_subscription_id (subscription_id),
-    INDEX idx_payment_history_stripe_payment_intent_id (stripe_payment_intent_id)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Index pour payment_history
+CREATE INDEX IF NOT EXISTS idx_payment_history_user_id ON payment_history (user_id);
+CREATE INDEX IF NOT EXISTS idx_payment_history_subscription_id ON payment_history (subscription_id);
+CREATE INDEX IF NOT EXISTS idx_payment_history_stripe_payment_intent_id ON payment_history (stripe_payment_intent_id);
 
 -- Table pour stocker les limites d'usage (cache pour optimiser les performances)
 CREATE TABLE IF NOT EXISTS usage_tracking (
@@ -60,11 +60,11 @@ CREATE TABLE IF NOT EXISTS usage_tracking (
     biens_count INTEGER DEFAULT 0,
     etats_des_lieux_count_current_month INTEGER DEFAULT 0,
     photos_count_total INTEGER DEFAULT 0,
-    last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    -- Index
-    INDEX idx_usage_tracking_user_id (user_id)
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Index pour usage_tracking
+CREATE INDEX IF NOT EXISTS idx_usage_tracking_user_id ON usage_tracking (user_id);
 
 -- Fonction pour mettre à jour les statistiques d'usage
 CREATE OR REPLACE FUNCTION update_usage_stats()

@@ -13,6 +13,7 @@ import EtatSortie from './pages/EtatSortie';
 import MonCalendrierPage from './pages/MonCalendrier';
 import UpdatePasswordPage from './pages/UpdatePassword';
 import VueGlobale from './pages/VueGlobale';
+import SubscriptionManage from './pages/SubscriptionManage';
 
 const App = () => {
   return (
@@ -92,6 +93,7 @@ const AuthRoutes = () => {
             <Route path="profile" element={<UserProfile />} />
             <Route path="team" element={<TeamManagement />} />
             <Route path="vue-globale" element={<VueGlobale />} />
+            <Route path="abonnement" element={<SubscriptionManage />} />
           </Route>
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/signup" element={<Navigate to="/" replace />} />
