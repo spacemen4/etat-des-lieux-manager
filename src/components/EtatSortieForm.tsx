@@ -10,7 +10,7 @@ import { ArrowLeft, CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import FormProgress from '@/components/FormProgress';
 import { useEtatDesLieuxById, useUpdateEtatSortie } from '@/hooks/useEtatDesLieux';
-import type { EtatDesLieux } from '@/types/etatDesLieux';
+import type { EidasEtatDesLieux, EidasEtatDesLieuxUpdate } from '@/types/eidasEtatDesLieux';
 import { useUser } from '@/context/UserContext';
 
 // Interface pour les étapes qui supportent la sauvegarde automatique
@@ -28,7 +28,7 @@ import PartiesPrivativesStep from '@/components/steps/PartiesPrivativesStep';
 import AutresEquipementsStep from '@/components/steps/AutresEquipementsStep';
 import EquipementsEnergetiquesStep from '@/components/steps/EquipementsEnergetiquesStep';
 import EquipementsChauffageStep from '@/components/steps/EquipementsChauffageStep';
-import { SignatureCanvas } from './SignatureCanvas';
+import { EidasSignatureCanvas, EidasSignatureData } from './EidasSignatureCanvas';
 
 interface EtatSortieFormProps {
   etatId: string;
@@ -39,7 +39,7 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
   const { userUuid } = useUser();
   const [currentStep, setCurrentStep] = useState(0);
   const [isValidationChecked, setIsValidationChecked] = useState(false);
-  const [initialEtatDesLieux, setInitialEtatDesLieux] = useState<EtatDesLieux | null>(null);
+  const [initialEtatDesLieux, setInitialEtatDesLieux] = useState<EidasEtatDesLieux | null>(null);
   const [travauxAFaire, setTravauxAFaire] = useState(false);
   const [descriptionTravaux, setDescriptionTravaux] = useState('');
   const [isSavingStep, setIsSavingStep] = useState(false);
@@ -55,7 +55,7 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
 
   useEffect(() => {
     if (etatData) {
-      setInitialEtatDesLieux(etatData as EtatDesLieux);
+      setInitialEtatDesLieux(etatData as EidasEtatDesLieux);
       setTravauxAFaire(etatData.travaux_a_faire || false);
       setDescriptionTravaux(etatData.description_travaux || '');
     }
@@ -249,25 +249,51 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
               <div className="space-y-4 border-t pt-4">
                 <h4 className="font-medium text-slate-800">Signatures</h4>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <SignatureCanvas
+                  <EidasSignatureCanvas
                     title="Signature du locataire"
                     autoSave
-                    initialSignature={initialEtatDesLieux?.signature_locataire ?? undefined}
-                    onSignatureSave={(signature) => {
+                    required
+                    initialSignature={{
+                      signature: initialEtatDesLieux?.signature_locataire ?? '',
+                      nom: initialEtatDesLieux?.signature_locataire_nom ?? '',
+                      lieu: initialEtatDesLieux?.signature_locataire_lieu ?? '',
+                      lu_approuve: initialEtatDesLieux?.signature_locataire_lu_approuve ?? false,
+                      photo_identite: initialEtatDesLieux?.signature_locataire_photo_identite ?? '',
+                      date: initialEtatDesLieux?.signature_locataire_date ?? ''
+                    }}
+                    onSignatureSave={(signatureData: EidasSignatureData) => {
                       updateEtatSortieMutation.mutate({
                         id: etatId,
-                        signature_locataire: signature,
+                        signature_locataire: signatureData.signature,
+                        signature_locataire_nom: signatureData.nom,
+                        signature_locataire_lieu: signatureData.lieu,
+                        signature_locataire_lu_approuve: signatureData.lu_approuve,
+                        signature_locataire_photo_identite: signatureData.photo_identite,
+                        signature_locataire_date: signatureData.date,
                       });
                     }}
                   />
-                  <SignatureCanvas
+                  <EidasSignatureCanvas
                     title="Signature du propriétaire/agent"
                     autoSave
-                    initialSignature={initialEtatDesLieux?.signature_proprietaire_agent ?? undefined}
-                    onSignatureSave={(signature) => {
+                    required
+                    initialSignature={{
+                      signature: initialEtatDesLieux?.signature_proprietaire_agent ?? '',
+                      nom: initialEtatDesLieux?.signature_proprietaire_agent_nom ?? '',
+                      lieu: initialEtatDesLieux?.signature_proprietaire_agent_lieu ?? '',
+                      lu_approuve: initialEtatDesLieux?.signature_proprietaire_agent_lu_approuve ?? false,
+                      photo_identite: initialEtatDesLieux?.signature_proprietaire_agent_photo_identite ?? '',
+                      date: initialEtatDesLieux?.signature_proprietaire_agent_date ?? ''
+                    }}
+                    onSignatureSave={(signatureData: EidasSignatureData) => {
                       updateEtatSortieMutation.mutate({
                         id: etatId,
-                        signature_proprietaire_agent: signature,
+                        signature_proprietaire_agent: signatureData.signature,
+                        signature_proprietaire_agent_nom: signatureData.nom,
+                        signature_proprietaire_agent_lieu: signatureData.lieu,
+                        signature_proprietaire_agent_lu_approuve: signatureData.lu_approuve,
+                        signature_proprietaire_agent_photo_identite: signatureData.photo_identite,
+                        signature_proprietaire_agent_date: signatureData.date,
                       });
                     }}
                   />

@@ -192,7 +192,17 @@ export const useUpdateEtatSortie = () => {
       travaux_a_faire?: boolean;
       description_travaux?: string | null;
       signature_locataire?: string | null;
+      signature_locataire_nom?: string | null;
+      signature_locataire_lieu?: string | null;
+      signature_locataire_lu_approuve?: boolean | null;
+      signature_locataire_photo_identite?: string | null;
+      signature_locataire_date?: string | null;
       signature_proprietaire_agent?: string | null;
+      signature_proprietaire_agent_nom?: string | null;
+      signature_proprietaire_agent_lieu?: string | null;
+      signature_proprietaire_agent_lu_approuve?: boolean | null;
+      signature_proprietaire_agent_photo_identite?: string | null;
+      signature_proprietaire_agent_date?: string | null;
       employe_id?: string | null;
     }) => {
       const { id, ...rest } = updates;
