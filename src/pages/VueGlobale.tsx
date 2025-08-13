@@ -9,7 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Calendar, MapPin, User, Building2, Clock, Loader2, ChevronLeft, ChevronRight, Search, Download, Printer, Mail, Lock, FileText, LogIn, LogOut } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar, MapPin, User, Building2, Clock, Loader2, ChevronLeft, ChevronRight, Search, Download, Printer, Mail, Lock, FileText, LogIn, LogOut, Filter, X } from 'lucide-react';
 import EtatDesLieuxViewer from '@/components/EtatDesLieuxViewer';
 import EtatDesLieuxPrintable from '@/components/EtatDesLieuxPrintable';
 import { supabase } from '@/lib/supabase';
@@ -27,6 +29,16 @@ const VueGlobale = () => {
   const [selectedEtatId, setSelectedEtatId] = useState<string | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const itemsPerPage = 10;
+
+  // États pour les filtres
+  const [filters, setFilters] = useState({
+    typeEtatDesLieux: 'all', // 'all', 'entree', 'sortie'
+    typeBien: 'all', // 'all' ou un des types de bien
+    statut: 'all', // 'all', 'en_cours', 'termine', 'avec_travaux'
+    employe: 'all', // 'all' ou un ID d'employé
+    periode: 'all' // 'all', 'cette_semaine', 'ce_mois', 'ce_trimestre'
+  });
+  const [showFilters, setShowFilters] = useState(false);
 
   const getTypeBienLabel = (typeBien: string) => {
     const labels: Record<string, string> = {
@@ -51,6 +63,26 @@ const VueGlobale = () => {
     };
   }, [employes]);
 
+  // Fonctions utilitaires pour les filtres
+  const isWithinPeriod = (date: string, period: string) => {
+    const now = new Date();
+    const itemDate = new Date(date);
+    
+    switch (period) {
+      case 'cette_semaine':
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        return itemDate >= weekAgo;
+      case 'ce_mois':
+        const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
+        return itemDate >= monthAgo;
+      case 'ce_trimestre':
+        const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+        return itemDate >= quarterStart;
+      default:
+        return true;
+    }
+  };
+
   // Filtrer et trier les états des lieux
   const filteredAndSortedEtatsDesLieux = useMemo(() => {
     if (!etatsDesLieux) return [];
@@ -60,7 +92,7 @@ const VueGlobale = () => {
     // Appliquer le filtre de recherche
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase().trim();
-      filtered = etatsDesLieux.filter((etat) => {
+      filtered = filtered.filter((etat) => {
         const adresse = etat.adresse_bien?.toLowerCase() || '';
         const locataire = etat.locataire_nom?.toLowerCase() || '';
         const typeBien = getTypeBienLabel(etat.type_bien).toLowerCase();
@@ -72,6 +104,49 @@ const VueGlobale = () => {
                employe.includes(searchLower);
       });
     }
+
+    // Appliquer les filtres
+    filtered = filtered.filter((etat) => {
+      // Filtre par type d'état des lieux
+      if (filters.typeEtatDesLieux !== 'all' && etat.type_etat_des_lieux !== filters.typeEtatDesLieux) {
+        return false;
+      }
+
+      // Filtre par type de bien
+      if (filters.typeBien !== 'all' && etat.type_bien !== filters.typeBien) {
+        return false;
+      }
+
+      // Filtre par statut
+      if (filters.statut !== 'all') {
+        switch (filters.statut) {
+          case 'en_cours':
+            if (etat.date_sortie) return false;
+            break;
+          case 'termine':
+            if (!etat.date_sortie) return false;
+            break;
+          case 'avec_travaux':
+            if (!etat.travaux_a_faire) return false;
+            break;
+        }
+      }
+
+      // Filtre par employé
+      if (filters.employe !== 'all' && etat.employe_id !== filters.employe) {
+        return false;
+      }
+
+      // Filtre par période
+      if (filters.periode !== 'all') {
+        const dateToCheck = etat.date_sortie || etat.date_entree || etat.created_at;
+        if (!isWithinPeriod(dateToCheck, filters.periode)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
     
     // Trier du plus récent au plus ancien
     return [...filtered].sort((a, b) => {
@@ -79,7 +154,7 @@ const VueGlobale = () => {
       const dateB = new Date(b.date_sortie || b.date_entree || b.created_at);
       return dateB.getTime() - dateA.getTime();
     });
-  }, [etatsDesLieux, searchTerm, getEmployeLabel]);
+  }, [etatsDesLieux, searchTerm, filters, getEmployeLabel]);
 
   // Calculer la pagination
   const totalPages = Math.ceil(filteredAndSortedEtatsDesLieux.length / itemsPerPage);
@@ -87,10 +162,10 @@ const VueGlobale = () => {
   const endIndex = startIndex + itemsPerPage;
   const currentItems = filteredAndSortedEtatsDesLieux.slice(startIndex, endIndex);
   
-  // Réinitialiser la pagination quand on recherche
+  // Réinitialiser la pagination quand on recherche ou filtre
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, filters]);
 
   const handlePrevPage = () => {
     setCurrentPage(prev => Math.max(prev - 1, 1));
@@ -98,6 +173,24 @@ const VueGlobale = () => {
 
   const handleNextPage = () => {
     setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  };
+
+  const updateFilter = (key: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      typeEtatDesLieux: 'all',
+      typeBien: 'all',
+      statut: 'all',
+      employe: 'all',
+      periode: 'all'
+    });
+  };
+
+  const getActiveFiltersCount = () => {
+    return Object.values(filters).filter(value => value !== 'all').length;
   };
 
   const handleViewEtat = (etatId: string) => {
@@ -340,30 +433,211 @@ const VueGlobale = () => {
         </div>
       </div>
 
-      {/* Barre de recherche */}
-      <div className="relative max-w-md">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search className="h-4 w-4 text-slate-400" />
+      {/* Barre de recherche et filtres */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+          <div className="relative max-w-md flex-grow">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-slate-400" />
+            </div>
+            <Input
+              type="text"
+              placeholder="Rechercher par adresse, locataire, type de bien..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 w-full border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            <Popover open={showFilters} onOpenChange={setShowFilters}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2 relative">
+                  <Filter className="h-4 w-4" />
+                  Filtres
+                  {getActiveFiltersCount() > 0 && (
+                    <Badge variant="secondary" className="ml-1 px-2 py-0.5 text-xs">
+                      {getActiveFiltersCount()}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" align="end">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">Filtres</h4>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={resetFilters}
+                      className="h-auto p-1 text-slate-600 hover:text-slate-900"
+                    >
+                      Réinitialiser
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {/* Filtre Type d'état des lieux */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Type d'état des lieux</label>
+                      <Select value={filters.typeEtatDesLieux} onValueChange={(value) => updateFilter('typeEtatDesLieux', value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tous</SelectItem>
+                          <SelectItem value="entree">Entrée</SelectItem>
+                          <SelectItem value="sortie">Sortie</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Filtre Type de bien */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Type de bien</label>
+                      <Select value={filters.typeBien} onValueChange={(value) => updateFilter('typeBien', value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tous</SelectItem>
+                          <SelectItem value="studio">Studio</SelectItem>
+                          <SelectItem value="t2_t3">T2 - T3</SelectItem>
+                          <SelectItem value="t4_t5">T4 - T5</SelectItem>
+                          <SelectItem value="inventaire_mobilier">Inventaire mobilier</SelectItem>
+                          <SelectItem value="bureau">Bureau</SelectItem>
+                          <SelectItem value="local_commercial">Local commercial</SelectItem>
+                          <SelectItem value="garage_box">Garage / Box</SelectItem>
+                          <SelectItem value="pieces_supplementaires">Pièces supplémentaires</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Filtre Statut */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Statut</label>
+                      <Select value={filters.statut} onValueChange={(value) => updateFilter('statut', value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tous</SelectItem>
+                          <SelectItem value="en_cours">En cours</SelectItem>
+                          <SelectItem value="termine">Terminé</SelectItem>
+                          <SelectItem value="avec_travaux">Avec travaux</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Filtre Employé */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Employé</label>
+                      <Select value={filters.employe} onValueChange={(value) => updateFilter('employe', value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tous</SelectItem>
+                          {employes.map((employe) => (
+                            <SelectItem key={employe.id} value={employe.id}>
+                              {`${employe.prenom ?? ''} ${employe.nom ?? ''}`.trim()}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Filtre Période */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Période</label>
+                      <Select value={filters.periode} onValueChange={(value) => updateFilter('periode', value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes les périodes</SelectItem>
+                          <SelectItem value="cette_semaine">Cette semaine</SelectItem>
+                          <SelectItem value="ce_mois">Ce mois</SelectItem>
+                          <SelectItem value="ce_trimestre">Ce trimestre</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
-        <Input
-          type="text"
-          placeholder="Rechercher par adresse, locataire, type de bien..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 pr-4 py-2 w-full border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-        />
+
+        {/* Filtres actifs */}
+        {getActiveFiltersCount() > 0 && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-sm text-slate-600">Filtres actifs:</span>
+            {filters.typeEtatDesLieux !== 'all' && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Type: {filters.typeEtatDesLieux === 'entree' ? 'Entrée' : 'Sortie'}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => updateFilter('typeEtatDesLieux', 'all')} />
+              </Badge>
+            )}
+            {filters.typeBien !== 'all' && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Bien: {getTypeBienLabel(filters.typeBien)}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => updateFilter('typeBien', 'all')} />
+              </Badge>
+            )}
+            {filters.statut !== 'all' && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Statut: {
+                  filters.statut === 'en_cours' ? 'En cours' :
+                  filters.statut === 'termine' ? 'Terminé' : 'Avec travaux'
+                }
+                <X className="h-3 w-3 cursor-pointer" onClick={() => updateFilter('statut', 'all')} />
+              </Badge>
+            )}
+            {filters.employe !== 'all' && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Employé: {getEmployeLabel(filters.employe)}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => updateFilter('employe', 'all')} />
+              </Badge>
+            )}
+            {filters.periode !== 'all' && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Période: {
+                  filters.periode === 'cette_semaine' ? 'Cette semaine' :
+                  filters.periode === 'ce_mois' ? 'Ce mois' : 'Ce trimestre'
+                }
+                <X className="h-3 w-3 cursor-pointer" onClick={() => updateFilter('periode', 'all')} />
+              </Badge>
+            )}
+            <Button variant="ghost" size="sm" onClick={resetFilters} className="text-slate-600 hover:text-slate-900">
+              Tout effacer
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Liste des états des lieux */}
-      {filteredAndSortedEtatsDesLieux.length === 0 && searchTerm ? (
+      {filteredAndSortedEtatsDesLieux.length === 0 && (searchTerm || getActiveFiltersCount() > 0) ? (
         <Card className="glass-heavy animate-fade-in">
           <CardContent className="p-8 text-center">
             <Search className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             <h3 className="text-xl font-bold gradient-text mb-3">Aucun résultat</h3>
-            <p className="text-slate-600/80 mb-8">Aucun état des lieux ne correspond à votre recherche "{searchTerm}"</p>
-            <Button variant="outline" onClick={() => setSearchTerm('')}>
-              Effacer la recherche
-            </Button>
+            <p className="text-slate-600/80 mb-8">
+              Aucun état des lieux ne correspond à {searchTerm ? `votre recherche "${searchTerm}"` : 'vos filtres'}
+              {searchTerm && getActiveFiltersCount() > 0 ? ' et aux filtres appliqués' : ''}
+            </p>
+            <div className="flex gap-2 justify-center">
+              {searchTerm && (
+                <Button variant="outline" onClick={() => setSearchTerm('')}>
+                  Effacer la recherche
+                </Button>
+              )}
+              {getActiveFiltersCount() > 0 && (
+                <Button variant="outline" onClick={resetFilters}>
+                  Réinitialiser les filtres
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       ) : etatsDesLieux?.length === 0 ? (
