@@ -63,7 +63,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     price: 0,
     limitations: {
       maxBiens: 1,
-      maxEtatsDesLieux: 1,
+      maxEtatsDesLieux: 1, // 1 état des lieux/an
       maxPhotosPerBien: 10,
       supportLevel: 'community'
     }
@@ -74,7 +74,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     price: 9,
     limitations: {
       maxBiens: 5,
-      maxEtatsDesLieux: 5,
+      maxEtatsDesLieux: 5, // 5 états des lieux/mois
       maxPhotosPerBien: 50,
       supportLevel: 'email'
     }
@@ -85,7 +85,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     price: 29,
     limitations: {
       maxBiens: 100,
-      maxEtatsDesLieux: 50,
+      maxEtatsDesLieux: 50, // 50 états des lieux/mois
       maxPhotosPerBien: 200,
       supportLevel: 'priority',
       teamManagement: true

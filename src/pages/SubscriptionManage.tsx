@@ -11,16 +11,23 @@ import {
   Download,
   AlertTriangle,
   CheckCircle,
-  ArrowUpCircle
+  ArrowUpCircle,
+  Star,
+  Users,
+  FileText,
+  Camera,
+  Mail,
+  MessageCircle,
+  Zap
 } from 'lucide-react';
-import { useSubscription } from '@/context/SubscriptionContext';
+import { useSubscription, SUBSCRIPTION_PLANS } from '@/context/SubscriptionContext';
 import { useStripeSubscription } from '@/hooks/useStripe';
 import SubscriptionLimits from '@/components/SubscriptionLimits';
 import { useNavigate } from 'react-router-dom';
 
 const SubscriptionManage = () => {
   const { subscription, currentPlan, isLoading } = useSubscription();
-  const { loading, handleManageSubscription } = useStripeSubscription();
+  const { loading, handleSubscribeToPlan, handleManageSubscription } = useStripeSubscription();
   const navigate = useNavigate();
 
   if (isLoading) {
@@ -55,6 +62,43 @@ const SubscriptionManage = () => {
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
+  };
+
+  const getPlanFeatures = (planId: string) => {
+    const features = {
+      free: [
+        { icon: FileText, text: "1 bien" },
+        { icon: Calendar, text: "1 état des lieux/an" },
+        { icon: Camera, text: "Jusqu'à 10 photos/bien" },
+        { icon: FileText, text: "Rapport PDF simple" },
+        { icon: MessageCircle, text: "Support communautaire" }
+      ],
+      essential: [
+        { icon: FileText, text: "Jusqu'à 5 biens" },
+        { icon: Calendar, text: "5 états des lieux/mois" },
+        { icon: Camera, text: "Jusqu'à 50 photos/bien" },
+        { icon: FileText, text: "Rapports PDF" },
+        { icon: Mail, text: "Support email" }
+      ],
+      pro: [
+        { icon: FileText, text: "Jusqu'à 100 biens" },
+        { icon: Users, text: "Gestion équipe" },
+        { icon: Calendar, text: "50 états des lieux/mois" },
+        { icon: Camera, text: "Jusqu'à 200 photos/bien" },
+        { icon: FileText, text: "Rapports PDF" },
+        { icon: Zap, text: "Support prioritaire" }
+      ]
+    };
+    return features[planId as keyof typeof features] || [];
+  };
+
+  const getPlanDescription = (planId: string) => {
+    const descriptions = {
+      free: "Pour découvrir notre solution.",
+      essential: "Pour les propriétaires et les petites structures.",
+      pro: "Pour les agents et gestionnaires immobiliers."
+    };
+    return descriptions[planId as keyof typeof descriptions] || "";
   };
 
   return (
@@ -139,6 +183,95 @@ const SubscriptionManage = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Plans d'abonnement */}
+      <div>
+        <h2 className="text-2xl font-bold mb-6 text-center">Choisissez votre plan</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {SUBSCRIPTION_PLANS.map((plan) => {
+            const isCurrentPlan = currentPlan?.id === plan.id;
+            const features = getPlanFeatures(plan.id);
+            const isPopular = plan.id === 'pro';
+            
+            return (
+              <Card key={plan.id} className={`relative ${
+                isCurrentPlan 
+                  ? 'ring-2 ring-blue-500 shadow-lg' 
+                  : isPopular
+                    ? 'border-2 border-gradient-to-r border-orange-500 shadow-lg'
+                    : 'glass-card hover:shadow-lg transition-shadow'
+              }`}>
+                {isPopular && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-1">
+                      Le plus populaire
+                    </Badge>
+                  </div>
+                )}
+                
+                {isCurrentPlan && (
+                  <div className="absolute -top-3 right-4">
+                    <Badge className="bg-blue-500 text-white">
+                      <Star className="w-3 h-3 mr-1" />
+                      Plan actuel
+                    </Badge>
+                  </div>
+                )}
+
+                <CardHeader className={`text-center ${isPopular ? 'pb-4' : ''}`}>
+                  <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
+                  <p className="text-slate-600 text-sm mt-1">
+                    {getPlanDescription(plan.id)}
+                  </p>
+                  <div className="mt-4">
+                    <span className="text-4xl font-bold text-slate-900">
+                      {plan.price}€
+                    </span>
+                    <span className="text-slate-600">/mois</span>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-6">
+                  <ul className="space-y-3">
+                    {features.map((feature, index) => {
+                      const IconComponent = feature.icon;
+                      return (
+                        <li key={index} className="flex items-center gap-3">
+                          <IconComponent className="h-4 w-4 text-green-500 shrink-0" />
+                          <span className="text-sm text-slate-700">{feature.text}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  <div className="pt-4">
+                    {isCurrentPlan ? (
+                      <Button disabled className="w-full" variant="outline">
+                        <Crown className="w-4 h-4 mr-2" />
+                        Plan actuel
+                      </Button>
+                    ) : (
+                      <Button 
+                        className={`w-full ${
+                          isPopular 
+                            ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white' 
+                            : plan.id === 'free' 
+                              ? 'bg-slate-600 hover:bg-slate-700 text-white'
+                              : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        }`}
+                        onClick={() => handleSubscribeToPlan(plan.id)}
+                        disabled={loading}
+                      >
+                        {loading ? 'Chargement...' : 'Choisir ce plan'}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Limitations et usage */}
       <Card className="glass-card">
