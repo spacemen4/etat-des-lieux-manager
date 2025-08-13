@@ -136,48 +136,41 @@ const DesktopProgress: React.FC<FormProgressProps> = ({ steps }) => {
     <nav aria-label="Progress" className="hidden md:block progress-horizontal animate-fade-in">
       <div className="glass-light rounded-2xl p-6 backdrop-blur-xl border border-white/20">
         <div className="w-full">
-          <ol className={`grid items-center ${getStepSpacing()}`} style={{ gridTemplateColumns: `repeat(${steps.length}, 1fr)` }}>
+          <ol className={`grid ${getStepSpacing()}`} style={{ gridTemplateColumns: `repeat(${steps.length}, 1fr)` }}>
             {steps.map((step, stepIdx) => (
-              <li 
-                key={step.id} 
-                className="relative flex flex-col items-center animate-slide-up"
-                style={{animationDelay: `${stepIdx * 0.1}s`}}
-              >
-                <div className="flex flex-col items-center w-full">
-                  <div className="relative">
-                    <div className={`relative flex ${getStepSize()} items-center justify-center rounded-full transition-all duration-300 step-interactive micro-bounce ${
-                      step.completed 
-                        ? 'gradient-cool text-white shadow-xl hover:shadow-2xl animate-pulse-soft' 
-                        : step.current 
-                          ? 'gradient-primary text-white shadow-xl ring-4 ring-blue-400/30' 
-                          : 'glass text-slate-600 border border-white/30 hover:glass-heavy'
-                    }`}>
-                      {step.completed ? <Check className={getIconSize()} /> : <span className={`${getTextSize()} font-bold`}>{stepIdx + 1}</span>}
-                    </div>
-                    {stepIdx !== steps.length - 1 && (
-                      <div className={`absolute top-1/2 -translate-y-1/2 h-1 step-connector transition-all duration-500 rounded-full ${
-                        step.completed ? 'gradient-cool shadow-lg' : 'glass border border-white/20'
-                      }`} style={{ 
-                        left: `calc(50% + ${steps.length <= 6 ? '24px' : steps.length <= 8 ? '20px' : '18px'})`,
-                        width: getConnectorWidth()
-                      }} />
-                    )}
-                  </div>
-                  <div className="mt-3 text-center w-full px-1">
-                    <span className={`step-title ${getTextSize()} font-semibold block transition-colors duration-300 leading-tight ${
-                      step.current 
-                        ? 'gradient-text' 
-                        : step.completed 
-                          ? 'text-green-600' 
-                          : 'text-slate-600'
-                    }`} style={{ 
-                      lineHeight: '1.2',
-                      wordBreak: 'break-word',
-                      hyphens: 'auto'
-                    }}>
-                      {step.title}
-                    </span>
-                  </div>
+              <li key={step.id} className="relative text-center">
+                {/* Rond de l'étape */}
+                <div className={`mx-auto flex ${getStepSize()} items-center justify-center rounded-full transition-all duration-300 ${
+                  step.completed 
+                    ? 'bg-green-500 text-white shadow-lg' 
+                    : step.current 
+                      ? 'bg-blue-500 text-white shadow-lg' 
+                      : 'bg-gray-200 text-gray-600 border-2 border-gray-300'
+                }`}>
+                  {step.completed ? <Check className={getIconSize()} /> : <span className={`${getTextSize()} font-bold`}>{stepIdx + 1}</span>}
+                </div>
+                
+                {/* Connecteur vers l'étape suivante */}
+                {stepIdx !== steps.length - 1 && (
+                  <div className={`absolute top-1/2 -translate-y-1/2 h-0.5 ${
+                    step.completed ? 'bg-green-500' : 'bg-gray-300'
+                  }`} style={{ 
+                    left: `calc(50% + ${steps.length <= 6 ? '24px' : steps.length <= 8 ? '20px' : '18px'})`,
+                    width: getConnectorWidth()
+                  }} />
+                )}
+                
+                {/* Titre de l'étape */}
+                <div className="mt-2">
+                  <span className={`${getTextSize()} font-medium block ${
+                    step.current 
+                      ? 'text-blue-600' 
+                      : step.completed 
+                        ? 'text-green-600' 
+                        : 'text-gray-500'
+                  }`}>
+                    {step.title}
+                  </span>
                 </div>
               </li>
             ))}
