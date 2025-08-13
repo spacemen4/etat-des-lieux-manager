@@ -55,15 +55,24 @@ export const createCheckoutSession = async (params: CreateCheckoutSessionParams)
     
     let errorMessage = 'Erreur lors de la création de la session de paiement';
     try {
-      const errorData = await response.json();
-      console.error('📄 Données d\'erreur de l\'API:', errorData);
-      if (errorData.details) {
-        errorMessage += `: ${errorData.details}`;
-      }
-    } catch (parseError) {
-      console.error('❌ Impossible de parser la réponse d\'erreur:', parseError);
       const textError = await response.text();
       console.error('📄 Réponse d\'erreur en texte:', textError);
+      
+      // Try to parse as JSON
+      try {
+        const errorData = JSON.parse(textError);
+        console.error('📄 Données d\'erreur de l\'API:', errorData);
+        if (errorData.details) {
+          errorMessage += `: ${errorData.details}`;
+        }
+      } catch (jsonParseError) {
+        console.error('❌ La réponse n\'est pas du JSON valide');
+        if (textError) {
+          errorMessage += `: ${textError}`;
+        }
+      }
+    } catch (textError) {
+      console.error('❌ Impossible de lire la réponse d\'erreur:', textError);
     }
     
     throw new Error(errorMessage);
