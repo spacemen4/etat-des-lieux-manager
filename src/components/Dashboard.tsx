@@ -309,62 +309,62 @@ const Dashboard = () => {
           </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         <Card className="glass-heavy cursor-pointer hover:shadow-lg transition-shadow" onClick={() => document.getElementById('total-des-biens')?.scrollIntoView({ behavior: 'smooth' })}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium gradient-text">Total des biens</CardTitle>
-            <div className="p-2 rounded-lg bg-gradient-primary">
-              <FileText className="h-4 w-4 text-white" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium gradient-text">Total des biens</CardTitle>
+            <div className="p-1 sm:p-2 rounded-lg bg-gradient-primary">
+              <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold gradient-text">{etatsDesLieux?.length || 0}</div>
-            <p className="text-xs text-muted-foreground/70">
+          <CardContent className="pt-1 sm:pt-3">
+            <div className="text-2xl sm:text-3xl font-bold gradient-text">{etatsDesLieux?.length || 0}</div>
+            <p className="text-xs text-muted-foreground/70 hidden sm:block">
               États des lieux
             </p>
           </CardContent>
         </Card>
 
         <Card className="glass-heavy cursor-pointer hover:shadow-lg transition-shadow" onClick={() => document.getElementById('en-cours')?.scrollIntoView({ behavior: 'smooth' })}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium gradient-text">En cours</CardTitle>
-            <div className="p-2 rounded-lg bg-gradient-warm">
-              <Calendar className="h-4 w-4 text-white" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium gradient-text">En cours</CardTitle>
+            <div className="p-1 sm:p-2 rounded-lg bg-gradient-warm">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-500">{etatsEnCours.length}</div>
-            <p className="text-xs text-muted-foreground/70">
+          <CardContent className="pt-1 sm:pt-3">
+            <div className="text-2xl sm:text-3xl font-bold text-orange-500">{etatsEnCours.length}</div>
+            <p className="text-xs text-muted-foreground/70 hidden sm:block">
               Locations actives
             </p>
           </CardContent>
         </Card>
 
         <Card className="glass-heavy cursor-pointer hover:shadow-lg transition-shadow" onClick={() => document.getElementById('termines')?.scrollIntoView({ behavior: 'smooth' })}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium gradient-text">Terminés</CardTitle>
-            <div className="p-2 rounded-lg bg-gradient-cool">
-              <User className="h-4 w-4 text-white" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium gradient-text">Terminés</CardTitle>
+            <div className="p-1 sm:p-2 rounded-lg bg-gradient-cool">
+              <User className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-500">{etatsTermines.length}</div>
-            <p className="text-xs text-muted-foreground/70">
+          <CardContent className="pt-1 sm:pt-3">
+            <div className="text-2xl sm:text-3xl font-bold text-green-500">{etatsTermines.length}</div>
+            <p className="text-xs text-muted-foreground/70 hidden sm:block">
               États finalisés
             </p>
           </CardContent>
         </Card>
 
         <Card className="glass-heavy cursor-pointer hover:shadow-lg transition-shadow" onClick={() => document.getElementById('rendez-vous')?.scrollIntoView({ behavior: 'smooth' })}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium gradient-text">Rendez-vous</CardTitle>
-            <div className="p-2 rounded-lg bg-gradient-sunset">
-              <Clock className="h-4 w-4 text-white" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium gradient-text">Rendez-vous</CardTitle>
+            <div className="p-1 sm:p-2 rounded-lg bg-gradient-sunset">
+              <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-500">{rendezVousPlanifies.length}</div>
-            <p className="text-xs text-muted-foreground/70">
+          <CardContent className="pt-1 sm:pt-3">
+            <div className="text-2xl sm:text-3xl font-bold text-blue-500">{rendezVousPlanifies.length}</div>
+            <p className="text-xs text-muted-foreground/70 hidden sm:block">
               Rendez-vous planifiés
             </p>
           </CardContent>
