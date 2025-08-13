@@ -1,7 +1,10 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import Stripe from 'stripe';
 
-// Import Stripe avec la clé secrète
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+// Initialize Stripe with the secret key
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2024-06-20',
+});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
