@@ -15,6 +15,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Vérifier que la clé secrète Stripe est configurée
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('STRIPE_SECRET_KEY n\'est pas configurée');
+      return res.status(500).json({ error: 'Configuration Stripe manquante' });
+    }
+
+    // Log des paramètres pour debug
+    console.log('Paramètres de la session:', { priceId, userId, successUrl, cancelUrl });
+
     // Créer une session de checkout Stripe
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -33,9 +42,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     });
 
+    console.log('Session créée avec succès:', session.id);
     return res.status(200).json({ sessionId: session.id });
   } catch (error) {
-    console.error('Erreur lors de la création de la session de checkout:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Erreur détaillée lors de la création de la session de checkout:', error);
+    
+    // Retourner une erreur plus descriptive en mode développement
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      ...(isDevelopment && { details: error.message })
+    });
   }
 }
