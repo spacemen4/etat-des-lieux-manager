@@ -466,7 +466,7 @@ export default function RendezVousCalendar({ userUuid }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Formulaire */}
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div>
               <RequiredLabel 
                 htmlFor="date" 
@@ -475,41 +475,45 @@ export default function RendezVousCalendar({ userUuid }) {
               >
                 Date du rendez-vous
               </RequiredLabel>
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={(newDate) => {
-                  setDate(newDate);
-                  if (validationErrors.date && newDate) {
-                    setValidationErrors(prev => ({ ...prev, date: false }));
-                  }
-                }}
-                className={`rounded-md border mt-1 ${validationErrors.date ? 'border-red-500' : ''}`}
-              />
+              <div className="flex justify-center mt-1">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(newDate) => {
+                    setDate(newDate);
+                    if (validationErrors.date && newDate) {
+                      setValidationErrors(prev => ({ ...prev, date: false }));
+                    }
+                  }}
+                  className={`rounded-md border ${validationErrors.date ? 'border-red-500' : ''}`}
+                />
+              </div>
             </div>
             
-            <div>
-              <RequiredLabel 
-                htmlFor="heure" 
-                isRequired={true} 
-                hasError={validationErrors.heure}
-              >
-                Heure du rendez-vous
-              </RequiredLabel>
-              <Input
-                id="heure"
-                type="time"
-                value={heure}
-                onChange={(e) => {
-                  setHeure(e.target.value);
-                  if (validationErrors.heure && e.target.value) {
-                    setValidationErrors(prev => ({ ...prev, heure: false }));
-                  }
-                }}
-                className={`mt-1 ${validationErrors.heure ? 'border-red-500 focus:border-red-500' : ''}`}
-              />
+            <div className="space-y-4">
+              <div>
+                <RequiredLabel 
+                  htmlFor="heure" 
+                  isRequired={true} 
+                  hasError={validationErrors.heure}
+                >
+                  Heure du rendez-vous
+                </RequiredLabel>
+                <Input
+                  id="heure"
+                  type="time"
+                  value={heure}
+                  onChange={(e) => {
+                    setHeure(e.target.value);
+                    if (validationErrors.heure && e.target.value) {
+                      setValidationErrors(prev => ({ ...prev, heure: false }));
+                    }
+                  }}
+                  className={`mt-1 ${validationErrors.heure ? 'border-red-500 focus:border-red-500' : ''}`}
+                />
+              </div>
               
-              <div className="mt-2">
+              <div>
                 <Label htmlFor="duree">Durée prévue (optionnel)</Label>
                 <Input
                   id="duree"
