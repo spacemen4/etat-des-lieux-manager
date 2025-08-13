@@ -211,7 +211,7 @@ export const EidasSignatureCanvas: React.FC<EidasSignatureCanvasProps> = ({
               size="sm"
               onClick={clearCanvas}
               disabled={isCanvasEmpty}
-              className="glass border-white/30 text-white hover:bg-white/20 hover:text-white transition-all duration-300"
+              className="bg-red-500/90 border-red-400 text-white hover:bg-red-600 hover:border-red-500 disabled:bg-gray-500/50 disabled:border-gray-400/50 disabled:text-gray-300 transition-all duration-300 shadow-lg"
             >
               <RotateCcw className="h-4 w-4 mr-2" />
               Effacer

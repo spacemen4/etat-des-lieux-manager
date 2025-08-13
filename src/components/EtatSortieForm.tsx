@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ArrowRight, Loader2, AlertTriangle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import FormProgress from '@/components/FormProgress';
 import { useEtatDesLieuxById, useUpdateEtatSortie } from '@/hooks/useEtatDesLieux';
@@ -235,15 +235,38 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
                 )}
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="validation"
-                  checked={isValidationChecked}
-                  onCheckedChange={handleCheckboxChange}
-                />
-                <Label htmlFor="validation">
-                  Je confirme que toutes les informations sont correctes et que l'état des lieux peut être {initialEtatDesLieux?.date_sortie ? 'mis à jour' : 'finalisé'}
-                </Label>
+              {/* Alerte d'information pour la finalisation */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-blue-900">Finalisation de l'état des lieux</h4>
+                    <div className="text-sm text-blue-800 space-y-1">
+                      <p>• Vérifiez que tous les champs obligatoires sont remplis</p>
+                      <p>• Assurez-vous que les signatures sont complètes</p>
+                      <p>• Confirmez l'exactitude de toutes les informations</p>
+                      <p className="font-medium">La confirmation ci-dessous est obligatoire pour finaliser.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex-shrink-0 mt-0.5">
+                  <Checkbox
+                    id="validation"
+                    checked={isValidationChecked}
+                    onCheckedChange={handleCheckboxChange}
+                    className="data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                  />
+                </div>
+                <div className="flex-1">
+                  <Label htmlFor="validation" className="text-amber-900 font-medium cursor-pointer">
+                    <span className="text-red-600 font-bold">* </span>
+                    Je confirme que toutes les informations sont correctes et que l'état des lieux peut être {initialEtatDesLieux?.date_sortie ? 'mis à jour' : 'finalisé'}
+                  </Label>
+                  <p className="text-xs text-amber-700 mt-1">Cette confirmation est obligatoire pour procéder à la finalisation.</p>
+                </div>
               </div>
 
               <div className="space-y-4 border-t pt-4">
@@ -299,10 +322,30 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
                   />
                 </div>
               </div>
+              
+              {/* Alerte d'erreur si validation non cochée */}
+              {!isValidationChecked && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-5 w-5 text-red-600 shrink-0" />
+                    <div>
+                      <p className="font-medium text-red-900">Action requise</p>
+                      <p className="text-sm text-red-800">
+                        Vous devez confirmer que toutes les informations sont correctes avant de pouvoir finaliser l'état des lieux.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <Button
                 onClick={handleFinalize}
                 disabled={!isValidationChecked || updateEtatSortieMutation.isPending}
-                className="w-full"
+                className={`w-full transition-all duration-200 ${
+                  !isValidationChecked 
+                    ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed' 
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
               >
                 {updateEtatSortieMutation.isPending
                   ? (initialEtatDesLieux?.date_sortie ? 'Sauvegarde...' : 'Finalisation...')
