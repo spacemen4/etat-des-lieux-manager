@@ -320,7 +320,8 @@ export const EidasSignatureCanvas: React.FC<EidasSignatureCanvasProps> = ({
             )}
           </div>
           <p className="text-xs text-slate-500">
-            Format accepté : JPG, PNG. Taille max : 5 MB
+            Format accepté : JPG, PNG. Taille max : 5 MB<br />
+            <strong>Conseil :</strong> Nous vous conseillons de prendre une photo de la personne tenant sa carte d'identité à la main
           </p>
         </div>
 

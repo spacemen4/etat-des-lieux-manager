@@ -6,11 +6,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, CheckCircle, ArrowRight, Loader2, AlertTriangle, Info } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ArrowRight, Loader2, AlertTriangle, Info, FileCheck, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import FormProgress from '@/components/FormProgress';
 import { useEtatDesLieuxById, useUpdateEtatSortie } from '@/hooks/useEtatDesLieux';
-import type { EidasEtatDesLieux, EidasEtatDesLieuxUpdate } from '@/types/eidasEtatDesLieux';
+import type { EidasEtatDesLieux } from '@/types/eidasEtatDesLieux';
 import { useUser } from '@/context/UserContext';
 
 // Interface pour les étapes qui supportent la sauvegarde automatique
@@ -43,6 +44,7 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
   const [travauxAFaire, setTravauxAFaire] = useState(false);
   const [descriptionTravaux, setDescriptionTravaux] = useState('');
   const [isSavingStep, setIsSavingStep] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
   // Références pour les étapes qui supportent la sauvegarde automatique
   const stepRefs = useRef<(StepRef | null)[]>([]);
@@ -119,14 +121,11 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
       return;
     }
 
-    // Seconde confirmation avant finalisation
-    const confirmMessage = initialEtatDesLieux?.date_sortie 
-      ? 'Vous êtes sur le point de sauvegarder les modifications de cet état des lieux. Cette action est définitive et vous ne pourrez plus modifier ce document après confirmation. Êtes-vous certain de vouloir procéder ?'
-      : 'Vous êtes sur le point de finaliser cet état des lieux. Une fois finalisé, vous ne pourrez plus le modifier. Êtes-vous certain de vouloir procéder à la finalisation ?';
-    
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+    // Ouvrir le modal de confirmation
+    setShowConfirmDialog(true);
+  };
+
+  const confirmFinalization = async () => {
 
     let dateSortieToUpdate: string | null = new Date().toISOString().split('T')[0];
     let toastMessage = 'État des lieux finalisé avec succès';
@@ -144,6 +143,8 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
     // This simplified logic assumes date_sortie is either new or preserved.
     // A more robust solution would involve GeneralStep communicating its date_sortie value.
 
+    setShowConfirmDialog(false);
+    
     updateEtatSortieMutation.mutate(
       { 
         id: etatId, 
@@ -444,6 +445,68 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
           </Button>
         ) : null}
       </div>
+
+      {/* Modal de confirmation personnalisé */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-xl font-bold text-slate-900">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <FileCheck className="w-5 h-5 text-amber-600" />
+              </div>
+              {initialEtatDesLieux?.date_sortie ? 'Confirmer la sauvegarde' : 'Finaliser l\'état des lieux'}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogDescription className="text-slate-600 leading-relaxed">
+            {initialEtatDesLieux?.date_sortie 
+              ? 'Vous êtes sur le point de sauvegarder les modifications de cet état des lieux. Cette action est définitive et vous ne pourrez plus modifier ce document après confirmation.'
+              : 'Vous êtes sur le point de finaliser cet état des lieux. Une fois finalisé, vous ne pourrez plus le modifier.'
+            }
+          </DialogDescription>
+          
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 my-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+              <div className="text-sm text-amber-800">
+                <p className="font-medium mb-2">Êtes-vous certain de vouloir procéder ?</p>
+                <ul className="space-y-1 text-xs">
+                  <li>• Cette action est irréversible</li>
+                  <li>• Vérifiez que toutes les informations sont correctes</li>
+                  <li>• Les signatures doivent être complètes</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+              className="flex items-center gap-2"
+            >
+              <X className="w-4 h-4" />
+              Annuler
+            </Button>
+            <Button
+              onClick={confirmFinalization}
+              disabled={updateEtatSortieMutation.isPending}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+            >
+              {updateEtatSortieMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {initialEtatDesLieux?.date_sortie ? 'Sauvegarde...' : 'Finalisation...'}
+                </>
+              ) : (
+                <>
+                  <FileCheck className="w-4 h-4" />
+                  {initialEtatDesLieux?.date_sortie ? 'Sauvegarder' : 'Finaliser'}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
