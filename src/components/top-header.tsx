@@ -40,10 +40,10 @@ export const Header: React.FC = () => {
             <div className="min-w-0">
               <h1 className="font-bold text-base md:text-xl text-gray-900 truncate leading-tight">
                 <span className="md:hidden">EtatDeLux</span>
-                <span className="hidden md:inline">État des Lieux</span>
+                <span className="hidden md:inline">EtatDeLux</span>
               </h1>
               <p className="text-xs text-gray-500 mt-0.5 hidden md:block">
-                Gestion simplifiée
+                L'état des Lieux dématérialisé et simplifiée
               </p>
             </div>
           </div>
