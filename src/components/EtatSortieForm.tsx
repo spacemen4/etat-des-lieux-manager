@@ -119,6 +119,15 @@ const EtatSortieForm: React.FC<EtatSortieFormProps> = ({ etatId }) => {
       return;
     }
 
+    // Seconde confirmation avant finalisation
+    const confirmMessage = initialEtatDesLieux?.date_sortie 
+      ? 'Vous êtes sur le point de sauvegarder les modifications de cet état des lieux. Cette action est définitive et vous ne pourrez plus modifier ce document après confirmation. Êtes-vous certain de vouloir procéder ?'
+      : 'Vous êtes sur le point de finaliser cet état des lieux. Une fois finalisé, vous ne pourrez plus le modifier. Êtes-vous certain de vouloir procéder à la finalisation ?';
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
     let dateSortieToUpdate: string | null = new Date().toISOString().split('T')[0];
     let toastMessage = 'État des lieux finalisé avec succès';
 
