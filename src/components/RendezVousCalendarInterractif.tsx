@@ -261,10 +261,10 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
     }
   };
 
-  const openCreateModal = (date: Date) => {
+  const openCreateModal = (date: Date, time?: string) => {
     setEditForm({
       date: date.toISOString().split('T')[0],
-      heure: '09:00',
+      heure: time || '09:00',
       duree: '',
       description: '',
       adresse: '',
@@ -429,6 +429,207 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
     );
   };
 
+  const renderWeekView = () => {
+    // Calculer le début et la fin de la semaine
+    const startOfWeek = new Date(currentDate);
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Ajuster pour commencer lundi
+    startOfWeek.setDate(diff);
+    
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + i);
+      weekDays.push(date);
+    }
+
+    return (
+      <div className="overflow-hidden">
+        {/* En-têtes des jours de la semaine */}
+        <div className="grid grid-cols-7 gradient-primary border-b border-white/20">
+          {weekDays.map((date, index) => (
+            <div 
+              key={index} 
+              className={`p-3 sm:p-4 text-center font-bold text-white text-xs sm:text-sm backdrop-blur-sm animate-slide-in-left`}
+              style={{animationDelay: `${index * 0.1}s`}}
+            >
+              <div className="uppercase tracking-wider">{daysOfWeek[index]}</div>
+              <div className="text-lg mt-1">{date.getDate()}</div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Grille des jours de la semaine */}
+        <div className="grid grid-cols-7 backdrop-blur-sm min-h-96">
+          {weekDays.map((date, index) => {
+            const dayRendezVous = getRendezVousForDate(date);
+            const isToday = date.toDateString() === new Date().toDateString();
+            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+            
+            return (
+              <div
+                key={index}
+                className={`p-2 sm:p-3 border-r border-b border-white/10 cursor-pointer transition-all duration-300 hover:glass-light hover:backdrop-blur-lg group card-hover-subtle animate-fade-in ${
+                  isWeekend 
+                    ? 'bg-slate-50/10' 
+                    : 'bg-white/5 hover:bg-white/10'
+                } ${isToday ? 'glass-heavy ring-2 ring-blue-400/50 bg-blue-50/20' : ''}`}
+                onClick={() => openCreateModal(date)}
+                style={{animationDelay: `${index * 0.02}s`}}
+              >
+                <div className="space-y-2">
+                  {dayRendezVous.map((rdv, rdvIndex) => (
+                    <div
+                      key={rdv.id}
+                      className={`text-xs px-2 sm:px-3 py-2 sm:py-2 rounded-lg text-white cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg glass-card backdrop-blur-md border border-white/20 animate-slide-up ${getStatutColor(rdv.statut || 'planifie')}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditModal(rdv);
+                      }}
+                      style={{animationDelay: `${(index * 0.02) + (rdvIndex * 0.1)}s`}}
+                    >
+                      <div className="font-semibold">{rdv.heure}</div>
+                      <div className="text-xs opacity-90 mt-1">{getTypeEtatLabel(rdv.type_etat_des_lieux || '')}</div>
+                      <div className="text-xs opacity-80 truncate">{rdv.nom_contact}</div>
+                    </div>
+                  ))}
+                  
+                  {dayRendezVous.length === 0 && (
+                    <div className="text-xs text-slate-500/60 opacity-0 group-hover:opacity-80 transition-all duration-300 italic text-center py-4">
+                      Cliquer pour ajouter
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderDayView = () => {
+    const dayRendezVous = getRendezVousForDate(currentDate);
+    const isToday = currentDate.toDateString() === new Date().toDateString();
+    
+    // Créer des créneaux horaires de 30 minutes de 8h à 20h
+    const timeSlots = [];
+    for (let hour = 8; hour < 20; hour++) {
+      timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
+      timeSlots.push(`${hour.toString().padStart(2, '0')}:30`);
+    }
+
+    return (
+      <div className="overflow-hidden">
+        {/* En-tête du jour */}
+        <div className="gradient-primary border-b border-white/20 p-4 text-center">
+          <div className="text-white">
+            <div className="text-xs sm:text-sm uppercase tracking-wider opacity-80">
+              {currentDate.toLocaleDateString('fr-FR', { weekday: 'long' })}
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold mt-1">
+              {currentDate.getDate()}
+            </div>
+            <div className="text-sm opacity-90">
+              {currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+            </div>
+          </div>
+        </div>
+        
+        {/* Vue planning du jour */}
+        <div className="backdrop-blur-sm max-h-96 overflow-y-auto">
+          <div className="divide-y divide-white/10">
+            {timeSlots.map((timeSlot, index) => {
+              // Trouver les RDV qui correspondent à ce créneau
+              const slotRendezVous = dayRendezVous.filter(rdv => rdv.heure === timeSlot);
+              
+              return (
+                <div
+                  key={timeSlot}
+                  className={`flex transition-all duration-300 hover:glass-light group animate-fade-in ${
+                    slotRendezVous.length > 0 ? 'min-h-16' : 'min-h-12'
+                  }`}
+                  style={{animationDelay: `${index * 0.02}s`}}
+                >
+                  {/* Colonne heure */}
+                  <div className="w-16 sm:w-20 flex-shrink-0 p-3 text-xs sm:text-sm text-slate-600 font-medium border-r border-white/10">
+                    {timeSlot}
+                  </div>
+                  
+                  {/* Colonne contenu */}
+                  <div className="flex-1 p-2 sm:p-3 cursor-pointer" onClick={() => {
+                    // Créer un nouveau RDV à cette heure
+                    openCreateModal(currentDate, timeSlot);
+                  }}>
+                    {slotRendezVous.length > 0 ? (
+                      <div className="space-y-2">
+                        {slotRendezVous.map((rdv, rdvIndex) => (
+                          <div
+                            key={rdv.id}
+                            className={`p-3 sm:p-4 rounded-lg text-white cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg glass-card backdrop-blur-md border border-white/20 animate-slide-up ${getStatutColor(rdv.statut || 'planifie')}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditModal(rdv);
+                            }}
+                            style={{animationDelay: `${(index * 0.02) + (rdvIndex * 0.1)}s`}}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <span className="font-bold text-sm">{rdv.heure}</span>
+                                  {rdv.duree && (
+                                    <span className="text-xs opacity-80">({rdv.duree})</span>
+                                  )}
+                                  <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
+                                    {getTypeEtatLabel(rdv.type_etat_des_lieux || '')}
+                                  </span>
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="font-semibold">{rdv.nom_contact}</div>
+                                  <div className="text-xs opacity-90">{rdv.adresse}, {rdv.ville}</div>
+                                  {rdv.telephone_contact && (
+                                    <div className="text-xs opacity-80">{rdv.telephone_contact}</div>
+                                  )}
+                                  {rdv.description && (
+                                    <div className="text-xs opacity-80 mt-2 italic">{rdv.description}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-500/60 opacity-0 group-hover:opacity-80 transition-all duration-300 italic py-2">
+                        Cliquer pour ajouter un rendez-vous
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Résumé du jour */}
+          {dayRendezVous.length > 0 && (
+            <div className="p-4 border-t border-white/10 glass-light">
+              <div className="text-center">
+                <div className="text-sm font-semibold gradient-text">
+                  {dayRendezVous.length} rendez-vous ce jour
+                </div>
+                <div className="text-xs text-slate-600 mt-1">
+                  {dayRendezVous.filter(rdv => rdv.statut === 'planifie').length} planifiés • 
+                  {dayRendezVous.filter(rdv => rdv.statut === 'realise').length} réalisés • 
+                  {dayRendezVous.filter(rdv => rdv.statut === 'annule').length} annulés
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen animate-fade-in">
       <div className="max-w-7xl mx-auto p-3 sm:p-6 space-y-6">
@@ -556,7 +757,9 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
 
         {/* Calendar Grid avec glassmorphism */}
         <div className="glass-heavy rounded-2xl shadow-2xl border border-white/20 overflow-hidden backdrop-blur-xl">
-          {renderMonthView()}
+          {viewMode === 'month' && renderMonthView()}
+          {viewMode === 'week' && renderWeekView()}
+          {viewMode === 'day' && renderDayView()}
         </div>
       </div>
 
