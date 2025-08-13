@@ -2,6 +2,7 @@ import React from 'react';
 import { AuthProvider, useAuth } from './auth';
 import { UserProvider } from './context/UserContext';
 import { EmployeProvider } from './context/EmployeContext';
+import { SubscriptionProvider } from './context/SubscriptionContext';
 import { LoginForm, SignUpForm, UserProfile, TeamManagement } from './auth';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from './components/layout';
@@ -19,10 +20,12 @@ const App = () => {
   return (
     <AuthProvider>
       <UserProvider>
-        <Router>
-          <AuthRoutes />
-        </Router>
-        <Toaster position="top-center" />
+        <SubscriptionProvider>
+          <Router>
+            <AuthRoutes />
+          </Router>
+          <Toaster position="top-center" />
+        </SubscriptionProvider>
       </UserProvider>
     </AuthProvider>
   );
