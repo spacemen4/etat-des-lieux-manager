@@ -312,7 +312,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         <Card className="glass-heavy cursor-pointer hover:shadow-lg transition-shadow" onClick={() => document.getElementById('total-des-biens')?.scrollIntoView({ behavior: 'smooth' })}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium gradient-text">Total des biens</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium gradient-text">Tous les biens</CardTitle>
             <div className="p-1 sm:p-2 rounded-lg bg-gradient-primary">
               <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
             </div>
@@ -539,7 +539,7 @@ const Dashboard = () => {
       <div id="total-des-biens">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-2">
           <h3 className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text">
-            Total des biens
+            Tous les biens
           </h3>
         </div>
 
