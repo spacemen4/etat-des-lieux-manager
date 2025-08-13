@@ -30,20 +30,39 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-3 min-w-0">
           {/* Mobile menu button is now in Sidebar component */}
           <div className="flex items-center gap-3">
+            {/* Logo mobile */}
             <div className="relative md:hidden">
-              <img
-                src="/android-chrome-192x192.png"
-                alt="Logo"
-                className="w-8 h-8 rounded-lg shadow-sm"
-              />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-0.5 shadow-lg">
+                <div className="w-full h-full rounded-lg bg-white flex items-center justify-center">
+                  <img
+                    src="/android-chrome-192x192.png"
+                    alt="Logo"
+                    className="w-7 h-7 rounded-md"
+                  />
+                </div>
+              </div>
             </div>
+            
+            {/* Logo desktop */}
+            <div className="relative hidden md:block">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-0.5 shadow-lg">
+                <div className="w-full h-full rounded-lg bg-white flex items-center justify-center">
+                  <img
+                    src="/android-chrome-192x192.png"
+                    alt="Logo EtatDeLux"
+                    className="w-8 h-8 rounded-md"
+                  />
+                </div>
+              </div>
+            </div>
+            
             <div className="min-w-0">
-              <h1 className="font-bold text-base md:text-xl text-gray-900 truncate leading-tight">
+              <h1 className="font-bold text-lg md:text-2xl gradient-text truncate leading-tight tracking-tight">
                 <span className="md:hidden">EtatDeLux</span>
                 <span className="hidden md:inline">EtatDeLux</span>
               </h1>
-              <p className="text-xs text-gray-500 mt-0.5 hidden md:block">
-                L'état des Lieux dématérialisé et simplifiée
+              <p className="text-xs text-slate-600/80 mt-0.5 hidden md:block font-medium">
+                L'état des lieux dématérialisé et simplifié
               </p>
             </div>
           </div>
