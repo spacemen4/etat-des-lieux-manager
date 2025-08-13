@@ -541,16 +541,6 @@ const Dashboard = () => {
           <h3 className="text-xl font-semibold text-slate-900">
             Total des biens
           </h3>
-          {etatsDesLieux && etatsDesLieux.length > 2 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAllBiens(!showAllBiens)}
-              className="w-full sm:w-auto"
-            >
-              {showAllBiens ? 'Voir moins' : `+Voir plus (${etatsDesLieux.length - 2})`}
-            </Button>
-          )}
         </div>
 
         {etatsDesLieux?.length === 0 ? (
@@ -735,6 +725,18 @@ const Dashboard = () => {
               </Card>
             ))}
           </div>
+          {etatsDesLieux && etatsDesLieux.length > 2 && (
+            <div className="flex justify-center mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAllBiens(!showAllBiens)}
+                className="w-auto"
+              >
+                {showAllBiens ? 'Voir moins' : `+Voir plus (${etatsDesLieux.length - 2})`}
+              </Button>
+            </div>
+          )}
         )}
       </div>
 
@@ -745,16 +747,6 @@ const Dashboard = () => {
             <h3 className="text-xl font-semibold text-slate-900">
               États des lieux terminés
             </h3>
-            {etatsTermines.length > 2 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAllTermines(!showAllTermines)}
-                className="w-full sm:w-auto"
-              >
-                {showAllTermines ? 'Voir moins' : `+Voir plus (${etatsTermines.length - 2})`}
-              </Button>
-            )}
           </div>
           <div className="grid gap-4">
             {(showAllTermines ? etatsTermines : etatsTermines.slice(0, 2)).map((etat, index) => (
@@ -887,6 +879,18 @@ const Dashboard = () => {
               </Card>
             ))}
           </div>
+          {etatsTermines.length > 2 && (
+            <div className="flex justify-center mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAllTermines(!showAllTermines)}
+                className="w-auto"
+              >
+                {showAllTermines ? 'Voir moins' : `+Voir plus (${etatsTermines.length - 2})`}
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
