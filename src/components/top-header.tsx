@@ -31,7 +31,7 @@ export const Header: React.FC = () => {
           {/* Mobile menu button is now in Sidebar component */}
           <div className="flex items-center gap-3">
             {/* Logo mobile */}
-            <div className="relative md:hidden">
+            <div className="relative md:hidden ml-12">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-0.5 shadow-lg">
                 <div className="w-full h-full rounded-lg bg-white flex items-center justify-center">
                   <img
