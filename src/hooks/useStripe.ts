@@ -11,18 +11,23 @@ export const useStripeSubscription = () => {
   const { subscription, upgradeSubscription } = useSubscription();
 
   const handleSubscribeToPlan = async (planId: string) => {
+    console.log('🚀 handleSubscribeToPlan appelé avec planId:', planId);
+    console.log('🔑 userUuid:', userUuid);
+    
     if (!userUuid) {
+      console.error('❌ Pas d\'utilisateur connecté');
       toast.error('Vous devez être connecté pour vous abonner');
       return;
     }
 
     if (planId === 'free') {
+      console.log('📋 Activation du plan gratuit');
       try {
         await upgradeSubscription('free');
         toast.success('Plan gratuit activé !');
         return;
       } catch (error) {
-        console.error('Erreur lors de l\'activation du plan gratuit:', error);
+        console.error('❌ Erreur lors de l\'activation du plan gratuit:', error);
         toast.error('Erreur lors de l\'activation du plan gratuit');
         return;
       }
@@ -31,33 +36,48 @@ export const useStripeSubscription = () => {
     setLoading(true);
     
     try {
+      console.log('💳 Initialisation de Stripe...');
       const stripe = await stripePromise;
       if (!stripe) {
         throw new Error('Stripe n\'est pas disponible');
       }
+      console.log('✅ Stripe initialisé');
 
       // Obtenir l'ID de prix Stripe correspondant
       const priceId = STRIPE_PRICE_IDS[planId as keyof typeof STRIPE_PRICE_IDS];
+      console.log('💰 Price ID récupéré:', priceId);
+      console.log('📊 STRIPE_PRICE_IDS disponibles:', STRIPE_PRICE_IDS);
+      
       if (!priceId) {
+        console.error('❌ Plan non trouvé pour:', planId);
         throw new Error('Plan non trouvé');
       }
 
+      console.log('🔄 Création de la session de checkout...');
+      console.log('📤 Paramètres envoyés:', { priceId, userId: userUuid });
+      
       // Créer une session de checkout
       const { sessionId } = await createCheckoutSession({
         priceId,
         userId: userUuid
       });
 
+      console.log('✅ Session créée avec ID:', sessionId);
+
       // Rediriger vers Stripe Checkout
+      console.log('🔄 Redirection vers Stripe Checkout...');
       const { error } = await stripe.redirectToCheckout({
         sessionId
       });
 
       if (error) {
+        console.error('❌ Erreur lors de la redirection:', error);
         throw error;
       }
     } catch (error) {
-      console.error('Erreur lors de la création de la session de paiement:', error);
+      console.error('❌ Erreur détaillée lors de la création de la session de paiement:', error);
+      console.error('📊 Type d\'erreur:', typeof error);
+      console.error('📊 Message d\'erreur:', error instanceof Error ? error.message : 'Erreur inconnue');
       toast.error('Erreur lors du processus de paiement');
     } finally {
       setLoading(false);

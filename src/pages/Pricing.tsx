@@ -1,15 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Star, Users, Building, Camera, FileText, Mail, MessageSquare, Zap } from 'lucide-react';
-import { useUser } from '@/context/UserContext';
+import { Check, Star, Users, Building, Mail, Zap } from 'lucide-react';
 import { useSubscription } from '@/context/SubscriptionContext';
 import { useStripeSubscription } from '@/hooks/useStripe';
 
 const Pricing = () => {
-  const { userUuid } = useUser();
-  const { currentPlan, subscription } = useSubscription();
+  const { currentPlan } = useSubscription();
   const { loading, handleSubscribeToPlan } = useStripeSubscription();
 
   const plans = [

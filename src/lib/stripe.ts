@@ -27,24 +27,51 @@ export interface CreateCheckoutSessionParams {
 
 // Fonction pour créer une session de checkout Stripe
 export const createCheckoutSession = async (params: CreateCheckoutSessionParams) => {
+  console.log('🌐 createCheckoutSession appelé avec params:', params);
+  
+  const requestBody = {
+    priceId: params.priceId,
+    userId: params.userId,
+    successUrl: params.successUrl || STRIPE_URLS.success,
+    cancelUrl: params.cancelUrl || STRIPE_URLS.cancel,
+  };
+  
+  console.log('📤 Corps de la requête:', requestBody);
+  console.log('🔗 URL de l\'API:', '/api/stripe/create-checkout-session');
+  
   const response = await fetch('/api/stripe/create-checkout-session', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      priceId: params.priceId,
-      userId: params.userId,
-      successUrl: params.successUrl || STRIPE_URLS.success,
-      cancelUrl: params.cancelUrl || STRIPE_URLS.cancel,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
+  console.log('📥 Statut de la réponse:', response.status);
+  console.log('📥 Headers de la réponse:', response.headers);
+  
   if (!response.ok) {
-    throw new Error('Erreur lors de la création de la session de paiement');
+    console.error('❌ Réponse non OK, statut:', response.status);
+    
+    let errorMessage = 'Erreur lors de la création de la session de paiement';
+    try {
+      const errorData = await response.json();
+      console.error('📄 Données d\'erreur de l\'API:', errorData);
+      if (errorData.details) {
+        errorMessage += `: ${errorData.details}`;
+      }
+    } catch (parseError) {
+      console.error('❌ Impossible de parser la réponse d\'erreur:', parseError);
+      const textError = await response.text();
+      console.error('📄 Réponse d\'erreur en texte:', textError);
+    }
+    
+    throw new Error(errorMessage);
   }
 
-  return response.json();
+  const result = await response.json();
+  console.log('✅ Réponse de l\'API:', result);
+  return result;
 };
 
 // Fonction pour créer un portail de gestion d'abonnement
