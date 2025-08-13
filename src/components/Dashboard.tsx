@@ -568,8 +568,9 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
-            {(showAllBiens ? etatsDesLieux : etatsDesLieux?.slice(0, 2))?.map((etat, index) => (
+          <>
+            <div className="grid gap-4">
+              {(showAllBiens ? etatsDesLieux : etatsDesLieux?.slice(0, 2))?.map((etat, index) => (
               <Card key={etat.id} className="glass-light card-hover cursor-pointer animate-slide-up" style={{animationDelay: `${index * 0.05}s`}} onClick={() => handleViewEtat(etat.id)}>
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
@@ -723,20 +724,21 @@ const Dashboard = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-          {etatsDesLieux && etatsDesLieux.length > 2 && (
-            <div className="flex justify-center mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAllBiens(!showAllBiens)}
-                className="w-auto"
-              >
-                {showAllBiens ? 'Voir moins' : `+Voir plus (${etatsDesLieux.length - 2})`}
-              </Button>
+              ))}
             </div>
-          )}
+            {etatsDesLieux && etatsDesLieux.length > 2 && (
+              <div className="flex justify-center mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAllBiens(!showAllBiens)}
+                  className="w-auto"
+                >
+                  {showAllBiens ? 'Voir moins' : `+Voir plus (${etatsDesLieux.length - 2})`}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
