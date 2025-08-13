@@ -374,7 +374,7 @@ const Dashboard = () => {
       {/* Section Rendez-vous planifiés */}
       {rendezVousPlanifies.length > 0 && (
         <div id="rendez-vous">
-          <h3 className="text-xl font-semibold text-slate-900 mb-6">
+          <h3 className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text mb-6">
             Rendez-vous planifiés
           </h3>
           <div className="grid gap-4">
@@ -448,7 +448,7 @@ const Dashboard = () => {
       {/* Section En cours */}
       {etatsEnCours.length > 0 && (
         <div id="en-cours">
-          <h3 className="text-xl font-semibold text-slate-900 mb-6">
+          <h3 className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text mb-6">
             États des lieux en cours
           </h3>
           <div className="grid gap-4">
@@ -538,7 +538,7 @@ const Dashboard = () => {
 
       <div id="total-des-biens">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-2">
-          <h3 className="text-xl font-semibold text-slate-900">
+          <h3 className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text">
             Total des biens
           </h3>
         </div>
@@ -744,7 +744,7 @@ const Dashboard = () => {
       {etatsTermines.length > 0 && (
         <div id="termines">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-2">
-            <h3 className="text-xl font-semibold text-slate-900">
+            <h3 className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text">
               États des lieux terminés
             </h3>
           </div>
