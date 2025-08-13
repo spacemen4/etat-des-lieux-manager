@@ -118,31 +118,54 @@ const Pricing = () => {
         </div>
 
         {/* Plans de tarification */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 mb-16 mt-12 px-4">
           {plans.map((plan, index) => {
             const IconComponent = plan.icon;
+            const currentPlan = isCurrentPlan(plan.id);
             return (
-              <Card 
-                key={plan.id}
-                className={`relative glass-card backdrop-blur-xl border-2 transition-all duration-300 hover:scale-105 animate-slide-up ${
-                  plan.popular 
-                    ? 'border-blue-400/50 ring-2 ring-blue-400/20 shadow-2xl' 
-                    : 'border-white/20 hover:border-blue-300/30'
-                }`}
-                style={{animationDelay: `${index * 0.1}s`}}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <Badge className="gradient-primary text-white px-4 py-1 text-sm font-semibold">
-                      Le plus populaire
+              <div key={plan.id} className="relative">
+                {/* Badge en haut avec plus d'espace */}
+                {(plan.popular || currentPlan) && (
+                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-20">
+                    <Badge 
+                      className={`px-4 py-2 text-xs sm:text-sm font-semibold shadow-lg whitespace-nowrap ${
+                        currentPlan 
+                          ? 'bg-green-500 hover:bg-green-600 text-white border-green-400' 
+                          : 'gradient-primary text-white border-blue-400'
+                      }`}
+                    >
+                      {currentPlan ? 'Plan actuel' : 'Le plus populaire'}
                     </Badge>
                   </div>
                 )}
                 
-                <CardHeader className="text-center pb-8 pt-8">
+                <Card 
+                  className={`relative glass-card backdrop-blur-xl border-2 transition-all duration-300 hover:scale-105 animate-slide-up mt-4 ${
+                    plan.popular 
+                      ? 'border-blue-400/50 ring-2 ring-blue-400/20 shadow-2xl' 
+                      : currentPlan
+                      ? 'border-green-400/50 ring-2 ring-green-400/20 shadow-xl'
+                      : 'border-white/20 hover:border-blue-300/30'
+                  }`}
+                  style={{animationDelay: `${index * 0.1}s`}}
+                >
+                
+                <CardHeader className="text-center pb-8 pt-10">
                   <div className="mb-4 flex justify-center">
-                    <div className={`p-3 rounded-2xl ${plan.popular ? 'gradient-primary' : 'glass'}`}>
-                      <IconComponent className={`h-8 w-8 ${plan.popular ? 'text-white' : 'text-blue-600'}`} />
+                    <div className={`p-3 rounded-2xl ${
+                      plan.popular 
+                        ? 'gradient-primary' 
+                        : currentPlan 
+                        ? 'bg-green-100 border-2 border-green-200' 
+                        : 'glass'
+                    }`}>
+                      <IconComponent className={`h-8 w-8 ${
+                        plan.popular 
+                          ? 'text-white' 
+                          : currentPlan 
+                          ? 'text-green-600' 
+                          : 'text-blue-600'
+                      }`} />
                     </div>
                   </div>
                   
@@ -203,7 +226,8 @@ const Pricing = () => {
                     </Button>
                   </div>
                 </CardContent>
-              </Card>
+                </Card>
+              </div>
             );
           })}
         </div>
