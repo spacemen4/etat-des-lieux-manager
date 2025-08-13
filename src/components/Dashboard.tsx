@@ -24,6 +24,8 @@ const Dashboard = () => {
   const { employes } = useEmployes();
   const [selectedEtatId, setSelectedEtatId] = useState<string | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [showAllTermines, setShowAllTermines] = useState(false);
+  const [showAllBiens, setShowAllBiens] = useState(false);
 
   const isLoading = isLoadingEtats || isLoadingRdv;
   const error = errorEtats || errorRdv;
@@ -308,7 +310,7 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="glass-heavy">
+        <Card className="glass-heavy cursor-pointer hover:shadow-lg transition-shadow" onClick={() => document.getElementById('total-des-biens')?.scrollIntoView({ behavior: 'smooth' })}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Total des biens</CardTitle>
             <div className="p-2 rounded-lg bg-gradient-primary">
@@ -323,7 +325,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="glass-heavy">
+        <Card className="glass-heavy cursor-pointer hover:shadow-lg transition-shadow" onClick={() => document.getElementById('en-cours')?.scrollIntoView({ behavior: 'smooth' })}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium gradient-text">En cours</CardTitle>
             <div className="p-2 rounded-lg bg-gradient-warm">
@@ -338,7 +340,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="glass-heavy">
+        <Card className="glass-heavy cursor-pointer hover:shadow-lg transition-shadow" onClick={() => document.getElementById('termines')?.scrollIntoView({ behavior: 'smooth' })}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Terminés</CardTitle>
             <div className="p-2 rounded-lg bg-gradient-cool">
@@ -353,7 +355,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="glass-heavy">
+        <Card className="glass-heavy cursor-pointer hover:shadow-lg transition-shadow" onClick={() => document.getElementById('rendez-vous')?.scrollIntoView({ behavior: 'smooth' })}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium gradient-text">Rendez-vous</CardTitle>
             <div className="p-2 rounded-lg bg-gradient-sunset">
@@ -371,7 +373,7 @@ const Dashboard = () => {
 
       {/* Section Rendez-vous planifiés */}
       {rendezVousPlanifies.length > 0 && (
-        <div>
+        <div id="rendez-vous">
           <h3 className="text-xl font-semibold text-slate-900 mb-6">
             Rendez-vous planifiés
           </h3>
@@ -443,16 +445,112 @@ const Dashboard = () => {
         </div>
       )}
 
-      <div>
+      {/* Section En cours */}
+      {etatsEnCours.length > 0 && (
+        <div id="en-cours">
+          <h3 className="text-xl font-semibold text-slate-900 mb-6">
+            États des lieux en cours
+          </h3>
+          <div className="grid gap-4">
+            {etatsEnCours.map((etat, index) => (
+              <Card key={etat.id} className="glass-light card-hover cursor-pointer animate-slide-up" style={{animationDelay: `${index * 0.05}s`}} onClick={() => handleViewEtat(etat.id)}>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                    <div className="space-y-2 flex-grow">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-slate-500" />
+                        <h4 className="font-semibold text-slate-900">
+                          {etat.adresse_bien}
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <User className="h-4 w-4 text-slate-500" />
+                        <span className="text-slate-600">{etat.locataire_nom || 'Non renseigné'}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Building2 className="h-4 w-4 text-slate-500" />
+                        <span className="text-slate-600">{getTypeBienLabel(etat.type_bien)}</span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-sm text-slate-500 pt-2">
+                        {etat.date_entree && (
+                          <span>Entrée: {new Date(etat.date_entree).toLocaleDateString()}</span>
+                        )}
+                      </div>
+                      {etat.employe_id && getEmployeLabel(etat.employe_id) && (
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                          <User className="h-3 w-3" />
+                          <span>Dernière action par {getEmployeLabel(etat.employe_id)}</span>
+                        </div>
+                      )}
+                      {etat.rendez_vous_id && (() => {
+                        const rdvAssocie = rendezVous?.find(rdv => rdv.id === etat.rendez_vous_id);
+                        if (rdvAssocie) {
+                          return (
+                            <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                              <Clock className="h-3 w-3" />
+                              <span>Lié au RDV du {new Date(rdvAssocie.date).toLocaleDateString()}</span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                    <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
+                      <div className="flex gap-2 flex-wrap">
+                        <Badge variant={etat.type_etat_des_lieux === 'entree' ? "default" : "secondary"}>
+                          {etat.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}
+                        </Badge>
+                        <Badge variant="default">En cours</Badge>
+                        {etat.travaux_a_faire && (
+                          <Badge variant="destructive">Travaux</Badge>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 mt-2 w-full sm:w-auto">
+                        <Button 
+                          size="sm" 
+                          asChild
+                          className={etat.type_etat_des_lieux === 'entree' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <a href={`/sortie/${etat.id}`} className="flex items-center justify-center gap-1">
+                            {etat.type_etat_des_lieux === 'entree' ? (
+                              <>
+                                <LogIn className="h-3 w-3" />
+                                Faire l'entrée
+                              </>
+                            ) : (
+                              <>
+                                <LogOut className="h-3 w-3" />
+                                Faire la sortie
+                              </>
+                            )}
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div id="total-des-biens">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-2">
           <h3 className="text-xl font-semibold text-slate-900">
-            États des lieux récents
+            Total des biens
           </h3>
-          <p className="text-sm text-slate-600">
-            {etatsEnCours.length > 0
-              ? "Sélectionnez un bien pour voir le détail ou faire une sortie"
-              : "Aucun bien en cours de location"}
-          </p>
+          {etatsDesLieux && etatsDesLieux.length > 2 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAllBiens(!showAllBiens)}
+              className="w-full sm:w-auto"
+            >
+              {showAllBiens ? 'Voir moins' : `+Voir plus (${etatsDesLieux.length - 2})`}
+            </Button>
+          )}
         </div>
 
         {etatsDesLieux?.length === 0 ? (
@@ -464,13 +562,13 @@ const Dashboard = () => {
               <h3 className="text-xl font-bold gradient-text mb-3 animate-pulse-soft">Aucun état des lieux</h3>
               <p className="text-slate-600/80 mb-8 backdrop-blur-sm">Commencez par créer votre premier état des lieux</p>
               <div className="flex gap-4 justify-center">
-                <Button asChild variant="gradient-aurora" size="sm" className="micro-bounce">
+                <Button asChild variant="primary" size="sm" className="micro-bounce">
                   <a href="/new-etat-des-lieux?type=entree">
                     <LogIn className="h-4 w-4 mr-2" />
                     État d'entrée
                   </a>
                 </Button>
-                <Button asChild variant="gradient-cyberpunk" size="sm" className="micro-bounce">
+                <Button asChild variant="secondary" size="sm" className="micro-bounce">
                   <a href="/new-etat-des-lieux?type=sortie">
                     <LogOut className="h-4 w-4 mr-2" />
                     État de sortie
@@ -481,7 +579,7 @@ const Dashboard = () => {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {etatsDesLieux?.map((etat, index) => (
+            {(showAllBiens ? etatsDesLieux : etatsDesLieux?.slice(0, 2))?.map((etat, index) => (
               <Card key={etat.id} className="glass-light card-hover cursor-pointer animate-slide-up" style={{animationDelay: `${index * 0.05}s`}} onClick={() => handleViewEtat(etat.id)}>
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
@@ -639,6 +737,158 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Section Terminés */}
+      {etatsTermines.length > 0 && (
+        <div id="termines">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-2">
+            <h3 className="text-xl font-semibold text-slate-900">
+              États des lieux terminés
+            </h3>
+            {etatsTermines.length > 2 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAllTermines(!showAllTermines)}
+                className="w-full sm:w-auto"
+              >
+                {showAllTermines ? 'Voir moins' : `+Voir plus (${etatsTermines.length - 2})`}
+              </Button>
+            )}
+          </div>
+          <div className="grid gap-4">
+            {(showAllTermines ? etatsTermines : etatsTermines.slice(0, 2)).map((etat, index) => (
+              <Card key={etat.id} className="glass-light card-hover cursor-pointer animate-slide-up" style={{animationDelay: `${index * 0.05}s`}} onClick={() => handleViewEtat(etat.id)}>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                    <div className="space-y-2 flex-grow">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-slate-500" />
+                        <h4 className="font-semibold text-slate-900">
+                          {etat.adresse_bien}
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <User className="h-4 w-4 text-slate-500" />
+                        <span className="text-slate-600">{etat.locataire_nom || 'Non renseigné'}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Building2 className="h-4 w-4 text-slate-500" />
+                        <span className="text-slate-600">{getTypeBienLabel(etat.type_bien)}</span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-sm text-slate-500 pt-2">
+                        {etat.date_entree && (
+                          <span>Entrée: {new Date(etat.date_entree).toLocaleDateString()}</span>
+                        )}
+                        {etat.date_sortie && (
+                          <span>Sortie: {new Date(etat.date_sortie).toLocaleDateString()}</span>
+                        )}
+                      </div>
+                      {etat.employe_id && getEmployeLabel(etat.employe_id) && (
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                          <User className="h-3 w-3" />
+                          <span>Dernière action par {getEmployeLabel(etat.employe_id)}</span>
+                        </div>
+                      )}
+                      {etat.rendez_vous_id && (() => {
+                        const rdvAssocie = rendezVous?.find(rdv => rdv.id === etat.rendez_vous_id);
+                        if (rdvAssocie) {
+                          return (
+                            <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                              <Clock className="h-3 w-3" />
+                              <span>Lié au RDV du {new Date(rdvAssocie.date).toLocaleDateString()}</span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                    <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
+                      <div className="flex gap-2 flex-wrap">
+                        <Badge variant={etat.type_etat_des_lieux === 'entree' ? "default" : "secondary"}>
+                          {etat.type_etat_des_lieux === 'entree' ? 'Entrée' : 'Sortie'}
+                        </Badge>
+                        <Badge variant="secondary">Terminé</Badge>
+                        {etat.travaux_a_faire && (
+                          <Badge variant="destructive">Travaux</Badge>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 mt-2 w-full sm:w-auto">
+                        <div className="flex flex-col gap-2 w-full">
+                          {etat.signature_locataire && etat.signature_proprietaire_agent ? (
+                            <div className="flex items-center justify-center gap-1 text-slate-500 text-sm py-2">
+                              <Lock className="h-3 w-3" />
+                              <span>Signé et verrouillé</span>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              asChild
+                              variant="outline"
+                              className="border-slate-400 hover:bg-slate-100 text-slate-700"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <a href={`/sortie/${etat.id}`} className="flex items-center justify-center gap-1">
+                                <FileText className="h-3 w-3" />
+                                Modifier
+                              </a>
+                            </Button>
+                          )}
+                          <div className="flex gap-2 w-full">
+                            <Badge 
+                              variant="secondary" 
+                              className="cursor-pointer hover:bg-secondary/80 text-center py-1 px-2 flex-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewEtat(etat.id);
+                              }}
+                            >
+                              Visualiser
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-slate-400 hover:bg-slate-100 text-slate-700 px-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                generatePDF(etat.id);
+                              }}
+                            >
+                              <Download className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-slate-400 hover:bg-slate-100 text-slate-700 px-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePrint(etat.id);
+                              }}
+                            >
+                              <Printer className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-slate-400 hover:bg-slate-100 text-slate-700 px-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEmail(etat.id);
+                              }}
+                            >
+                              <Mail className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       <EtatDesLieuxViewer 
         etatId={selectedEtatId}
