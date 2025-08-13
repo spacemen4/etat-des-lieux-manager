@@ -1,34 +1,61 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useEtatDesLieux } from '@/hooks/useEtatDesLieux';
 import { useUser } from '@/context/UserContext';
 import { useEmployes } from '@/context/EmployeContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, User, Building2, Clock, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Calendar, MapPin, User, Building2, Clock, Loader2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 
 const VueGlobale = () => {
   const { userUuid } = useUser();
   const { data: etatsDesLieux, isLoading, error } = useEtatDesLieux(userUuid);
   const { employes } = useEmployes();
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
   const itemsPerPage = 10;
 
-  // Trier les états des lieux du plus récent au plus ancien
-  const sortedEtatsDesLieux = useMemo(() => {
+  // Filtrer et trier les états des lieux
+  const filteredAndSortedEtatsDesLieux = useMemo(() => {
     if (!etatsDesLieux) return [];
-    return [...etatsDesLieux].sort((a, b) => {
+    
+    let filtered = etatsDesLieux;
+    
+    // Appliquer le filtre de recherche
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim();
+      filtered = etatsDesLieux.filter((etat) => {
+        const adresse = etat.adresse_bien?.toLowerCase() || '';
+        const locataire = etat.locataire_nom?.toLowerCase() || '';
+        const typeBien = getTypeBienLabel(etat.type_bien).toLowerCase();
+        const employe = getEmployeLabel(etat.employe_id)?.toLowerCase() || '';
+        
+        return adresse.includes(searchLower) || 
+               locataire.includes(searchLower) || 
+               typeBien.includes(searchLower) ||
+               employe.includes(searchLower);
+      });
+    }
+    
+    // Trier du plus récent au plus ancien
+    return [...filtered].sort((a, b) => {
       const dateA = new Date(a.date_sortie || a.date_entree || a.created_at);
       const dateB = new Date(b.date_sortie || b.date_entree || b.created_at);
       return dateB.getTime() - dateA.getTime();
     });
-  }, [etatsDesLieux]);
+  }, [etatsDesLieux, searchTerm, employes]);
 
   // Calculer la pagination
-  const totalPages = Math.ceil(sortedEtatsDesLieux.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredAndSortedEtatsDesLieux.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentItems = sortedEtatsDesLieux.slice(startIndex, endIndex);
+  const currentItems = filteredAndSortedEtatsDesLieux.slice(startIndex, endIndex);
+  
+  // Réinitialiser la pagination quand on recherche
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const getTypeBienLabel = (typeBien: string) => {
     const labels: Record<string, string> = {
@@ -99,16 +126,45 @@ const VueGlobale = () => {
         
         {/* Informations de pagination */}
         <div className="text-sm text-slate-600">
-          {sortedEtatsDesLieux.length > 0 && (
+          {filteredAndSortedEtatsDesLieux.length > 0 && (
             <span>
-              {startIndex + 1}-{Math.min(endIndex, sortedEtatsDesLieux.length)} sur {sortedEtatsDesLieux.length} états des lieux
+              {startIndex + 1}-{Math.min(endIndex, filteredAndSortedEtatsDesLieux.length)} sur {filteredAndSortedEtatsDesLieux.length} 
+              {searchTerm ? ' résultats' : ' états des lieux'}
+              {searchTerm && etatsDesLieux && filteredAndSortedEtatsDesLieux.length !== etatsDesLieux.length && (
+                <span className="text-slate-500"> (sur {etatsDesLieux.length} au total)</span>
+              )}
             </span>
           )}
         </div>
       </div>
 
+      {/* Barre de recherche */}
+      <div className="relative max-w-md">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Search className="h-4 w-4 text-slate-400" />
+        </div>
+        <Input
+          type="text"
+          placeholder="Rechercher par adresse, locataire, type de bien..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 pr-4 py-2 w-full border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+        />
+      </div>
+
       {/* Liste des états des lieux */}
-      {sortedEtatsDesLieux.length === 0 ? (
+      {filteredAndSortedEtatsDesLieux.length === 0 && searchTerm ? (
+        <Card className="glass-heavy animate-fade-in">
+          <CardContent className="p-8 text-center">
+            <Search className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+            <h3 className="text-xl font-bold gradient-text mb-3">Aucun résultat</h3>
+            <p className="text-slate-600/80 mb-8">Aucun état des lieux ne correspond à votre recherche "{searchTerm}"</p>
+            <Button variant="outline" onClick={() => setSearchTerm('')}>
+              Effacer la recherche
+            </Button>
+          </CardContent>
+        </Card>
+      ) : etatsDesLieux?.length === 0 ? (
         <Card className="glass-heavy animate-fade-in">
           <CardContent className="p-8 text-center">
             <h3 className="text-xl font-bold gradient-text mb-3">Aucun état des lieux</h3>
