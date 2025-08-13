@@ -12,6 +12,7 @@ import NewEtatDesLieux from './pages/NewEtatDesLieux';
 import EtatSortie from './pages/EtatSortie';
 import MonCalendrierPage from './pages/MonCalendrier';
 import UpdatePasswordPage from './pages/UpdatePassword';
+import VueGlobale from './pages/VueGlobale';
 
 const App = () => {
   return (
@@ -63,7 +64,7 @@ const AuthRoutes = () => {
           </div>
           <h2 className="text-xl font-bold gradient-text mb-3 animate-glow">Erreur de chargement</h2>
           <p className="text-red-500/80 mb-8 backdrop-blur-sm">{error.message}</p>
-          <Button variant="gradient-aurora" className="micro-bounce" onClick={() => window.location.reload()}>
+          <Button variant="primary" className="micro-bounce" onClick={() => window.location.reload()}>
             Réessayer
           </Button>
         </div>
@@ -90,6 +91,7 @@ const AuthRoutes = () => {
             <Route path="mon-calendrier" element={<MonCalendrierPage />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="team" element={<TeamManagement />} />
+            <Route path="vue-globale" element={<VueGlobale />} />
           </Route>
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/signup" element={<Navigate to="/" replace />} />
