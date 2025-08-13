@@ -426,8 +426,7 @@ const Dashboard = () => {
                         <Button 
                           size="sm" 
                           asChild
-                          variant="gradient-sunset"
-                          className="w-full micro-bounce"
+                          className="w-full bg-blue-600 hover:bg-blue-700"
                         >
                           <a href={`/new-etat-des-lieux?type=${rdv.type_etat_des_lieux}&rdv=${rdv.id}`} className="flex items-center justify-center gap-1">
                             <FileText className="h-3 w-3" />
