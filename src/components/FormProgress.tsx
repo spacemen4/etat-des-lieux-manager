@@ -78,7 +78,7 @@ const TabletMobileProgress: React.FC<FormProgressProps> = ({ steps }) => {
 
       {/* Étape courante en évidence avec design moderne */}
       {currentStep && (
-        <div className="glass-heavy rounded-xl p-4 current-step-highlight animate-glow border border-white/20 backdrop-blur-xl">
+        <div className="glass-heavy rounded-xl p-4 current-step-highlight border border-white/20 backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full gradient-primary text-white shadow-2xl">
               <span className="text-sm font-bold">{currentStepIndex + 1}</span>
@@ -149,7 +149,7 @@ const DesktopProgress: React.FC<FormProgressProps> = ({ steps }) => {
                       step.completed 
                         ? 'gradient-cool text-white shadow-xl hover:shadow-2xl animate-pulse-soft' 
                         : step.current 
-                          ? 'gradient-primary text-white shadow-xl ring-4 ring-blue-400/30 animate-glow' 
+                          ? 'gradient-primary text-white shadow-xl ring-4 ring-blue-400/30' 
                           : 'glass text-slate-600 border border-white/30 hover:glass-heavy'
                     }`}>
                       {step.completed ? <Check className={getIconSize()} /> : <span className={`${getTextSize()} font-bold`}>{stepIdx + 1}</span>}
