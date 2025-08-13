@@ -28,6 +28,29 @@ const VueGlobale = () => {
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const itemsPerPage = 10;
 
+  const getTypeBienLabel = (typeBien: string) => {
+    const labels: Record<string, string> = {
+      'studio': 'Studio',
+      't2_t3': 'T2 - T3',
+      't4_t5': 'T4 - T5',
+      'inventaire_mobilier': 'Inventaire mobilier',
+      'bureau': 'Bureau',
+      'local_commercial': 'Local commercial',
+      'garage_box': 'Garage / Box',
+      'pieces_supplementaires': 'Pièces supplémentaires',
+    };
+    return labels[typeBien] || typeBien;
+  };
+
+  const getEmployeLabel = useMemo(() => {
+    return (employeId?: string | null) => {
+      if (!employeId) return null;
+      const e = employes.find(emp => emp.id === employeId);
+      if (!e) return null;
+      return `${e.prenom ?? ''} ${e.nom ?? ''}`.trim();
+    };
+  }, [employes]);
+
   // Filtrer et trier les états des lieux
   const filteredAndSortedEtatsDesLieux = useMemo(() => {
     if (!etatsDesLieux) return [];
@@ -56,7 +79,7 @@ const VueGlobale = () => {
       const dateB = new Date(b.date_sortie || b.date_entree || b.created_at);
       return dateB.getTime() - dateA.getTime();
     });
-  }, [etatsDesLieux, searchTerm, employes]);
+  }, [etatsDesLieux, searchTerm, getEmployeLabel]);
 
   // Calculer la pagination
   const totalPages = Math.ceil(filteredAndSortedEtatsDesLieux.length / itemsPerPage);
@@ -68,27 +91,6 @@ const VueGlobale = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
-
-  const getTypeBienLabel = (typeBien: string) => {
-    const labels: Record<string, string> = {
-      'studio': 'Studio',
-      't2_t3': 'T2 - T3',
-      't4_t5': 'T4 - T5',
-      'inventaire_mobilier': 'Inventaire mobilier',
-      'bureau': 'Bureau',
-      'local_commercial': 'Local commercial',
-      'garage_box': 'Garage / Box',
-      'pieces_supplementaires': 'Pièces supplémentaires',
-    };
-    return labels[typeBien] || typeBien;
-  };
-
-  const getEmployeLabel = (employeId?: string | null) => {
-    if (!employeId) return null;
-    const e = employes.find(emp => emp.id === employeId);
-    if (!e) return null;
-    return `${e.prenom ?? ''} ${e.nom ?? ''}`.trim();
-  };
 
   const handlePrevPage = () => {
     setCurrentPage(prev => Math.max(prev - 1, 1));
