@@ -19,7 +19,7 @@ const NavContent = ({ onLinkClick }) => {
     <div className="p-4 flex flex-col h-full">
       <div className="flex items-center gap-2 mb-8 p-2 md:mt-0 mt-12">
         <img src="/android-chrome-192x192.png" alt="Logo" className="w-6 h-6" />
-        <h1 className="font-semibold text-lg truncate">Mon Application</h1>
+        <h1 className="font-semibold text-lg truncate">EtatDeLux</h1>
       </div>
 
       <nav className="flex-1 space-y-1">
