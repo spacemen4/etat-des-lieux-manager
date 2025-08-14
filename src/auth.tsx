@@ -452,7 +452,8 @@ export const UserProfile = () => {
     nom: '',
     date_naissance: '',
     telephone: '',
-    adresse: '',
+    adresse_ligne_1: '',
+    adresse_ligne_2: '',
     code_postal: '',
     ville: '',
     pays: 'France',
@@ -494,7 +495,8 @@ export const UserProfile = () => {
           nom: data.nom || user.user_metadata.nom || '',
           date_naissance: data.date_naissance || '',
           telephone: data.telephone || '',
-          adresse: data.adresse || '',
+          adresse_ligne_1: data.adresse_ligne_1 || '',
+          adresse_ligne_2: data.adresse_ligne_2 || '',
           code_postal: data.code_postal || '',
           ville: data.ville || '',
           pays: data.pays || 'France',
@@ -674,20 +676,33 @@ export const UserProfile = () => {
                     </p>
                   )}
                 </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="adresse">Adresse</Label>
+                <div>
+                  <Label htmlFor="adresse_ligne_1">Adresse (ligne 1)</Label>
                   {editing ? (
                     <Input 
-                      id="adresse"
-                      value={formData.adresse}
-                      onChange={(e) => handleInputChange('adresse', e.target.value)}
+                      id="adresse_ligne_1"
+                      value={formData.adresse_ligne_1}
+                      onChange={(e) => handleInputChange('adresse_ligne_1', e.target.value)}
                       placeholder="123 rue de la Paix"
                     />
                   ) : (
                     <p className="flex items-center gap-2">
                       <MapPin className="w-4 h-4" />
-                      {formData.adresse || 'Non renseigné'}
+                      {formData.adresse_ligne_1 || 'Non renseigné'}
                     </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="adresse_ligne_2">Adresse (ligne 2)</Label>
+                  {editing ? (
+                    <Input 
+                      id="adresse_ligne_2"
+                      value={formData.adresse_ligne_2}
+                      onChange={(e) => handleInputChange('adresse_ligne_2', e.target.value)}
+                      placeholder="Appartement, étage, etc."
+                    />
+                  ) : (
+                    <p>{formData.adresse_ligne_2 || 'Non renseigné'}</p>
                   )}
                 </div>
                 <div>
