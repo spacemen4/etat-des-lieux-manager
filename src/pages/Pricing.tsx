@@ -1,4 +1,3 @@
-import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,16 +18,13 @@ const Pricing = () => {
       period: '/mois',
       popular: false,
       features: [
-        '1 bien',
-        '1 état des lieux/an',
-        'Jusqu\'à 10 photos/bien',
+        '1 état des lieux/mois',
+        'Photos illimitées',
         'Rapport PDF simple',
         'Support communautaire'
       ],
       limitations: {
-        maxBiens: 1,
         maxEtatsDesLieux: 1,
-        maxPhotosPerBien: 10,
         supportLevel: 'community'
       },
       icon: Building,
@@ -43,16 +39,13 @@ const Pricing = () => {
       period: '/mois',
       popular: false,
       features: [
-        'Jusqu\'à 5 biens',
-        '5 états des lieux/mois',
-        'Jusqu\'à 50 photos/bien',
-        'Rapports PDF',
+        '10 états des lieux/mois',
+        'Photos illimitées',
+        'Rapports PDF avancés',
         'Support email'
       ],
       limitations: {
-        maxBiens: 5,
-        maxEtatsDesLieux: 5,
-        maxPhotosPerBien: 50,
+        maxEtatsDesLieux: 10,
         supportLevel: 'email'
       },
       icon: Users,
@@ -67,17 +60,15 @@ const Pricing = () => {
       period: '/mois',
       popular: true,
       features: [
-        'Jusqu\'à 100 biens',
+        'États des lieux illimités',
+        'Photos illimitées',
         'Gestion équipe',
-        '50 états des lieux/mois',
-        'Jusqu\'à 200 photos/bien',
-        'Rapports PDF',
+        'Rapports PDF avancés',
+        'Export données',
         'Support prioritaire'
       ],
       limitations: {
-        maxBiens: 100,
-        maxEtatsDesLieux: 50,
-        maxPhotosPerBien: 200,
+        maxEtatsDesLieux: -1, // -1 = illimité
         supportLevel: 'priority',
         teamManagement: true
       },
@@ -117,7 +108,7 @@ const Pricing = () => {
 
         {/* Plans de tarification */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 mb-16 mt-12 px-4">
-          {plans.map((plan, index) => {
+          {plans.map((plan) => {
             const IconComponent = plan.icon;
             const currentPlan = isCurrentPlan(plan.id);
             return (

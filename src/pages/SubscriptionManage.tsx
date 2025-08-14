@@ -67,25 +67,23 @@ const SubscriptionManage = () => {
   const getPlanFeatures = (planId: string) => {
     const features = {
       free: [
-        { icon: FileText, text: "1 bien" },
-        { icon: Calendar, text: "1 état des lieux/an" },
-        { icon: Camera, text: "Jusqu'à 10 photos/bien" },
+        { icon: Calendar, text: "1 état des lieux/mois" },
+        { icon: Camera, text: "Photos illimitées" },
         { icon: FileText, text: "Rapport PDF simple" },
         { icon: MessageCircle, text: "Support communautaire" }
       ],
       essential: [
-        { icon: FileText, text: "Jusqu'à 5 biens" },
-        { icon: Calendar, text: "5 états des lieux/mois" },
-        { icon: Camera, text: "Jusqu'à 50 photos/bien" },
-        { icon: FileText, text: "Rapports PDF" },
+        { icon: Calendar, text: "10 états des lieux/mois" },
+        { icon: Camera, text: "Photos illimitées" },
+        { icon: FileText, text: "Rapports PDF avancés" },
         { icon: Mail, text: "Support email" }
       ],
       pro: [
-        { icon: FileText, text: "Jusqu'à 100 biens" },
+        { icon: Calendar, text: "États des lieux illimités" },
+        { icon: Camera, text: "Photos illimitées" },
         { icon: Users, text: "Gestion équipe" },
-        { icon: Calendar, text: "50 états des lieux/mois" },
-        { icon: Camera, text: "Jusqu'à 200 photos/bien" },
-        { icon: FileText, text: "Rapports PDF" },
+        { icon: FileText, text: "Rapports PDF avancés" },
+        { icon: FileText, text: "Export données" },
         { icon: Zap, text: "Support prioritaire" }
       ]
     };
