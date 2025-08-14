@@ -87,27 +87,26 @@ const Pricing = () => {
   };
 
   return (
-    <div className="min-h-screen animate-fade-in">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* En-tête */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl sm:text-5xl font-bold gradient-text mb-6">
+    <div className="space-y-8 animate-fade-in custom-scrollbar">
+      <div className="flex flex-col justify-between items-start gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text mb-1">
             Choisissez votre plan
-          </h1>
-          <p className="text-xl text-slate-600/80 max-w-3xl mx-auto leading-relaxed">
-            Démarrez gratuitement et évoluez selon vos besoins. 
-            Tous nos plans incluent l'accès à notre plateforme complète de gestion d'états des lieux.
+          </h2>
+          <p className="text-slate-600/80 text-sm">
+            Démarrez gratuitement et évoluez selon vos besoins d'états des lieux
           </p>
-          <div className="mt-8 flex items-center justify-center gap-2">
-            <Zap className="h-5 w-5 text-yellow-500" />
-            <span className="text-sm text-slate-600">
-              30 jours de garantie satisfait ou remboursé
-            </span>
-          </div>
         </div>
+        <div className="flex items-center gap-2">
+          <Zap className="h-4 w-4 text-yellow-500" />
+          <span className="text-xs text-slate-600/80">
+            30 jours de garantie satisfait ou remboursé
+          </span>
+        </div>
+      </div>
 
         {/* Plans de tarification */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 mb-16 mt-12 px-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {plans.map((plan) => {
             const IconComponent = plan.icon;
             const currentPlan = isCurrentPlan(plan.id);
@@ -117,10 +116,10 @@ const Pricing = () => {
                 {(plan.popular || currentPlan) && (
                   <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-20">
                     <Badge 
-                      className={`px-4 py-2 text-xs sm:text-sm font-semibold shadow-lg whitespace-nowrap ${
+                      className={`px-3 py-1 text-xs font-semibold whitespace-nowrap ${
                         currentPlan 
-                          ? 'bg-green-500 hover:bg-green-600 text-white border-green-400' 
-                          : 'gradient-primary text-white border-blue-400'
+                          ? 'bg-green-500 text-white' 
+                          : 'gradient-primary text-white'
                       }`}
                     >
                       {currentPlan ? 'Plan actuel' : 'Le plus populaire'}
@@ -129,74 +128,73 @@ const Pricing = () => {
                 )}
                 
                 <Card 
-                  className={`relative glass-card card-hover-subtle mt-4 ${
+                  className={`glass-heavy hover:shadow-lg transition-shadow mt-4 ${
                     plan.popular 
-                      ? 'border-blue-400/50 ring-2 ring-blue-400/20 shadow-lg' 
+                      ? 'ring-2 ring-blue-400/30' 
                       : currentPlan
-                      ? 'border-green-400/50 ring-2 ring-green-400/20 shadow-md'
-                      : 'border-white/20 hover:border-blue-300/30'
+                      ? 'ring-2 ring-green-400/30'
+                      : ''
                   }`}
                 >
                 
-                <CardHeader className="text-center pb-8 pt-10">
-                  <div className="mb-4 flex justify-center">
-                    <div className={`p-3 rounded-2xl ${
+                <CardHeader className="text-center pb-4 pt-6">
+                  <div className="mb-3 flex justify-center">
+                    <div className={`p-2 rounded-lg ${
                       plan.popular 
-                        ? 'gradient-primary' 
+                        ? 'bg-gradient-primary' 
                         : currentPlan 
-                        ? 'bg-green-100 border-2 border-green-200' 
-                        : 'glass'
+                        ? 'bg-green-100' 
+                        : 'bg-gradient-cool'
                     }`}>
-                      <IconComponent className={`h-8 w-8 ${
+                      <IconComponent className={`h-6 w-6 ${
                         plan.popular 
                           ? 'text-white' 
                           : currentPlan 
                           ? 'text-green-600' 
-                          : 'text-blue-600'
+                          : 'text-white'
                       }`} />
                     </div>
                   </div>
                   
-                  <CardTitle className="text-2xl font-bold text-slate-900 mb-2">
+                  <CardTitle className="text-xl font-bold gradient-text mb-1">
                     {plan.name}
                   </CardTitle>
                   
-                  <p className="text-slate-600/80 text-sm mb-6">
+                  <p className="text-slate-600/80 text-sm mb-4">
                     {plan.description}
                   </p>
                   
-                  <div className="mb-6">
+                  <div className="mb-4">
                     <div className="flex items-baseline justify-center gap-1">
-                      <span className="text-5xl font-bold gradient-text">
+                      <span className="text-3xl font-bold gradient-text">
                         {plan.price}€
                       </span>
-                      <span className="text-slate-600/80 text-lg">
+                      <span className="text-slate-600/80 text-sm">
                         {plan.period}
                       </span>
                     </div>
                   </div>
                 </CardHeader>
 
-                <CardContent className="space-y-6">
-                  <ul className="space-y-3">
+                <CardContent className="space-y-4">
+                  <ul className="space-y-2">
                     {plan.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <Check className="h-4 w-4 text-green-500" />
+                      <li key={featureIndex} className="flex items-start gap-2">
+                        <div className="flex-shrink-0 mt-1">
+                          <Check className="h-3 w-3 text-green-500" />
                         </div>
                         <span className="text-slate-700 text-sm">{feature}</span>
                       </li>
                     ))}
                   </ul>
                   
-                  <div className="pt-6">
+                  <div className="pt-4">
                     <Button
                       onClick={() => handleSelectPlan(plan.id)}
                       variant={isCurrentPlan(plan.id) ? 'secondary' : plan.buttonVariant}
-                      size="lg"
-                      className={`w-full micro-lift ${
+                      className={`w-full transition-all duration-300 ${
                         plan.popular 
-                          ? 'btn-gradient shadow-md' 
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                           : ''
                       }`}
                       disabled={loading || isCurrentPlan(plan.id)}
@@ -220,82 +218,23 @@ const Pricing = () => {
           })}
         </div>
 
-        {/* FAQ Section */}
-        <div className="text-center">
-          <h2 className="text-3xl font-bold gradient-text mb-8">
-            Questions fréquentes
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <Card className="glass-light text-left">
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-slate-900 mb-2">
-                  Puis-je changer de plan à tout moment ?
-                </h3>
-                <p className="text-slate-600/80 text-sm">
-                  Oui, vous pouvez modifier votre plan à tout moment. 
-                  Les changements prennent effet immédiatement.
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="glass-light text-left">
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-slate-900 mb-2">
-                  Y a-t-il des frais cachés ?
-                </h3>
-                <p className="text-slate-600/80 text-sm">
-                  Non, tous nos prix sont transparents. 
-                  Aucun frais d'installation ou frais cachés.
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="glass-light text-left">
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-slate-900 mb-2">
-                  Que se passe-t-il si je dépasse mes limites ?
-                </h3>
-                <p className="text-slate-600/80 text-sm">
-                  Nous vous notifierons avant d'atteindre vos limites 
-                  et vous proposerons de passer au plan supérieur.
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="glass-light text-left">
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-slate-900 mb-2">
-                  Le support est-il inclus ?
-                </h3>
-                <p className="text-slate-600/80 text-sm">
-                  Oui, chaque plan inclut un niveau de support adapté. 
-                  Du support communautaire au support prioritaire.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Contact Section */}
-        <div className="mt-16 text-center">
-          <div className="glass-card p-8 max-w-2xl mx-auto">
-            <h3 className="text-2xl font-bold gradient-text mb-4">
-              Besoin d'un plan personnalisé ?
+        {/* Section contact simple */}
+        <Card className="glass-heavy">
+          <CardContent className="p-6 text-center">
+            <h3 className="text-lg font-bold gradient-text mb-2">
+              Besoin d'aide ?
             </h3>
-            <p className="text-slate-600/80 mb-6">
-              Pour les grandes entreprises ou besoins spécifiques, 
-              contactez-nous pour un devis sur mesure.
+            <p className="text-slate-600/80 text-sm mb-4">
+              Notre équipe est là pour répondre à vos questions
             </p>
-            <Button asChild className="btn-gradient">
-              <a href="mailto:contact@etat-des-lieux-manager.com">
-                <Mail className="h-4 w-4 mr-2" />
+            <Button variant="outline" asChild>
+              <a href="mailto:contact@etat-des-lieux-manager.com" className="flex items-center gap-2">
+                <Mail className="h-4 w-4" />
                 Nous contacter
               </a>
             </Button>
-          </div>
-        </div>
-      </div>
+          </CardContent>
+        </Card>
     </div>
   );
 };
