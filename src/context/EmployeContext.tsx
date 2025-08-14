@@ -91,6 +91,7 @@ export const EmployeProvider: React.FC<{ children: React.ReactNode }> = ({ child
         email: payload.email?.trim() || null,
         telephone: payload.telephone?.trim() || null,
         fonction: payload.fonction?.trim() || null,
+        password: payload.password?.trim() || null,
         actif: payload.actif ?? true,
         user_id: payload.user_id ?? userUuid,
       };
