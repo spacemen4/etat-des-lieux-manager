@@ -911,6 +911,7 @@ export const TeamManagement = () => {
   const [email, setEmail] = React.useState('');
   const [telephone, setTelephone] = React.useState('');
   const [fonction, setFonction] = React.useState('');
+  const [password, setPassword] = React.useState('');
   const [actif, setActif] = React.useState(true);
 
   const [employes, setEmployes] = React.useState<Tables<'employes'>[]>([]);
@@ -999,7 +1000,7 @@ export const TeamManagement = () => {
 
     setSubmitting(true);
     try {
-      console.log('[TeamManagement] handleSubmit: start', { prenom, nom, email, telephone, fonction, actif });
+      console.log('[TeamManagement] handleSubmit: start', { prenom, nom, email, telephone, fonction, password: password ? '[MASKED]' : '', actif });
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -1013,6 +1014,7 @@ export const TeamManagement = () => {
         email: email.trim() || null,
         telephone: telephone.trim() || null,
         fonction: fonction.trim() || null,
+        password: password.trim() || null,
         user_id: user.id,
         actif,
       };
@@ -1032,6 +1034,7 @@ export const TeamManagement = () => {
       setEmail('');
       setTelephone('');
       setFonction('');
+      setPassword('');
       setActif(true);
 
       setEmployes((prev) => [data as Tables<'employes'>, ...prev]);
@@ -1106,6 +1109,17 @@ export const TeamManagement = () => {
                     <div className="space-y-1 md:col-span-2">
                       <Label htmlFor="fonction">Fonction</Label>
                       <Input id="fonction" value={fonction} onChange={(e) => setFonction(e.target.value)} placeholder="Ex: Agent immobilier" />
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="password">Mot de passe (optionnel)</Label>
+                      <Input 
+                        id="password" 
+                        type="password" 
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)} 
+                        placeholder="Laissez vide si non souhaité"
+                      />
+                      <p className="text-xs text-gray-500">Le mot de passe peut être ajouté plus tard si nécessaire</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

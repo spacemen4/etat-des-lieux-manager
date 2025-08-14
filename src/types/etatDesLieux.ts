@@ -199,6 +199,7 @@ export type Database = {
           fonction: string | null
           id: string
           nom: string
+          password: string | null
           prenom: string
           telephone: string | null
           updated_at: string | null
@@ -213,6 +214,7 @@ export type Database = {
           fonction?: string | null
           id?: string
           nom: string
+          password?: string | null
           prenom: string
           telephone?: string | null
           updated_at?: string | null
@@ -227,6 +229,7 @@ export type Database = {
           fonction?: string | null
           id?: string
           nom?: string
+          password?: string | null
           prenom?: string
           telephone?: string | null
           updated_at?: string | null
