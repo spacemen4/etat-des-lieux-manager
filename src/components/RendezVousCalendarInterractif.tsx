@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, FileText } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { useEmployes } from '@/context/EmployeContext';
@@ -848,6 +848,16 @@ const RendezVousCalendar = ({ userUuid }: { userUuid?: string }) => {
             </div>
             
             <div className="flex justify-end space-x-3 pt-6 border-t border-white/10">
+              <Button 
+                size="sm" 
+                asChild
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 transition-all duration-300 micro-bounce"
+              >
+                <a href={selectedRendezVous ? `/new-etat-des-lieux?type=${selectedRendezVous.type_etat_des_lieux}&rdv=${selectedRendezVous.id}` : "#"} className="flex items-center justify-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  Faire l'état des lieux
+                </a>
+              </Button>
               <Button 
                 variant="destructive" 
                 onClick={() => {
