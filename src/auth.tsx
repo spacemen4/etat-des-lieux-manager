@@ -439,32 +439,392 @@ export const SignUpForm = ({ onSuccess }) => {
 // Composant UserProfile
 export const UserProfile = () => {
   const { user } = useAuth();
+  const { handleError } = useSupabaseErrorHandler();
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Form states
+  const [formData, setFormData] = useState({
+    prenom: '',
+    nom: '',
+    date_naissance: '',
+    telephone: '',
+    adresse: '',
+    code_postal: '',
+    ville: '',
+    pays: 'France',
+    profession: '',
+    entreprise: '',
+    site_web: '',
+    bio: '',
+    linkedin: '',
+    preferences_contact_email: true,
+    preferences_contact_sms: false,
+    preferences_notifications_rdv: true,
+    preferences_notifications_rappels: true,
+    preferences_langue: 'fr',
+    niveau_experience: '',
+    certifications: '',
+    photo_url: '',
+    disponibilites: '',
+    notes_privees: ''
+  });
+
+  // Charger le profil existant
+  const loadProfile = React.useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+      
+      if (data) {
+        setProfile(data);
+        setFormData({
+          prenom: data.prenom || user.user_metadata.prenom || '',
+          nom: data.nom || user.user_metadata.nom || '',
+          date_naissance: data.date_naissance || '',
+          telephone: data.telephone || '',
+          adresse: data.adresse || '',
+          code_postal: data.code_postal || '',
+          ville: data.ville || '',
+          pays: data.pays || 'France',
+          profession: data.profession || '',
+          entreprise: data.entreprise || '',
+          site_web: data.site_web || '',
+          bio: data.bio || '',
+          linkedin: data.linkedin || '',
+          preferences_contact_email: data.preferences_contact_email ?? true,
+          preferences_contact_sms: data.preferences_contact_sms ?? false,
+          preferences_notifications_rdv: data.preferences_notifications_rdv ?? true,
+          preferences_notifications_rappels: data.preferences_notifications_rappels ?? true,
+          preferences_langue: data.preferences_langue || 'fr',
+          niveau_experience: data.niveau_experience || '',
+          certifications: data.certifications || '',
+          photo_url: data.photo_url || '',
+          disponibilites: data.disponibilites || '',
+          notes_privees: data.notes_privees || ''
+        });
+      } else {
+        // Profil n'existe pas, utiliser les données auth
+        setFormData(prev => ({
+          ...prev,
+          prenom: user.user_metadata.prenom || '',
+          nom: user.user_metadata.nom || ''
+        }));
+      }
+    } catch (e) {
+      if (!handleError(e)) {
+        setError(e.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [user, handleError]);
+
+  React.useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!user) return;
+    
+    try {
+      setSaving(true);
+      setError(null);
+      
+      const profileData = {
+        user_id: user.id,
+        ...formData,
+        updated_at: new Date().toISOString()
+      };
+      
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .upsert(profileData, { onConflict: 'user_id' })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      setProfile(data);
+      setEditing(false);
+    } catch (e) {
+      if (!handleError(e)) {
+        setError(e.message);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
   if (!user) return <div>Chargement...</div>;
+  if (loading) return <div>Chargement du profil...</div>;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <UserCheck /> Mon Profil
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
-            <User className="w-10 h-10 text-gray-500" />
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle className="flex items-center gap-2">
+              <UserCheck /> Mon Profil
+            </CardTitle>
+            <Button 
+              variant={editing ? "outline" : "default"}
+              onClick={() => editing ? setEditing(false) : setEditing(true)}
+            >
+              {editing ? 'Annuler' : 'Modifier'}
+            </Button>
           </div>
-          <div>
-            <h2 className="text-xl font-semibold">{user.user_metadata.prenom} {user.user_metadata.nom}</h2>
-            <p className="text-sm text-gray-500">{user.email}</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center gap-2"><Mail className="w-4 h-4" /> {user.email}</div>
-          <div className="flex items-center gap-2"><Phone className="w-4 h-4" /> {user.phone || 'Non renseigné'}</div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          <form onSubmit={handleSave} className="space-y-6">
+            {/* En-tête du profil */}
+            <div className="flex items-center gap-6 p-4 bg-gray-50 rounded-lg">
+              <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
+                {formData.photo_url ? (
+                  <img src={formData.photo_url} alt="Photo de profil" className="w-full h-full rounded-full object-cover" />
+                ) : (
+                  <User className="w-12 h-12 text-gray-500" />
+                )}
+              </div>
+              <div className="flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="prenom">Prénom</Label>
+                    {editing ? (
+                      <Input 
+                        id="prenom"
+                        value={formData.prenom}
+                        onChange={(e) => handleInputChange('prenom', e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-lg font-semibold">{formData.prenom || 'Non renseigné'}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="nom">Nom</Label>
+                    {editing ? (
+                      <Input 
+                        id="nom"
+                        value={formData.nom}
+                        onChange={(e) => handleInputChange('nom', e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-lg font-semibold">{formData.nom || 'Non renseigné'}</p>
+                    )}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                  <Mail className="w-4 h-4" /> {user.email}
+                </p>
+              </div>
+            </div>
+
+            {/* Informations personnelles */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Informations personnelles</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="date_naissance">Date de naissance</Label>
+                  {editing ? (
+                    <Input 
+                      id="date_naissance"
+                      type="date"
+                      value={formData.date_naissance}
+                      onChange={(e) => handleInputChange('date_naissance', e.target.value)}
+                    />
+                  ) : (
+                    <p>{formData.date_naissance || 'Non renseigné'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="telephone">Téléphone</Label>
+                  {editing ? (
+                    <Input 
+                      id="telephone"
+                      value={formData.telephone}
+                      onChange={(e) => handleInputChange('telephone', e.target.value)}
+                      placeholder="06 12 34 56 78"
+                    />
+                  ) : (
+                    <p className="flex items-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      {formData.telephone || 'Non renseigné'}
+                    </p>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="adresse">Adresse</Label>
+                  {editing ? (
+                    <Input 
+                      id="adresse"
+                      value={formData.adresse}
+                      onChange={(e) => handleInputChange('adresse', e.target.value)}
+                      placeholder="123 rue de la Paix"
+                    />
+                  ) : (
+                    <p className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      {formData.adresse || 'Non renseigné'}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="code_postal">Code postal</Label>
+                  {editing ? (
+                    <Input 
+                      id="code_postal"
+                      value={formData.code_postal}
+                      onChange={(e) => handleInputChange('code_postal', e.target.value)}
+                    />
+                  ) : (
+                    <p>{formData.code_postal || 'Non renseigné'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="ville">Ville</Label>
+                  {editing ? (
+                    <Input 
+                      id="ville"
+                      value={formData.ville}
+                      onChange={(e) => handleInputChange('ville', e.target.value)}
+                    />
+                  ) : (
+                    <p>{formData.ville || 'Non renseigné'}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Informations professionnelles */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Informations professionnelles</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="profession">Profession</Label>
+                  {editing ? (
+                    <Input 
+                      id="profession"
+                      value={formData.profession}
+                      onChange={(e) => handleInputChange('profession', e.target.value)}
+                      placeholder="Agent immobilier"
+                    />
+                  ) : (
+                    <p>{formData.profession || 'Non renseigné'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="entreprise">Entreprise</Label>
+                  {editing ? (
+                    <Input 
+                      id="entreprise"
+                      value={formData.entreprise}
+                      onChange={(e) => handleInputChange('entreprise', e.target.value)}
+                    />
+                  ) : (
+                    <p>{formData.entreprise || 'Non renseigné'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="niveau_experience">Niveau d'expérience</Label>
+                  {editing ? (
+                    <select 
+                      id="niveau_experience"
+                      value={formData.niveau_experience}
+                      onChange={(e) => handleInputChange('niveau_experience', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="debutant">Débutant (0-2 ans)</option>
+                      <option value="intermediaire">Intermédiaire (2-5 ans)</option>
+                      <option value="confirme">Confirmé (5-10 ans)</option>
+                      <option value="expert">Expert (10+ ans)</option>
+                    </select>
+                  ) : (
+                    <p>{formData.niveau_experience || 'Non renseigné'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="site_web">Site web</Label>
+                  {editing ? (
+                    <Input 
+                      id="site_web"
+                      type="url"
+                      value={formData.site_web}
+                      onChange={(e) => handleInputChange('site_web', e.target.value)}
+                      placeholder="https://mon-site.com"
+                    />
+                  ) : (
+                    <p>{formData.site_web ? (
+                      <a href={formData.site_web} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                        {formData.site_web}
+                      </a>
+                    ) : 'Non renseigné'}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Préférences */}
+            {editing && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Préférences</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="preferences_contact_email"
+                      checked={formData.preferences_contact_email}
+                      onCheckedChange={(checked) => handleInputChange('preferences_contact_email', checked)}
+                    />
+                    <Label htmlFor="preferences_contact_email">Contact par email</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="preferences_notifications_rdv"
+                      checked={formData.preferences_notifications_rdv}
+                      onCheckedChange={(checked) => handleInputChange('preferences_notifications_rdv', checked)}
+                    />
+                    <Label htmlFor="preferences_notifications_rdv">Notifications de RDV</Label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {editing && (
+              <div className="flex gap-4">
+                <Button type="submit" disabled={saving} className="min-w-32">
+                  {saving ? "Enregistrement..." : "Enregistrer"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setEditing(false)}>
+                  Annuler
+                </Button>
+              </div>
+            )}
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
