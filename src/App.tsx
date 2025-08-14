@@ -61,16 +61,30 @@ const AuthRoutes = () => {
   }
 
   if (error) {
+    const isSessionExpired = error.message?.includes('session a expiré') || error.message?.includes('expired');
+    
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="glass-heavy p-10 text-center max-w-md animate-fade-in">
           <div className="w-20 h-20 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse-soft">
             <AlertCircle className="h-10 w-10 text-white" />
           </div>
-          <h2 className="text-xl font-bold gradient-text mb-3 animate-glow">Erreur de chargement</h2>
+          <h2 className="text-xl font-bold gradient-text mb-3 animate-glow">
+            {isSessionExpired ? 'Session expirée' : 'Erreur de chargement'}
+          </h2>
           <p className="text-red-500/80 mb-8 backdrop-blur-sm">{error.message}</p>
-          <Button variant="primary" className="micro-bounce" onClick={() => window.location.reload()}>
-            Réessayer
+          <Button 
+            variant="primary" 
+            className="micro-bounce" 
+            onClick={() => {
+              if (isSessionExpired) {
+                window.location.href = '/login';
+              } else {
+                window.location.reload();
+              }
+            }}
+          >
+            {isSessionExpired ? 'Se reconnecter' : 'Réessayer'}
           </Button>
         </div>
       </div>

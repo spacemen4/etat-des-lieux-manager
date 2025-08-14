@@ -7,11 +7,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Users, Building, UserPlus, Shield, Mail, Phone, MapPin, Settings, LogOut, Crown, UserCheck, User, Eye, EyeOff } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { supabase } from './lib/supabase';
+import { supabase, setJwtExpirationHandler, handleJwtExpiration } from './lib/supabase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader as DialogHeaderUI, DialogTitle as DialogTitleUI, DialogTrigger } from '@/components/ui/dialog';
 import type { Tables, TablesInsert } from '@/types/etatDesLieux';
+import { useSupabaseErrorHandler } from './hooks/useSupabaseErrorHandler';
 
 // Contexte d'authentification
 const AuthContext = createContext(null);
@@ -23,16 +24,43 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     setLoading(true);
+    
+    // Set up JWT expiration handler
+    const handleExpiration = () => {
+      console.log('JWT expired, signing out user...');
+      setUser(null);
+      setError('Votre session a expiré. Veuillez vous reconnecter.');
+      // Clear any stored session data
+      supabase.auth.signOut().catch(console.error);
+    };
+    setJwtExpirationHandler(handleExpiration);
+
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      setLoading(false);
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error && !handleJwtExpiration(error)) {
+          console.error('Auth error:', error);
+          setError(error.message);
+        } else {
+          setUser(user);
+        }
+      } catch (err) {
+        if (!handleJwtExpiration(err)) {
+          console.error('Auth fetch error:', err);
+          setError(err.message);
+        }
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (_event === 'SIGNED_OUT') {
+        setError(null);
+      }
     });
 
     return () => {
@@ -448,6 +476,7 @@ export const TeamManagement = () => {
   const [loadingList, setLoadingList] = React.useState<boolean>(false);
   const [submitting, setSubmitting] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
+  const { handleError } = useSupabaseErrorHandler();
 
   const [prenom, setPrenom] = React.useState('');
   const [nom, setNom] = React.useState('');
@@ -478,14 +507,18 @@ export const TeamManagement = () => {
           console.log('[TeamManagement] Loaded auth user', { userId: user.id });
         }
       } catch (e: any) {
-        if (isMounted) setError(e.message ?? "Erreur d'authentification");
+        if (isMounted) {
+          if (!handleError(e)) {
+            setError(e.message ?? "Erreur d'authentification");
+          }
+        }
       } finally {
         if (isMounted) setLoadingUser(false);
       }
     };
     load();
     return () => { isMounted = false; };
-  }, []);
+  }, [handleError]);
 
   const loadEmployes = React.useCallback(async (userId: string) => {
     setLoadingList(true);
@@ -500,12 +533,14 @@ export const TeamManagement = () => {
       setEmployes(data ?? []);
       console.log('[TeamManagement] loadEmployes: success', { count: data?.length ?? 0 });
     } catch (e: any) {
-      setError(e.message ?? 'Erreur lors du chargement des employés');
-      console.error('[TeamManagement] loadEmployes: error', e);
+      if (!handleError(e)) {
+        setError(e.message ?? 'Erreur lors du chargement des employés');
+        console.error('[TeamManagement] loadEmployes: error', e);
+      }
     } finally {
       setLoadingList(false);
     }
-  }, []);
+  }, [handleError]);
 
   // Load employees when currentUserId is known
   React.useEffect(() => {
@@ -576,8 +611,10 @@ export const TeamManagement = () => {
       console.log('[TeamManagement] handleSubmit: closing dialog');
       setIsAddOpen(false);
     } catch (e: any) {
-      setError(e.message ?? "Erreur lors de l'ajout de l'employé");
-      console.error('[TeamManagement] handleSubmit: error', e);
+      if (!handleError(e)) {
+        setError(e.message ?? "Erreur lors de l'ajout de l'employé");
+        console.error('[TeamManagement] handleSubmit: error', e);
+      }
     } finally {
       setSubmitting(false);
       console.log('[TeamManagement] handleSubmit: end');

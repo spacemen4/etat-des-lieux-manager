@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import EtatDesLieuxTypeSelector from '@/components/EtatDesLieuxTypeSelector';
 import { useUser } from '@/context/UserContext';
 import { useEmployes } from '@/context/EmployeContext';
+import { useSupabaseErrorHandler } from '@/hooks/useSupabaseErrorHandler';
 
 interface RendezVous {
   id: string;
@@ -74,6 +75,7 @@ const NewEtatDesLieux = () => {
   const [searchParams] = useSearchParams();
   const { userUuid } = useUser();
   const { selectedEmployeId } = useEmployes();
+  const { handleError } = useSupabaseErrorHandler();
   const [isLoading, setIsLoading] = useState(false);
   const [typeEtatDesLieux, setTypeEtatDesLieux] = useState<'entree' | 'sortie'>('entree');
   const [typeBien, setTypeBien] = useState<'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires'>('studio');
@@ -127,8 +129,10 @@ const NewEtatDesLieux = () => {
         }));
       }
     } catch (error) {
-      console.error('Erreur lors du chargement du rendez-vous:', error);
-      toast.error('Erreur lors du chargement du rendez-vous');
+      if (!handleError(error)) {
+        console.error('Erreur lors du chargement du rendez-vous:', error);
+        toast.error('Erreur lors du chargement du rendez-vous');
+      }
     }
   };
 
@@ -201,8 +205,10 @@ const NewEtatDesLieux = () => {
         navigate('/');
       }
     } catch (error) {
-      console.error('Erreur lors de la création:', error);
-      toast.error('Erreur lors de la création de l\'état des lieux');
+      if (!handleError(error)) {
+        console.error('Erreur lors de la création:', error);
+        toast.error('Erreur lors de la création de l\'état des lieux');
+      }
     } finally {
       setIsLoading(false);
     }
