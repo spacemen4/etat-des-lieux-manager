@@ -15,6 +15,7 @@ import MonCalendrierPage from './pages/MonCalendrier';
 import UpdatePasswordPage from './pages/UpdatePassword';
 import VueGlobale from './pages/VueGlobale';
 import SubscriptionManage from './pages/SubscriptionManage';
+import Pricing from './pages/Pricing';
 
 const App = () => {
   return (
@@ -97,6 +98,7 @@ const AuthRoutes = () => {
             <Route path="team" element={<TeamManagement />} />
             <Route path="vue-globale" element={<VueGlobale />} />
             <Route path="abonnement" element={<SubscriptionManage />} />
+            <Route path="pricing" element={<Pricing />} />
           </Route>
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/signup" element={<Navigate to="/" replace />} />
