@@ -459,18 +459,19 @@ export const UserProfile = () => {
     pays: 'France',
     profession: '',
     entreprise: '',
-    site_web: '',
+    siret: '',
+    tva_intra: '',
+    type_activite: '',
+    carte_professionnelle: '',
+    numero_rcp: '',
     bio: '',
-    linkedin: '',
-    preferences_contact_email: true,
-    preferences_contact_sms: false,
-    preferences_notifications_rdv: true,
-    preferences_notifications_rappels: true,
-    preferences_langue: 'fr',
-    niveau_experience: '',
     photo_url: '',
-    disponibilites: '',
-    notes_privees: ''
+    notes_privees: '',
+    notifications_email: true,
+    notifications_sms: false,
+    langue: 'fr',
+    timezone: 'Europe/Paris',
+    signature_url: ''
   });
 
   // Charger le profil existant
@@ -501,18 +502,19 @@ export const UserProfile = () => {
           pays: data.pays || 'France',
           profession: data.profession || '',
           entreprise: data.entreprise || '',
-          site_web: data.site_web || '',
+          siret: data.siret || '',
+          tva_intra: data.tva_intra || '',
+          type_activite: data.type_activite || '',
+          carte_professionnelle: data.carte_professionnelle || '',
+          numero_rcp: data.numero_rcp || '',
           bio: data.bio || '',
-          linkedin: data.linkedin || '',
-          preferences_contact_email: data.preferences_contact_email ?? true,
-          preferences_contact_sms: data.preferences_contact_sms ?? false,
-          preferences_notifications_rdv: data.preferences_notifications_rdv ?? true,
-          preferences_notifications_rappels: data.preferences_notifications_rappels ?? true,
-          preferences_langue: data.preferences_langue || 'fr',
-          niveau_experience: data.niveau_experience || '',
           photo_url: data.photo_url || '',
-          disponibilites: data.disponibilites || '',
-          notes_privees: data.notes_privees || ''
+          notes_privees: data.notes_privees || '',
+          notifications_email: data.notifications_email ?? true,
+          notifications_sms: data.notifications_sms ?? false,
+          langue: data.langue || 'fr',
+          timezone: data.timezone || 'Europe/Paris',
+          signature_url: data.signature_url || ''
         });
       } else {
         // Profil n'existe pas, utiliser les données auth
@@ -760,44 +762,97 @@ export const UserProfile = () => {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="niveau_experience">Niveau d'expérience</Label>
+                  <Label htmlFor="type_activite">Type d'activité</Label>
                   {editing ? (
                     <select 
-                      id="niveau_experience"
-                      value={formData.niveau_experience}
-                      onChange={(e) => handleInputChange('niveau_experience', e.target.value)}
+                      id="type_activite"
+                      value={formData.type_activite}
+                      onChange={(e) => handleInputChange('type_activite', e.target.value)}
                       className="w-full p-2 border rounded"
                     >
                       <option value="">Sélectionner</option>
-                      <option value="debutant">Débutant (0-2 ans)</option>
-                      <option value="intermediaire">Intermédiaire (2-5 ans)</option>
-                      <option value="confirme">Confirmé (5-10 ans)</option>
-                      <option value="expert">Expert (10+ ans)</option>
+                      <option value="particulier">Particulier</option>
+                      <option value="agent_immobilier">Agent immobilier</option>
+                      <option value="proprietaire">Propriétaire</option>
+                      <option value="syndic">Syndic</option>
+                      <option value="gestionnaire">Gestionnaire</option>
+                      <option value="autre">Autre</option>
                     </select>
                   ) : (
-                    <p>{formData.niveau_experience || 'Non renseigné'}</p>
+                    <p>{formData.type_activite || 'Non renseigné'}</p>
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="site_web">Site web</Label>
+                  <Label htmlFor="siret">SIRET</Label>
                   {editing ? (
                     <Input 
-                      id="site_web"
-                      type="url"
-                      value={formData.site_web}
-                      onChange={(e) => handleInputChange('site_web', e.target.value)}
-                      placeholder="https://mon-site.com"
+                      id="siret"
+                      value={formData.siret}
+                      onChange={(e) => handleInputChange('siret', e.target.value)}
+                      placeholder="12345678901234"
                     />
                   ) : (
-                    <p>{formData.site_web ? (
-                      <a href={formData.site_web} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                        {formData.site_web}
-                      </a>
-                    ) : 'Non renseigné'}</p>
+                    <p>{formData.siret || 'Non renseigné'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="tva_intra">TVA intracommunautaire</Label>
+                  {editing ? (
+                    <Input 
+                      id="tva_intra"
+                      value={formData.tva_intra}
+                      onChange={(e) => handleInputChange('tva_intra', e.target.value)}
+                      placeholder="FR12345678901"
+                    />
+                  ) : (
+                    <p>{formData.tva_intra || 'Non renseigné'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="carte_professionnelle">Carte professionnelle</Label>
+                  {editing ? (
+                    <Input 
+                      id="carte_professionnelle"
+                      value={formData.carte_professionnelle}
+                      onChange={(e) => handleInputChange('carte_professionnelle', e.target.value)}
+                      placeholder="Numéro de carte"
+                    />
+                  ) : (
+                    <p>{formData.carte_professionnelle || 'Non renseigné'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="numero_rcp">Numéro RCP</Label>
+                  {editing ? (
+                    <Input 
+                      id="numero_rcp"
+                      value={formData.numero_rcp}
+                      onChange={(e) => handleInputChange('numero_rcp', e.target.value)}
+                      placeholder="Responsabilité Civile Professionnelle"
+                    />
+                  ) : (
+                    <p>{formData.numero_rcp || 'Non renseigné'}</p>
                   )}
                 </div>
               </div>
             </div>
+
+            {/* Bio */}
+            {editing && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Bio</h3>
+                <div>
+                  <Label htmlFor="bio">Bio</Label>
+                  <textarea 
+                    id="bio"
+                    value={formData.bio}
+                    onChange={(e) => handleInputChange('bio', e.target.value)}
+                    className="w-full p-2 border rounded h-24"
+                    placeholder="Présentez-vous brièvement..."
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Préférences */}
             {editing && (
@@ -806,19 +861,19 @@ export const UserProfile = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center space-x-2">
                     <Checkbox
-                      id="preferences_contact_email"
-                      checked={formData.preferences_contact_email}
-                      onCheckedChange={(checked) => handleInputChange('preferences_contact_email', checked)}
+                      id="notifications_email"
+                      checked={formData.notifications_email}
+                      onCheckedChange={(checked) => handleInputChange('notifications_email', checked)}
                     />
-                    <Label htmlFor="preferences_contact_email">Contact par email</Label>
+                    <Label htmlFor="notifications_email">Notifications par email</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox
-                      id="preferences_notifications_rdv"
-                      checked={formData.preferences_notifications_rdv}
-                      onCheckedChange={(checked) => handleInputChange('preferences_notifications_rdv', checked)}
+                      id="notifications_sms"
+                      checked={formData.notifications_sms}
+                      onCheckedChange={(checked) => handleInputChange('notifications_sms', checked)}
                     />
-                    <Label htmlFor="preferences_notifications_rdv">Notifications de RDV</Label>
+                    <Label htmlFor="notifications_sms">Notifications par SMS</Label>
                   </div>
                 </div>
               </div>
