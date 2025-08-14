@@ -96,7 +96,7 @@ const Pricing = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 animate-fade-in">
+    <div className="min-h-screen animate-fade-in">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* En-tête */}
         <div className="text-center mb-16">
@@ -138,14 +138,13 @@ const Pricing = () => {
                 )}
                 
                 <Card 
-                  className={`relative glass-card backdrop-blur-xl border-2 transition-all duration-300 hover:scale-105 animate-slide-up mt-4 ${
+                  className={`relative glass-card card-hover-subtle mt-4 ${
                     plan.popular 
-                      ? 'border-blue-400/50 ring-2 ring-blue-400/20 shadow-2xl' 
+                      ? 'border-blue-400/50 ring-2 ring-blue-400/20 shadow-lg' 
                       : currentPlan
-                      ? 'border-green-400/50 ring-2 ring-green-400/20 shadow-xl'
+                      ? 'border-green-400/50 ring-2 ring-green-400/20 shadow-md'
                       : 'border-white/20 hover:border-blue-300/30'
                   }`}
-                  style={{animationDelay: `${index * 0.1}s`}}
                 >
                 
                 <CardHeader className="text-center pb-8 pt-10">
@@ -204,10 +203,10 @@ const Pricing = () => {
                       onClick={() => handleSelectPlan(plan.id)}
                       variant={isCurrentPlan(plan.id) ? 'secondary' : plan.buttonVariant}
                       size="lg"
-                      className={`w-full transition-all duration-300 ${
+                      className={`w-full micro-lift ${
                         plan.popular 
-                          ? 'btn-gradient shadow-lg hover:shadow-xl' 
-                          : 'hover:scale-105'
+                          ? 'btn-gradient shadow-md' 
+                          : ''
                       }`}
                       disabled={loading || isCurrentPlan(plan.id)}
                     >

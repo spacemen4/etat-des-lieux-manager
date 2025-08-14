@@ -102,7 +102,7 @@ const SubscriptionManage = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-fade-in p-6">
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in p-6">
       {/* En-tête */}
       <div>
         <h1 className="text-3xl font-bold gradient-text mb-2">
@@ -194,12 +194,12 @@ const SubscriptionManage = () => {
             const isPopular = plan.id === 'pro';
             
             return (
-              <Card key={plan.id} className={`relative ${
+              <Card key={plan.id} className={`relative glass-card card-hover-subtle ${
                 isCurrentPlan 
-                  ? 'ring-2 ring-blue-500 shadow-lg' 
+                  ? 'ring-2 ring-blue-500 shadow-md' 
                   : isPopular
-                    ? 'border-2 border-gradient-to-r border-orange-500 shadow-lg'
-                    : 'glass-card hover:shadow-lg transition-shadow'
+                    ? 'border-2 border-orange-500 shadow-md'
+                    : ''
               }`}>
                 {isPopular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
@@ -252,7 +252,7 @@ const SubscriptionManage = () => {
                       </Button>
                     ) : (
                       <Button 
-                        className={`w-full ${
+                        className={`w-full micro-lift ${
                           isPopular 
                             ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white' 
                             : plan.id === 'free' 
