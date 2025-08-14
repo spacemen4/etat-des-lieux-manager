@@ -468,7 +468,6 @@ export const UserProfile = () => {
     preferences_notifications_rappels: true,
     preferences_langue: 'fr',
     niveau_experience: '',
-    certifications: '',
     photo_url: '',
     disponibilites: '',
     notes_privees: ''
@@ -511,7 +510,6 @@ export const UserProfile = () => {
           preferences_notifications_rappels: data.preferences_notifications_rappels ?? true,
           preferences_langue: data.preferences_langue || 'fr',
           niveau_experience: data.niveau_experience || '',
-          certifications: data.certifications || '',
           photo_url: data.photo_url || '',
           disponibilites: data.disponibilites || '',
           notes_privees: data.notes_privees || ''
