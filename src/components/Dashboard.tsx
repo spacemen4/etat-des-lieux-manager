@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, User, FileText, Loader2, Building2, LogIn, LogOut, Clock, Lock, Download, Printer, Mail, Crown, AlertTriangle } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, Loader2, Building2, LogIn, LogOut, Clock, Lock, Download, Printer, Mail, Crown, AlertTriangle, Phone } from 'lucide-react';
 import { useEtatDesLieux, useRendezVous } from '@/hooks/useEtatDesLieux';
 import EtatDesLieuxViewer from './EtatDesLieuxViewer';
 import EtatDesLieuxPrintable from './EtatDesLieuxPrintable';
@@ -303,12 +303,49 @@ const Dashboard = () => {
           <div className="text-sm text-blue-700">
             {getRemainingEtatsDesLieux()} état{getRemainingEtatsDesLieux() !== 1 ? 's' : ''} des lieux restant{getRemainingEtatsDesLieux() !== 1 ? 's' : ''} ce mois
           </div>
+          
+          {/* Alerte pour plan Pro proche de la limite */}
+          {currentPlan?.id === 'pro' && getRemainingEtatsDesLieux() <= 5 && getRemainingEtatsDesLieux() > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-orange-100 rounded-md border border-orange-200">
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
+              <span className="text-xs text-orange-700 font-medium">Proche de la limite</span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs h-6 border-orange-300 text-orange-700 hover:bg-orange-50"
+                onClick={() => window.open('tel:0773020538')}
+              >
+                <Phone className="h-3 w-3 mr-1" />
+                Contacter
+              </Button>
+            </div>
+          )}
+          
+          {/* Actions selon le plan quand limite atteinte */}
           {!canCreateEtatDesLieux && (
             <div className="flex items-center gap-1">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <Button asChild variant="outline" size="sm" className="text-xs h-6">
-                <a href="/pricing">Améliorer</a>
-              </Button>
+              {currentPlan?.id === 'free' && (
+                <Button asChild variant="outline" size="sm" className="text-xs h-6">
+                  <a href="/pricing">Souscrire</a>
+                </Button>
+              )}
+              {currentPlan?.id === 'essential' && (
+                <Button asChild variant="outline" size="sm" className="text-xs h-6">
+                  <a href="/pricing">Plan Pro</a>
+                </Button>
+              )}
+              {currentPlan?.id === 'pro' && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-xs h-6"
+                  onClick={() => window.open('tel:0773020538')}
+                >
+                  <Phone className="h-3 w-3 mr-1" />
+                  Contacter
+                </Button>
+              )}
             </div>
           )}
         </div>

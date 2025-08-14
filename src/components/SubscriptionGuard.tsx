@@ -9,7 +9,8 @@ import {
   Lock,
   Building,
   FileText,
-  Camera
+  Camera,
+  Phone
 } from 'lucide-react';
 import { useSubscription } from '@/context/SubscriptionContext';
 import { useNavigate } from 'react-router-dom';
@@ -120,8 +121,30 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
           )}
           {feature === 'createEtatDesLieux' && (
             <>
-              Vous avez atteint la limite de {featureInfo.limit} état{featureInfo.limit > 1 ? 's' : ''} des lieux 
-              par mois de votre plan {currentPlan?.name}.
+              {currentPlan?.id === 'free' && (
+                <>
+                  Vous avez atteint la limite de {featureInfo.limit} état des lieux par mois. 
+                  Souscrivez à un abonnement pour créer plus d'inventaires.
+                </>
+              )}
+              {currentPlan?.id === 'essential' && (
+                <>
+                  Vous avez atteint la limite de {featureInfo.limit} états des lieux par mois de votre plan Essentiel. 
+                  Passez au plan Pro pour 50 inventaires/mois.
+                </>
+              )}
+              {currentPlan?.id === 'pro' && (
+                <>
+                  Vous avez atteint la limite de {featureInfo.limit} états des lieux par mois. 
+                  Pour des besoins plus importants, contactez-nous au 07 73 02 05 38.
+                </>
+              )}
+              {!['free', 'essential', 'pro'].includes(currentPlan?.id || '') && (
+                <>
+                  Vous avez atteint la limite de {featureInfo.limit} état{featureInfo.limit > 1 ? 's' : ''} des lieux 
+                  par mois de votre plan {currentPlan?.name}.
+                </>
+              )}
             </>
           )}
           {feature === 'addPhotos' && (
@@ -132,17 +155,44 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
           )}
         </div>
 
-        {showUpgradeButton && currentPlan?.id !== 'pro' && (
-          <Button 
-            variant="default"
-            size="sm"
-            onClick={() => navigate('/pricing')}
-            className="btn-gradient flex items-center gap-2 mt-3"
-          >
-            <ArrowUpCircle className="h-4 w-4" />
-            Mettre à niveau mon plan
-          </Button>
-        )}
+        {/* Boutons d'action selon le plan */}
+        <div className="flex gap-2 mt-3">
+          {showUpgradeButton && currentPlan?.id === 'free' && (
+            <Button 
+              variant="default"
+              size="sm"
+              onClick={() => navigate('/pricing')}
+              className="btn-gradient flex items-center gap-2"
+            >
+              <ArrowUpCircle className="h-4 w-4" />
+              Souscrire un abonnement
+            </Button>
+          )}
+          
+          {showUpgradeButton && currentPlan?.id === 'essential' && (
+            <Button 
+              variant="default"
+              size="sm"
+              onClick={() => navigate('/pricing')}
+              className="btn-gradient flex items-center gap-2"
+            >
+              <ArrowUpCircle className="h-4 w-4" />
+              Passer au plan Pro
+            </Button>
+          )}
+          
+          {currentPlan?.id === 'pro' && feature === 'createEtatDesLieux' && (
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={() => window.open('tel:0773020538')}
+              className="flex items-center gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+            >
+              <Phone className="h-4 w-4" />
+              Nous contacter
+            </Button>
+          )}
+        </div>
       </AlertDescription>
     </Alert>
   );

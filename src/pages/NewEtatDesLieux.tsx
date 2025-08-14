@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Save, Calendar, MapPin, User, Clock, FileText, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, Calendar, MapPin, User, Clock, FileText, AlertCircle, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import EtatDesLieuxTypeSelector from '@/components/EtatDesLieuxTypeSelector';
 import { useUser } from '@/context/UserContext';
@@ -161,11 +161,26 @@ const NewEtatDesLieux = () => {
       if (remaining === 0) {
         if (currentPlan?.id === 'free') {
           toast.error('Vous avez atteint la limite de 1 état des lieux par mois. Souscrivez à un abonnement pour créer plus d\'inventaires.');
-        } else {
-          toast.error(`Vous avez atteint la limite de ${currentPlan?.limitations.maxEtatsDesLieux} états des lieux par mois de votre plan ${currentPlan?.name}.`);
+          navigate('/pricing');
+        } else if (currentPlan?.id === 'essential') {
+          toast.error('Vous avez atteint la limite de 5 états des lieux par mois de votre plan Essentiel. Passez au plan Pro pour 50 inventaires/mois.');
+          navigate('/pricing');
+        } else if (currentPlan?.id === 'pro') {
+          toast.error('Vous avez atteint la limite de 50 états des lieux par mois. Pour des besoins plus importants, contactez-nous au 07 73 02 05 38.');
         }
-        navigate('/pricing');
         return;
+      }
+    }
+    
+    // Alerte pour les utilisateurs Pro qui approchent de la limite
+    if (currentPlan?.id === 'pro') {
+      const remaining = getRemainingEtatsDesLieux();
+      const used = (currentPlan?.limitations.maxEtatsDesLieux || 50) - remaining;
+      
+      if (remaining <= 5 && remaining > 0) {
+        toast.warning(`Attention: Il vous reste seulement ${remaining} état${remaining !== 1 ? 's' : ''} des lieux ce mois. Pour des besoins plus importants, contactez-nous au 07 73 02 05 38.`, {
+          duration: 8000,
+        });
       }
     }
 
@@ -275,11 +290,27 @@ const NewEtatDesLieux = () => {
         </div>
         
         {/* Indicateur de limites d'abonnement */}
-        <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border">
-          <FileText className="h-5 w-5 text-blue-600" />
-          <div className="text-sm">
-            <span className="font-medium text-blue-900">Plan {currentPlan?.name}</span>
-            <div className="text-blue-700">
+        <div className={`flex items-center gap-3 p-3 rounded-lg border ${
+          currentPlan?.id === 'pro' && getRemainingEtatsDesLieux() <= 5 && getRemainingEtatsDesLieux() > 0
+            ? 'bg-orange-50 border-orange-200' 
+            : 'bg-blue-50 border-blue-200'
+        }`}>
+          <FileText className={`h-5 w-5 ${
+            currentPlan?.id === 'pro' && getRemainingEtatsDesLieux() <= 5 && getRemainingEtatsDesLieux() > 0
+              ? 'text-orange-600'
+              : 'text-blue-600'
+          }`} />
+          <div className="text-sm flex-1">
+            <span className={`font-medium ${
+              currentPlan?.id === 'pro' && getRemainingEtatsDesLieux() <= 5 && getRemainingEtatsDesLieux() > 0
+                ? 'text-orange-900'
+                : 'text-blue-900'
+            }`}>Plan {currentPlan?.name}</span>
+            <div className={`${
+              currentPlan?.id === 'pro' && getRemainingEtatsDesLieux() <= 5 && getRemainingEtatsDesLieux() > 0
+                ? 'text-orange-700'
+                : 'text-blue-700'
+            }`}>
               {getRemainingEtatsDesLieux()} état{getRemainingEtatsDesLieux() !== 1 ? 's' : ''} des lieux restant{getRemainingEtatsDesLieux() !== 1 ? 's' : ''} ce mois
             </div>
             {!canCreateEtatDesLieux && (
@@ -289,6 +320,19 @@ const NewEtatDesLieux = () => {
               </div>
             )}
           </div>
+          
+          {/* Bouton contact pour plan Pro proche de la limite */}
+          {currentPlan?.id === 'pro' && getRemainingEtatsDesLieux() <= 5 && getRemainingEtatsDesLieux() > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-xs h-7 border-orange-300 text-orange-700 hover:bg-orange-100"
+              onClick={() => window.open('tel:0773020538')}
+            >
+              <Phone className="h-3 w-3 mr-1" />
+              07 73 02 05 38
+            </Button>
+          )}
         </div>
       </div>
 

@@ -109,6 +109,30 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
       fetchUsage();
     }
   }, [userUuid]);
+  
+  // Effet pour afficher l'alerte proactive pour les utilisateurs Pro
+  useEffect(() => {
+    if (subscription && currentPlan?.id === 'pro' && usage) {
+      const remaining = currentPlan.limitations.maxEtatsDesLieux - usage.etats_des_lieux_count_this_month;
+      
+      if (remaining <= 5 && remaining > 0) {
+        const hasShownAlert = sessionStorage.getItem(`pro-limit-alert-${new Date().getMonth()}`);
+        
+        if (!hasShownAlert) {
+          setTimeout(() => {
+            toast.warning(`Attention : Il vous reste ${remaining} état${remaining !== 1 ? 's' : ''} des lieux ce mois. Pour des besoins plus importants, contactez-nous au 07 73 02 05 38.`, {
+              duration: 10000,
+              action: {
+                label: 'Contacter',
+                onClick: () => window.open('tel:0773020538')
+              }
+            });
+            sessionStorage.setItem(`pro-limit-alert-${new Date().getMonth()}`, 'shown');
+          }, 2000); // Délai de 2 secondes pour ne pas surcharger l'interface au chargement
+        }
+      }
+    }
+  }, [subscription, currentPlan, usage]);
 
   const fetchSubscription = async () => {
     if (!userUuid) return;
