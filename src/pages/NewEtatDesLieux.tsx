@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Save, Calendar, MapPin, User, Clock } from 'lucide-react';
+import { ArrowLeft, Save, Calendar, MapPin, User, Clock, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import EtatDesLieuxTypeSelector from '@/components/EtatDesLieuxTypeSelector';
 import { useUser } from '@/context/UserContext';
 import { useEmployes } from '@/context/EmployeContext';
 import { useSupabaseErrorHandler } from '@/hooks/useSupabaseErrorHandler';
+import { useSubscription } from '@/context/SubscriptionContext';
+import SubscriptionGuard from '@/components/SubscriptionGuard';
 
 interface RendezVous {
   id: string;
@@ -76,6 +78,7 @@ const NewEtatDesLieux = () => {
   const { userUuid } = useUser();
   const { selectedEmployeId } = useEmployes();
   const { handleError } = useSupabaseErrorHandler();
+  const { canCreateEtatDesLieux, currentPlan, getRemainingEtatsDesLieux, refreshSubscription } = useSubscription();
   const [isLoading, setIsLoading] = useState(false);
   const [typeEtatDesLieux, setTypeEtatDesLieux] = useState<'entree' | 'sortie'>('entree');
   const [typeBien, setTypeBien] = useState<'studio' | 't2_t3' | 't4_t5' | 'inventaire_mobilier' | 'bureau' | 'local_commercial' | 'garage_box' | 'pieces_supplementaires'>('studio');
@@ -152,6 +155,20 @@ const NewEtatDesLieux = () => {
       return;
     }
 
+    // Vérifier les limites de l'abonnement
+    if (!canCreateEtatDesLieux) {
+      const remaining = getRemainingEtatsDesLieux();
+      if (remaining === 0) {
+        if (currentPlan?.id === 'free') {
+          toast.error('Vous avez atteint la limite de 1 état des lieux par mois. Souscrivez à un abonnement pour créer plus d\'inventaires.');
+        } else {
+          toast.error(`Vous avez atteint la limite de ${currentPlan?.limitations.maxEtatsDesLieux} états des lieux par mois de votre plan ${currentPlan?.name}.`);
+        }
+        navigate('/pricing');
+        return;
+      }
+    }
+
     setIsLoading(true);
 
     try {
@@ -197,6 +214,9 @@ const NewEtatDesLieux = () => {
       }
 
       toast.success('État des lieux créé avec succès');
+      
+      // Refresh subscription usage to update remaining count
+      await refreshSubscription();
       
       // Redirect based on the type of inventory
       if (typeEtatDesLieux === 'sortie') {
@@ -245,13 +265,30 @@ const NewEtatDesLieux = () => {
           <ArrowLeft className="h-4 w-4" />
           Retour
         </Button>
-        <div>
+        <div className="flex-1">
           <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
             Nouvel état des lieux
           </h2>
           <p className="text-slate-600">
             {selectedRendezVous ? 'Basé sur le rendez-vous planifié' : 'Sélectionnez le type d\'état des lieux et de bien'}
           </p>
+        </div>
+        
+        {/* Indicateur de limites d'abonnement */}
+        <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border">
+          <FileText className="h-5 w-5 text-blue-600" />
+          <div className="text-sm">
+            <span className="font-medium text-blue-900">Plan {currentPlan?.name}</span>
+            <div className="text-blue-700">
+              {getRemainingEtatsDesLieux()} état{getRemainingEtatsDesLieux() !== 1 ? 's' : ''} des lieux restant{getRemainingEtatsDesLieux() !== 1 ? 's' : ''} ce mois
+            </div>
+            {!canCreateEtatDesLieux && (
+              <div className="flex items-center gap-1 text-amber-700 mt-1">
+                <AlertCircle className="h-3 w-3" />
+                <span className="text-xs">Limite atteinte</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -317,12 +354,13 @@ const NewEtatDesLieux = () => {
         disabled={!!selectedRendezVous} // Désactiver si lié à un rendez-vous
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Informations générales</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+      <SubscriptionGuard feature="createEtatDesLieux">
+        <Card>
+          <CardHeader>
+            <CardTitle>Informations générales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="date_entree">
@@ -416,6 +454,7 @@ const NewEtatDesLieux = () => {
           </form>
         </CardContent>
       </Card>
+      </SubscriptionGuard>
     </div>
   );
 };

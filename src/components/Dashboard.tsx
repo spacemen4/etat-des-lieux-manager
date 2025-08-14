@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, User, FileText, Loader2, Building2, LogIn, LogOut, Clock, Lock, Download, Printer, Mail } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, Loader2, Building2, LogIn, LogOut, Clock, Lock, Download, Printer, Mail, Crown, AlertTriangle } from 'lucide-react';
 import { useEtatDesLieux, useRendezVous } from '@/hooks/useEtatDesLieux';
 import EtatDesLieuxViewer from './EtatDesLieuxViewer';
 import EtatDesLieuxPrintable from './EtatDesLieuxPrintable';
@@ -14,6 +14,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import html2pdf from 'html2pdf.js';
 import { toast } from 'sonner';
 import { useEmployes } from '@/context/EmployeContext';
+import { useSubscription } from '@/context/SubscriptionContext';
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const Dashboard = () => {
   const { data: etatsDesLieux, isLoading: isLoadingEtats, error: errorEtats } = useEtatDesLieux(userUuid);
   const { data: rendezVous, isLoading: isLoadingRdv, error: errorRdv } = useRendezVous(userUuid);
   const { employes } = useEmployes();
+  const { currentPlan, getRemainingEtatsDesLieux, canCreateEtatDesLieux } = useSubscription();
   const [selectedEtatId, setSelectedEtatId] = useState<string | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [showAllTermines, setShowAllTermines] = useState(false);
@@ -291,16 +293,46 @@ const Dashboard = () => {
             Gérez vos états des lieux d'entrée et de sortie
           </p>
         </div>
+        
+        {/* Subscription status */}
+        <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+          <div className="flex items-center gap-2">
+            <Crown className="h-4 w-4 text-blue-600" />
+            <span className="font-medium text-blue-900">Plan {currentPlan?.name}</span>
+          </div>
+          <div className="text-sm text-blue-700">
+            {getRemainingEtatsDesLieux()} état{getRemainingEtatsDesLieux() !== 1 ? 's' : ''} des lieux restant{getRemainingEtatsDesLieux() !== 1 ? 's' : ''} ce mois
+          </div>
+          {!canCreateEtatDesLieux && (
+            <div className="flex items-center gap-1">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <Button asChild variant="outline" size="sm" className="text-xs h-6">
+                <a href="/pricing">Améliorer</a>
+              </Button>
+            </div>
+          )}
+        </div>
+        
         <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-            <Button asChild variant="success" className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700">
-              <a href="/new-etat-des-lieux?type=entree" className="flex items-center justify-center gap-2">
+            <Button 
+              asChild 
+              variant="success" 
+              className={`flex-1 sm:flex-initial ${canCreateEtatDesLieux ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gray-400 cursor-not-allowed'}`}
+              disabled={!canCreateEtatDesLieux}
+            >
+              <a href={canCreateEtatDesLieux ? "/new-etat-des-lieux?type=entree" : "#"} className="flex items-center justify-center gap-2">
                 <LogIn className="h-4 w-4" />
                 <span className="hidden sm:inline">État d'entrée</span>
                 <span className="sm:hidden">Entrée</span>
               </a>
             </Button>
-            <Button asChild variant="primary" className="flex-1 sm:flex-initial bg-blue-600 hover:bg-blue-700">
-              <a href="/new-etat-des-lieux?type=sortie" className="flex items-center justify-center gap-2">
+            <Button 
+              asChild 
+              variant="primary" 
+              className={`flex-1 sm:flex-initial ${canCreateEtatDesLieux ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
+              disabled={!canCreateEtatDesLieux}
+            >
+              <a href={canCreateEtatDesLieux ? "/new-etat-des-lieux?type=sortie" : "#"} className="flex items-center justify-center gap-2">
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">État de sortie</span>
                 <span className="sm:hidden">Sortie</span>
