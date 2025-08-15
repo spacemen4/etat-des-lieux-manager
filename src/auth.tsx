@@ -1,26 +1,61 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Users, Building, UserPlus, Shield, Mail, Phone, MapPin, Settings, LogOut, Crown, UserCheck, User, Eye, EyeOff } from 'lucide-react';
+import { Users, UserPlus, Shield, Mail, Phone, MapPin, User, Eye, EyeOff, UserCheck, Settings, LogOut, Crown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase, setJwtExpirationHandler, handleJwtExpiration } from './lib/supabase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader as DialogHeaderUI, DialogTitle as DialogTitleUI, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import type { Tables, TablesInsert } from '@/types/etatDesLieux';
 import { useSupabaseErrorHandler } from './hooks/useSupabaseErrorHandler';
 
-// Contexte d'authentification
-const AuthContext = createContext(null);
+// Types
+interface AuthContextType {
+  user: any;
+  loading: boolean;
+  error: string | null;
+  signOut: () => Promise<void>;
+}
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+interface UserProfileFormData {
+  prenom: string;
+  nom: string;
+  date_naissance: string;
+  telephone: string;
+  adresse_ligne_1: string;
+  adresse_ligne_2: string;
+  code_postal: string;
+  ville: string;
+  pays: string;
+  profession: string;
+  entreprise: string;
+  siret: string;
+  tva_intra: string;
+  type_activite: string;
+  carte_professionnelle: string;
+  numero_rcp: string;
+  bio: string;
+  photo_url: string;
+  notes_privees: string;
+  notifications_email: boolean;
+  notifications_sms: boolean;
+  langue: string;
+  timezone: string;
+  signature_url: string;
+}
+
+// Contexte d'authentification
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -30,7 +65,6 @@ export const AuthProvider = ({ children }) => {
       console.log('JWT expired, signing out user...');
       setUser(null);
       setError('Votre session a expiré. Veuillez vous reconnecter.');
-      // Clear any stored session data
       supabase.auth.signOut().catch(console.error);
     };
     setJwtExpirationHandler(handleExpiration);
@@ -39,7 +73,6 @@ export const AuthProvider = ({ children }) => {
       try {
         const { data: { user }, error } = await supabase.auth.getUser();
         if (error) {
-          // AuthSessionMissingError is normal when user is not logged in
           if (error.message.includes('Auth session missing')) {
             setUser(null);
             setError(null);
@@ -51,8 +84,7 @@ export const AuthProvider = ({ children }) => {
           setUser(user);
           setError(null);
         }
-      } catch (err) {
-        // Handle AuthSessionMissingError as normal case
+      } catch (err: any) {
         if (err.message && err.message.includes('Auth session missing')) {
           setUser(null);
           setError(null);
@@ -95,12 +127,6 @@ export const AuthProvider = ({ children }) => {
     },
   };
 
-  console.log("AuthProvider render - state:", { 
-    user: user ? { id: user.id, email: user.email } : null, 
-    loading, 
-    error: error ? error.toString() : null 
-  });
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
@@ -113,15 +139,15 @@ export const useAuth = () => {
 };
 
 // Composant LoginForm
-export const LoginForm = ({ onSuccess }) => {
+export const LoginForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -143,10 +169,6 @@ export const LoginForm = ({ onSuccess }) => {
         throw error;
       }
       
-      // La gestion de la session est gérée par Supabase.
-      // Le "rememberMe" est implicitement géré par le stockage local.
-      // On pourrait ajouter une logique plus fine si nécessaire.
-
       setTimeout(() => {
         onSuccess?.();
       }, 100);
@@ -283,270 +305,287 @@ export const LoginForm = ({ onSuccess }) => {
 };
 
 // Composant SignUpForm
-export const SignUpForm = ({ onSuccess }) => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [prenom, setPrenom] = useState('');
-    const [nom, setNom] = useState('');
-    const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
+export const SignUpForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    prenom: '',
+    nom: ''
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const { handleError } = useSupabaseErrorHandler();
 
-    const handleSignUp = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setError(null);
-        
-        console.log('[SIGNUP] Starting signup process', { 
-            email: email, 
-            hasPassword: !!password,
-            prenom: prenom.trim(),
-            nom: nom.trim()
-        });
-        
-        try {
-            console.log('[SIGNUP] Calling supabase.auth.signUp...');
-            const signUpResult = await supabase.auth.signUp({
-                email: email.trim(),
-                password: password
-            });
-            
-            console.log('[SIGNUP] SignUp result:', {
-                user: signUpResult.data?.user ? {
-                    id: signUpResult.data.user.id,
-                    email: signUpResult.data.user.email,
-                    email_confirmed_at: signUpResult.data.user.email_confirmed_at
-                } : null,
-                error: signUpResult.error,
-                session: signUpResult.data?.session ? 'present' : 'null'
-            });
-            
-            if (signUpResult.error) {
-                console.error('[SIGNUP] SignUp error details:', signUpResult.error);
-                
-                // Solution de contournement pour l'erreur Database
-                if (signUpResult.error.message.includes('Database error saving new user')) {
-                    setError(`Problème technique lors de l'inscription. 
-                    
-En attendant la résolution, veuillez contacter l'administrateur avec vos informations :
-• Email: ${email}
-• Prénom: ${prenom}
-• Nom: ${nom}
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({ ...prev, [id]: value }));
+  };
 
-L'équipe créera votre compte manuellement.`);
-                } else if (signUpResult.error.message.includes('User already registered')) {
-                    setError("Un compte existe déjà avec cet email. Essayez de vous connecter ou de réinitialiser votre mot de passe.");
-                } else {
-                    setError(signUpResult.error.message);
-                }
-                return; // Ne pas throw, on affiche juste le message
-            }
-            
-            const user = signUpResult.data?.user;
-            console.log('[SIGNUP] User created successfully:', {
-                userId: user?.id,
-                emailConfirmed: user?.email_confirmed_at
-            });
-            
-            // Si l'inscription réussit, créer le profil
-            if (user) {
-                console.log('[SIGNUP] Creating user profile...');
-                try {
-                    const profileData = {
-                        user_id: user.id,
-                        prenom: prenom.trim(),
-                        nom: nom.trim()
-                    };
-                    
-                    const profileResult = await supabase
-                        .from('user_profiles')
-                        .insert(profileData);
-                    
-                    if (profileResult.error) {
-                        console.warn('[SIGNUP] Profile creation failed:', profileResult.error);
-                    } else {
-                        console.log('[SIGNUP] Profile created successfully');
-                    }
-                } catch (profileErr) {
-                    console.warn('[SIGNUP] Profile creation error:', profileErr);
-                }
-                
-                // Vérifier si confirmation email est requise
-                if (!user.email_confirmed_at) {
-                    console.log('[SIGNUP] Email confirmation required');
-                    setError("Un email de confirmation a été envoyé. Veuillez vérifier votre boîte mail et cliquer sur le lien de confirmation avant de vous connecter.");
-                } else {
-                    console.log('[SIGNUP] No email confirmation required, proceeding...');
-                    onSuccess?.();
-                }
-            } else {
-                console.error('[SIGNUP] No user returned from signUp');
-                setError("Erreur lors de la création du compte (pas d'utilisateur retourné).");
-            }
-            
-        } catch (error) {
-            console.error('[SIGNUP] Catch block error:', error);
-            setError("Une erreur technique s'est produite. Veuillez contacter l'administrateur.");
-        } finally {
-            console.log('[SIGNUP] Signup process completed');
-            setLoading(false);
+  const validateForm = () => {
+    if (!formData.email.trim()) {
+      setError("L'email est requis");
+      return false;
+    }
+    if (!formData.password) {
+      setError("Le mot de passe est requis");
+      return false;
+    }
+    if (!formData.prenom.trim()) {
+      setError("Le prénom est requis");
+      return false;
+    }
+    if (!formData.nom.trim()) {
+      setError("Le nom est requis");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!validateForm()) return;
+
+    setLoading(true);
+    console.log('[SignUp] Starting signup process', formData);
+
+    try {
+      // Étape 1: Création du compte auth
+      console.log('[SignUp] Creating auth user...');
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email.trim(),
+        password: formData.password,
+        options: {
+          data: {
+            prenom: formData.prenom.trim(),
+            nom: formData.nom.trim()
+          }
         }
-    };
+      });
 
-    return (
-        <Card className="w-full max-w-md glass-heavy backdrop-blur-xl border border-white/20 rounded-2xl overflow-hidden animate-fade-in shadow-2xl">
-            <CardHeader className="gradient-secondary text-white p-6 text-center">
-                <CardTitle className="text-2xl font-bold flex items-center justify-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                        <UserPlus className="w-6 h-6" />
-                    </div>
-                    Inscription
-                </CardTitle>
-                <p className="text-white/80 text-sm mt-2">Créez votre compte professionnel</p>
-            </CardHeader>
-            <CardContent className="p-6">
-                <form onSubmit={handleSignUp} className="space-y-5">
-                    {error && (
-                        <Alert variant="destructive" className="glass-light backdrop-blur-sm border border-red-200/50 animate-slide-up">
-                            <AlertDescription className="text-red-700 font-medium">{error}</AlertDescription>
-                        </Alert>
-                    )}
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="prenom" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                                <User className="w-4 h-4" />
-                                Prénom
-                            </Label>
-                            <Input 
-                                id="prenom" 
-                                value={prenom} 
-                                onChange={(e) => setPrenom(e.target.value)} 
-                                required 
-                                placeholder="Jean"
-                                className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-11"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="nom" className="text-sm font-semibold text-slate-700">Nom</Label>
-                            <Input 
-                                id="nom" 
-                                value={nom} 
-                                onChange={(e) => setNom(e.target.value)} 
-                                required 
-                                placeholder="Dupont"
-                                className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-11"
-                            />
-                        </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                            <Mail className="w-4 h-4" />
-                            Email
-                        </Label>
-                        <Input 
-                            id="email" 
-                            type="email" 
-                            value={email} 
-                            onChange={(e) => setEmail(e.target.value)} 
-                            required 
-                            placeholder="jean.dupont@email.com"
-                            className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-11"
-                        />
-                    </div>
-                    
-                    <div className="space-y-2">
-                        <Label htmlFor="password" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                            <Shield className="w-4 h-4" />
-                            Mot de passe
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id="password"
-                            type={showPassword ? 'text' : 'password'}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            placeholder="••••••••"
-                            className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-11 pr-12"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-slate-700 transition-colors duration-300 micro-bounce"
-                            aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                          >
-                            {showPassword ? (
-                                <EyeOff className="h-5 w-5" />
-                            ) : (
-                                <Eye className="h-5 w-5" />
-                            )}
-                          </button>
-                        </div>
-                    </div>
-                    
-                    <Button 
-                        type="submit" 
-                        className="w-full btn-gradient h-12 text-lg font-semibold micro-bounce shadow-xl" 
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <div className="flex items-center gap-2">
-                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                Inscription...
-                            </div>
-                        ) : (
-                            'S\'inscrire'
-                        )}
-                    </Button>
-                </form>
-                
-                <div className="mt-6 text-center">
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-slate-200"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="bg-white px-3 text-slate-500">Déjà inscrit ?</span>
-                        </div>
-                    </div>
-                    
-                    <div className="mt-4 space-y-2">
-                        <a href="/login">
-                            <Button variant="outline" className="w-full glass border-slate-200/50 hover:glass-heavy transition-all duration-300 h-11 micro-bounce">
-                                <Shield className="w-4 h-4 mr-2" />
-                                Se connecter
-                            </Button>
-                        </a>
-                        
-                        {error && error.includes('contacter l\'administrateur') && (
-                            <a href="mailto:support@etatdelux.com?subject=Inscription%20-%20Problème%20technique&body=Bonjour,%0A%0AJe%20rencontre%20un%20problème%20lors%20de%20l'inscription%20sur%20État%20des%20Lieux%20Manager.%0A%0AMes%20informations%20:%0A%0AEmail%20:%20%0APrénom%20:%20%0ANom%20:%20%0A%0AMerci%20de%20créer%20mon%20compte.%0A%0ACordialement">
-                                <Button variant="outline" className="w-full glass border-blue-200/50 hover:glass-heavy transition-all duration-300 h-11 micro-bounce">
-                                    <Mail className="w-4 h-4 mr-2" />
-                                    Contacter le support
-                                </Button>
-                            </a>
-                        )}
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-    );
+      if (authError) {
+        console.error('[SignUp] Auth error:', authError);
+        throw authError;
+      }
+
+      if (!authData.user) {
+        console.error('[SignUp] No user returned from auth');
+        throw new Error("Erreur lors de la création du compte");
+      }
+
+      console.log('[SignUp] Auth user created:', authData.user.id);
+
+      // Étape 2: Création du profil utilisateur
+      console.log('[SignUp] Creating user profile...');
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          user_id: authData.user.id,
+          prenom: formData.prenom.trim(),
+          nom: formData.nom.trim(),
+          email: formData.email.trim(),
+          profil_complet: false
+        });
+
+      if (profileError) {
+        console.error('[SignUp] Profile creation error:', profileError);
+        
+        // Tentative de nettoyage
+        console.log('[SignUp] Attempting to delete auth user...');
+        const { error: deleteError } = await supabase.auth.admin.deleteUser(authData.user.id);
+        if (deleteError) {
+          console.error('[SignUp] Failed to delete auth user:', deleteError);
+        }
+
+        throw profileError;
+      }
+
+      console.log('[SignUp] Signup successful!');
+      
+      if (!authData.user.email_confirmed_at) {
+        console.log('[SignUp] Email confirmation required');
+        setError("Un email de confirmation a été envoyé. Veuillez vérifier votre boîte mail.");
+      } else {
+        console.log('[SignUp] Email already confirmed');
+        onSuccess?.();
+      }
+
+    } catch (error: any) {
+      console.error('[SignUp] Error:', error);
+      
+      if (error.message.includes('User already registered')) {
+        setError("Un compte existe déjà avec cet email.");
+      } else if (error.message.includes('Database error')) {
+        setError(`
+          Problème technique lors de l'inscription. 
+          Veuillez contacter le support avec ces informations :
+          Email: ${formData.email}
+          Prénom: ${formData.prenom}
+          Nom: ${formData.nom}
+        `);
+      } else if (!handleError(error)) {
+        setError(error.message || "Une erreur inconnue est survenue");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card className="w-full max-w-md glass-heavy backdrop-blur-xl border border-white/20 rounded-2xl overflow-hidden animate-fade-in shadow-2xl">
+      <CardHeader className="gradient-secondary text-white p-6 text-center">
+        <CardTitle className="text-2xl font-bold flex items-center justify-center gap-3">
+          <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+            <UserPlus className="w-6 h-6" />
+          </div>
+          Inscription
+        </CardTitle>
+        <p className="text-white/80 text-sm mt-2">Créez votre compte professionnel</p>
+      </CardHeader>
+      <CardContent className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {error && (
+            <Alert variant="destructive" className="glass-light backdrop-blur-sm border border-red-200/50 animate-slide-up">
+              <AlertDescription className="text-red-700 font-medium">{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="prenom" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Prénom
+              </Label>
+              <Input 
+                id="prenom" 
+                value={formData.prenom} 
+                onChange={handleChange}
+                required 
+                placeholder="Jean"
+                className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-11"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nom" className="text-sm font-semibold text-slate-700">Nom</Label>
+              <Input 
+                id="nom" 
+                value={formData.nom} 
+                onChange={handleChange}
+                required 
+                placeholder="Dupont"
+                className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-11"
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <Mail className="w-4 h-4" />
+              Email
+            </Label>
+            <Input 
+              id="email" 
+              type="email" 
+              value={formData.email} 
+              onChange={handleChange}
+              required 
+              placeholder="jean.dupont@email.com"
+              className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-11"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <Shield className="w-4 h-4" />
+              Mot de passe
+            </Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="••••••••"
+                className="input-glass border-slate-200/50 focus:border-blue-400/50 transition-all duration-300 h-11 pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-slate-700 transition-colors duration-300 micro-bounce"
+                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+          </div>
+          
+          <Button 
+            type="submit" 
+            className="w-full btn-gradient h-12 text-lg font-semibold micro-bounce shadow-xl" 
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Inscription...
+              </div>
+            ) : (
+              'S\'inscrire'
+            )}
+          </Button>
+        </form>
+        
+        <div className="mt-6 text-center">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-white px-3 text-slate-500">Déjà inscrit ?</span>
+            </div>
+          </div>
+          
+          <div className="mt-4 space-y-2">
+            <a href="/login">
+              <Button variant="outline" className="w-full glass border-slate-200/50 hover:glass-heavy transition-all duration-300 h-11 micro-bounce">
+                <Shield className="w-4 h-4 mr-2" />
+                Se connecter
+              </Button>
+            </a>
+            
+            {error && error.includes('contacter l\'administrateur') && (
+              <a href="mailto:support@etatdelux.com?subject=Inscription%20-%20Problème%20technique&body=Bonjour,%0A%0AJe%20rencontre%20un%20problème%20lors%20de%20l'inscription%20sur%20État%20des%20Lieux%20Manager.%0A%0AMes%20informations%20:%0A%0AEmail%20:%20%0APrénom%20:%20%0ANom%20:%20%0A%0AMerci%20de%20créer%20mon%20compte.%0A%0ACordialement">
+                <Button variant="outline" className="w-full glass border-blue-200/50 hover:glass-heavy transition-all duration-300 h-11 micro-bounce">
+                  <Mail className="w-4 h-4 mr-2" />
+                  Contacter le support
+                </Button>
+              </a>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 };
 
 // Composant UserProfile
 export const UserProfile = () => {
   const { user } = useAuth();
   const { handleError } = useSupabaseErrorHandler();
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   
-  // Form states
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<UserProfileFormData>({
     prenom: '',
     nom: '',
     date_naissance: '',
@@ -573,8 +612,7 @@ export const UserProfile = () => {
     signature_url: ''
   });
 
-  // Charger le profil existant
-  const loadProfile = React.useCallback(async () => {
+  const loadProfile = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -585,13 +623,13 @@ export const UserProfile = () => {
         .eq('user_id', user.id)
         .single();
         
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+      if (error && error.code !== 'PGRST116') throw error;
       
       if (data) {
         setProfile(data);
         setFormData({
-          prenom: data.prenom || user.user_metadata.prenom || '',
-          nom: data.nom || user.user_metadata.nom || '',
+          prenom: data.prenom || user.user_metadata?.prenom || '',
+          nom: data.nom || user.user_metadata?.nom || '',
           date_naissance: data.date_naissance || '',
           telephone: data.telephone || '',
           adresse_ligne_1: data.adresse_ligne_1 || '',
@@ -616,14 +654,13 @@ export const UserProfile = () => {
           signature_url: data.signature_url || ''
         });
       } else {
-        // Profil n'existe pas, utiliser les données auth
         setFormData(prev => ({
           ...prev,
-          prenom: user.user_metadata.prenom || '',
-          nom: user.user_metadata.nom || ''
+          prenom: user.user_metadata?.prenom || '',
+          nom: user.user_metadata?.nom || ''
         }));
       }
-    } catch (e) {
+    } catch (e: any) {
       if (!handleError(e)) {
         setError(e.message);
       }
@@ -632,11 +669,11 @@ export const UserProfile = () => {
     }
   }, [user, handleError]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadProfile();
   }, [loadProfile]);
 
-  const handleSave = async (e) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     
@@ -660,7 +697,7 @@ export const UserProfile = () => {
       
       setProfile(data);
       setEditing(false);
-    } catch (e) {
+    } catch (e: any) {
       if (!handleError(e)) {
         setError(e.message);
       }
@@ -669,7 +706,7 @@ export const UserProfile = () => {
     }
   };
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field: keyof UserProfileFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -995,34 +1032,28 @@ export const UserProfile = () => {
   );
 };
 
-// Placeholder for TeamManagement component
+// Composant TeamManagement
 export const TeamManagement = () => {
-  // Scope by current user's id (table `employes.user_id`)
-  const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
-  const [loadingUser, setLoadingUser] = React.useState<boolean>(true);
-  const [loadingList, setLoadingList] = React.useState<boolean>(false);
-  const [submitting, setSubmitting] = React.useState<boolean>(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [loadingUser, setLoadingUser] = useState<boolean>(true);
+  const [loadingList, setLoadingList] = useState<boolean>(false);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const { handleError } = useSupabaseErrorHandler();
 
-  const [prenom, setPrenom] = React.useState('');
-  const [nom, setNom] = React.useState('');
-  const [email, setEmail] = React.useState('');
-  const [telephone, setTelephone] = React.useState('');
-  const [fonction, setFonction] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [actif, setActif] = React.useState(true);
+  const [prenom, setPrenom] = useState('');
+  const [nom, setNom] = useState('');
+  const [email, setEmail] = useState('');
+  const [telephone, setTelephone] = useState('');
+  const [fonction, setFonction] = useState('');
+  const [password, setPassword] = useState('');
+  const [actif, setActif] = useState(true);
 
-  const [employes, setEmployes] = React.useState<Tables<'employes'>[]>([]);
-
-  // Dialog state for creating a new employee
-  const [isAddOpen, setIsAddOpen] = React.useState(false);
-
-  // Plus de dépendance à la table `utilisateurs` depuis que `employes.user_id`
-  // référence `auth.users.id` directement.
+  const [employes, setEmployes] = useState<Tables<'employes'>[]>([]);
+  const [isAddOpen, setIsAddOpen] = useState(false);
 
   // Load current user id
-  React.useEffect(() => {
+  useEffect(() => {
     let isMounted = true;
     const load = async () => {
       try {
@@ -1032,7 +1063,6 @@ export const TeamManagement = () => {
         if (!user) throw new Error('Utilisateur non authentifié');
         if (isMounted) {
           setCurrentUserId(user.id);
-          console.log('[TeamManagement] Loaded auth user', { userId: user.id });
         }
       } catch (e: any) {
         if (isMounted) {
@@ -1048,9 +1078,8 @@ export const TeamManagement = () => {
     return () => { isMounted = false; };
   }, [handleError]);
 
-  const loadEmployes = React.useCallback(async (userId: string) => {
+  const loadEmployes = useCallback(async (userId: string) => {
     setLoadingList(true);
-    console.log('[TeamManagement] loadEmployes: start', { userId });
     try {
       const { data, error } = await supabase
         .from('employes')
@@ -1059,11 +1088,9 @@ export const TeamManagement = () => {
         .order('created_at', { ascending: false });
       if (error) throw error;
       setEmployes(data ?? []);
-      console.log('[TeamManagement] loadEmployes: success', { count: data?.length ?? 0 });
     } catch (e: any) {
       if (!handleError(e)) {
         setError(e.message ?? 'Erreur lors du chargement des employés');
-        console.error('[TeamManagement] loadEmployes: error', e);
       }
     } finally {
       setLoadingList(false);
@@ -1071,23 +1098,11 @@ export const TeamManagement = () => {
   }, [handleError]);
 
   // Load employees when currentUserId is known
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentUserId) {
-      console.log('[TeamManagement] currentUserId ready, loading employees');
       loadEmployes(currentUserId);
     }
   }, [currentUserId, loadEmployes]);
-
-  // Trace key state changes
-  React.useEffect(() => {
-    console.log('[TeamManagement] state changed', {
-      currentUserId,
-      loadingUser,
-      loadingList,
-      submitting,
-      isAddOpen,
-    });
-  }, [currentUserId, loadingUser, loadingList, submitting, isAddOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1099,13 +1114,8 @@ export const TeamManagement = () => {
 
     setSubmitting(true);
     try {
-      console.log('[TeamManagement] handleSubmit: start', { prenom, nom, email, telephone, fonction, password: password ? '[MASKED]' : '', actif });
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      console.log('[TeamManagement] handleSubmit: current auth user', { userId: user?.id });
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Utilisateur non authentifié');
-      // Plus besoin de vérifier la présence dans `utilisateurs`
 
       const newEmploye: TablesInsert<'employes'> = {
         prenom: prenom.trim(),
@@ -1117,7 +1127,6 @@ export const TeamManagement = () => {
         user_id: user.id,
         actif,
       };
-      console.log('[TeamManagement] handleSubmit: inserting employe', newEmploye);
 
       const { data, error } = await supabase
         .from('employes')
@@ -1125,7 +1134,6 @@ export const TeamManagement = () => {
         .select()
         .single();
       if (error) throw error;
-      console.log('[TeamManagement] handleSubmit: insert success', { created: data });
 
       // Reset form and refresh list
       setPrenom('');
@@ -1137,17 +1145,13 @@ export const TeamManagement = () => {
       setActif(true);
 
       setEmployes((prev) => [data as Tables<'employes'>, ...prev]);
-      // Close dialog after successful creation
-      console.log('[TeamManagement] handleSubmit: closing dialog');
       setIsAddOpen(false);
     } catch (e: any) {
       if (!handleError(e)) {
         setError(e.message ?? "Erreur lors de l'ajout de l'employé");
-        console.error('[TeamManagement] handleSubmit: error', e);
       }
     } finally {
       setSubmitting(false);
-      console.log('[TeamManagement] handleSubmit: end');
     }
   };
 
@@ -1167,15 +1171,11 @@ export const TeamManagement = () => {
 
         {/* Bouton + Ajouter un employé */}
         <div className="flex justify-end">
-          <Dialog open={isAddOpen} onOpenChange={async (open) => { 
-              console.log('[TeamManagement] Dialog onOpenChange', { open }); 
-              setIsAddOpen(open); 
-            }}>
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button
                 className="min-w-48"
                 disabled={loadingUser || !currentUserId}
-                onClick={() => { console.log('[TeamManagement] Add employee button clicked'); }}
               >
                 <span className="inline-flex items-center gap-2">
                   <UserPlus className="h-4 w-4" /> + Ajouter un employé
@@ -1183,57 +1183,57 @@ export const TeamManagement = () => {
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeaderUI>
-                <DialogTitleUI>Ajouter un employé</DialogTitleUI>
-              </DialogHeaderUI>
+              <DialogHeader>
+                <DialogTitle>Ajouter un employé</DialogTitle>
+              </DialogHeader>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label htmlFor="prenom">Prénom</Label>
-                      <Input id="prenom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="nom">Nom</Label>
-                      <Input id="nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="exemple@domaine.com" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="telephone">Téléphone</Label>
-                      <Input id="telephone" value={telephone} onChange={(e) => setTelephone(e.target.value)} placeholder="06 12 34 56 78" />
-                    </div>
-                    <div className="space-y-1 md:col-span-2">
-                      <Label htmlFor="fonction">Fonction</Label>
-                      <Input id="fonction" value={fonction} onChange={(e) => setFonction(e.target.value)} placeholder="Ex: Agent immobilier" />
-                    </div>
-                    <div className="space-y-1 md:col-span-2">
-                      <Label htmlFor="password">Mot de passe (optionnel)</Label>
-                      <Input 
-                        id="password" 
-                        type="password" 
-                        value={password} 
-                        onChange={(e) => setPassword(e.target.value)} 
-                        placeholder="Laissez vide si non souhaité"
-                      />
-                      <p className="text-xs text-gray-500">Le mot de passe peut être ajouté plus tard si nécessaire</p>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="prenom">Prénom</Label>
+                    <Input id="prenom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Switch id="actif" checked={actif} onCheckedChange={setActif} />
-                    <Label htmlFor="actif">Actif</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="nom">Nom</Label>
+                    <Input id="nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
                   </div>
-                  <div className="flex gap-2 justify-end">
-                    <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
-                      Annuler
-                    </Button>
-                    <Button type="submit" disabled={submitting || loadingUser} className="min-w-32">
-                      {submitting ? "Ajout en cours..." : "Ajouter"}
-                    </Button>
+                  <div className="space-y-1">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="exemple@domaine.com" />
                   </div>
-                </form>
+                  <div className="space-y-1">
+                    <Label htmlFor="telephone">Téléphone</Label>
+                    <Input id="telephone" value={telephone} onChange={(e) => setTelephone(e.target.value)} placeholder="06 12 34 56 78" />
+                  </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <Label htmlFor="fonction">Fonction</Label>
+                    <Input id="fonction" value={fonction} onChange={(e) => setFonction(e.target.value)} placeholder="Ex: Agent immobilier" />
+                  </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <Label htmlFor="password">Mot de passe (optionnel)</Label>
+                    <Input 
+                      id="password" 
+                      type="password" 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      placeholder="Laissez vide si non souhaité"
+                    />
+                    <p className="text-xs text-gray-500">Le mot de passe peut être ajouté plus tard si nécessaire</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Switch id="actif" checked={actif} onCheckedChange={setActif} />
+                  <Label htmlFor="actif">Actif</Label>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button type="submit" disabled={submitting || loadingUser} className="min-w-32">
+                    {submitting ? "Ajout en cours..." : "Ajouter"}
+                  </Button>
+                </div>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
@@ -1295,6 +1295,4 @@ export const TeamManagement = () => {
   );
 };
 
-export {
-  AuthContext,
-};
+export { AuthContext };
