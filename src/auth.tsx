@@ -294,31 +294,55 @@ export const SignUpForm = ({ onSuccess }) => {
         setError(null);
         
         try {
+            // Inscription simple sans données utilisateur pour éviter le trigger problématique
             const { data: { user }, error } = await supabase.auth.signUp({
                 email,
-                password,
-                options: {
-                    data: {
-                        prenom,
-                        nom
-                    }
-                }
+                password
             });
+            
             if (error) {
                 console.error('SignUp error:', error);
                 if (error.message.includes('Database error')) {
                     setError("Erreur lors de la création du compte. Veuillez réessayer.");
+                } else if (error.message.includes('User already registered')) {
+                    setError("Un compte existe déjà avec cet email.");
                 } else {
                     setError(error.message);
                 }
                 throw error;
             }
             
-            onSuccess?.();
+            // Si l'inscription réussit, créer le profil manuellement
+            if (user) {
+                try {
+                    const { error: profileError } = await supabase
+                        .from('user_profiles')
+                        .insert({
+                            user_id: user.id,
+                            prenom: prenom.trim(),
+                            nom: nom.trim()
+                        });
+                    
+                    if (profileError) {
+                        console.warn('Profile creation failed:', profileError);
+                        // Ne pas bloquer l'inscription si la création du profil échoue
+                    }
+                } catch (profileErr) {
+                    console.warn('Profile creation error:', profileErr);
+                    // Ne pas bloquer l'inscription
+                }
+            }
+            
+            // Si Supabase est configuré pour demander la confirmation email
+            if (user && !user.email_confirmed_at) {
+                setError("Un email de confirmation a été envoyé. Veuillez vérifier votre boîte mail et cliquer sur le lien de confirmation avant de vous connecter.");
+            } else {
+                onSuccess?.();
+            }
         } catch (error) {
             console.error('SignUp catch error:', error);
-            if (!error.message.includes('Database error')) {
-                setError(error.message);
+            if (!error.message) {
+                setError("Une erreur inattendue s'est produite. Veuillez réessayer.");
             }
         } finally {
             setLoading(false);
