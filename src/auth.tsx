@@ -38,14 +38,25 @@ export const AuthProvider = ({ children }) => {
     const fetchUser = async () => {
       try {
         const { data: { user }, error } = await supabase.auth.getUser();
-        if (error && !handleJwtExpiration(error)) {
-          console.error('Auth error:', error);
-          setError(error.message);
+        if (error) {
+          // AuthSessionMissingError is normal when user is not logged in
+          if (error.message.includes('Auth session missing')) {
+            setUser(null);
+            setError(null);
+          } else if (!handleJwtExpiration(error)) {
+            console.error('Auth error:', error);
+            setError(error.message);
+          }
         } else {
           setUser(user);
+          setError(null);
         }
       } catch (err) {
-        if (!handleJwtExpiration(err)) {
+        // Handle AuthSessionMissingError as normal case
+        if (err.message && err.message.includes('Auth session missing')) {
+          setUser(null);
+          setError(null);
+        } else if (!handleJwtExpiration(err)) {
           console.error('Auth fetch error:', err);
           setError(err.message);
         }
