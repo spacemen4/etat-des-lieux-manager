@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -403,7 +403,17 @@ export type Database = {
           photos: Json | null
           rendez_vous_id: string | null
           signature_locataire: string | null
+          signature_locataire_date: string | null
+          signature_locataire_lieu: string | null
+          signature_locataire_lu_approuve: boolean | null
+          signature_locataire_nom: string | null
+          signature_locataire_photo_identite: string | null
           signature_proprietaire_agent: string | null
+          signature_proprietaire_agent_date: string | null
+          signature_proprietaire_agent_lieu: string | null
+          signature_proprietaire_agent_lu_approuve: boolean | null
+          signature_proprietaire_agent_nom: string | null
+          signature_proprietaire_agent_photo_identite: string | null
           statut: string | null
           travaux_a_faire: boolean | null
           type_bien: string
@@ -431,7 +441,17 @@ export type Database = {
           photos?: Json | null
           rendez_vous_id?: string | null
           signature_locataire?: string | null
+          signature_locataire_date?: string | null
+          signature_locataire_lieu?: string | null
+          signature_locataire_lu_approuve?: boolean | null
+          signature_locataire_nom?: string | null
+          signature_locataire_photo_identite?: string | null
           signature_proprietaire_agent?: string | null
+          signature_proprietaire_agent_date?: string | null
+          signature_proprietaire_agent_lieu?: string | null
+          signature_proprietaire_agent_lu_approuve?: boolean | null
+          signature_proprietaire_agent_nom?: string | null
+          signature_proprietaire_agent_photo_identite?: string | null
           statut?: string | null
           travaux_a_faire?: boolean | null
           type_bien: string
@@ -459,7 +479,17 @@ export type Database = {
           photos?: Json | null
           rendez_vous_id?: string | null
           signature_locataire?: string | null
+          signature_locataire_date?: string | null
+          signature_locataire_lieu?: string | null
+          signature_locataire_lu_approuve?: boolean | null
+          signature_locataire_nom?: string | null
+          signature_locataire_photo_identite?: string | null
           signature_proprietaire_agent?: string | null
+          signature_proprietaire_agent_date?: string | null
+          signature_proprietaire_agent_lieu?: string | null
+          signature_proprietaire_agent_lu_approuve?: boolean | null
+          signature_proprietaire_agent_nom?: string | null
+          signature_proprietaire_agent_photo_identite?: string | null
           statut?: string | null
           travaux_a_faire?: boolean | null
           type_bien?: string
@@ -745,6 +775,50 @@ export type Database = {
             columns: ["etat_des_lieux_id"]
             isOneToOne: false
             referencedRelation: "v_etat_des_lieux_with_permissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_history: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string
+          description: string | null
+          id: string
+          status: string
+          stripe_payment_intent_id: string | null
+          subscription_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string
+          description?: string | null
+          id?: string
+          status: string
+          stripe_payment_intent_id?: string | null
+          subscription_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string
+          description?: string | null
+          id?: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          subscription_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_history_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
             referencedColumns: ["id"]
           },
         ]
@@ -1354,8 +1428,195 @@ export type Database = {
           },
         ]
       }
+      usage_tracking: {
+        Row: {
+          biens_count: number | null
+          etats_des_lieux_count_current_month: number | null
+          id: string
+          last_updated: string | null
+          photos_count_total: number | null
+          user_id: string
+        }
+        Insert: {
+          biens_count?: number | null
+          etats_des_lieux_count_current_month?: number | null
+          id?: string
+          last_updated?: string | null
+          photos_count_total?: number | null
+          user_id: string
+        }
+        Update: {
+          biens_count?: number | null
+          etats_des_lieux_count_current_month?: number | null
+          id?: string
+          last_updated?: string | null
+          photos_count_total?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          adresse_ligne_1: string | null
+          adresse_ligne_2: string | null
+          bio: string | null
+          carte_professionnelle: string | null
+          code_postal: string | null
+          created_at: string | null
+          date_naissance: string | null
+          derniere_connexion: string | null
+          entreprise: string | null
+          id: string
+          langue: string | null
+          nom: string | null
+          notes_privees: string | null
+          notifications_email: boolean | null
+          notifications_sms: boolean | null
+          numero_rcp: string | null
+          pays: string | null
+          photo_url: string | null
+          prenom: string | null
+          profession: string | null
+          profil_complet: boolean | null
+          signature_url: string | null
+          siret: string | null
+          telephone: string | null
+          telephone_fixe: string | null
+          timezone: string | null
+          tva_intra: string | null
+          type_activite: string | null
+          updated_at: string | null
+          user_id: string
+          ville: string | null
+        }
+        Insert: {
+          adresse_ligne_1?: string | null
+          adresse_ligne_2?: string | null
+          bio?: string | null
+          carte_professionnelle?: string | null
+          code_postal?: string | null
+          created_at?: string | null
+          date_naissance?: string | null
+          derniere_connexion?: string | null
+          entreprise?: string | null
+          id?: string
+          langue?: string | null
+          nom?: string | null
+          notes_privees?: string | null
+          notifications_email?: boolean | null
+          notifications_sms?: boolean | null
+          numero_rcp?: string | null
+          pays?: string | null
+          photo_url?: string | null
+          prenom?: string | null
+          profession?: string | null
+          profil_complet?: boolean | null
+          signature_url?: string | null
+          siret?: string | null
+          telephone?: string | null
+          telephone_fixe?: string | null
+          timezone?: string | null
+          tva_intra?: string | null
+          type_activite?: string | null
+          updated_at?: string | null
+          user_id: string
+          ville?: string | null
+        }
+        Update: {
+          adresse_ligne_1?: string | null
+          adresse_ligne_2?: string | null
+          bio?: string | null
+          carte_professionnelle?: string | null
+          code_postal?: string | null
+          created_at?: string | null
+          date_naissance?: string | null
+          derniere_connexion?: string | null
+          entreprise?: string | null
+          id?: string
+          langue?: string | null
+          nom?: string | null
+          notes_privees?: string | null
+          notifications_email?: boolean | null
+          notifications_sms?: boolean | null
+          numero_rcp?: string | null
+          pays?: string | null
+          photo_url?: string | null
+          prenom?: string | null
+          profession?: string | null
+          profil_complet?: boolean | null
+          signature_url?: string | null
+          siret?: string | null
+          telephone?: string | null
+          telephone_fixe?: string | null
+          timezone?: string | null
+          tva_intra?: string | null
+          type_activite?: string | null
+          updated_at?: string | null
+          user_id?: string
+          ville?: string | null
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string | null
+          current_period_end: string
+          current_period_start: string
+          id: string
+          plan_id: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_price_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_period_end?: string
+          current_period_start?: string
+          id?: string
+          plan_id: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_period_end?: string
+          current_period_start?: string
+          id?: string
+          plan_id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
+      user_profiles_summary: {
+        Row: {
+          created_at: string | null
+          derniere_connexion: string | null
+          email: string | null
+          entreprise: string | null
+          nom: string | null
+          prenom: string | null
+          profil_complet: boolean | null
+          telephone: string | null
+          type_activite: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       v_etat_des_lieux_with_permissions: {
         Row: {
           adresse_bien: string | null
@@ -1477,29 +1738,37 @@ export type Database = {
       }
     }
     Functions: {
+      can_create_bien: {
+        Args: { user_uuid: string }
+        Returns: boolean
+      }
+      can_create_etat_des_lieux: {
+        Args: { user_uuid: string }
+        Returns: boolean
+      }
       check_etat_lieux_permission: {
         Args: {
           p_etat_des_lieux_id: string
-          p_utilisateur_id: string
           p_permission?: string
+          p_utilisateur_id: string
         }
         Returns: boolean
       }
       check_plan_limit: {
         Args: {
-          p_organisation_id: string
-          p_feature_name: string
           p_current_count?: number
+          p_feature_name: string
+          p_organisation_id: string
         }
         Returns: boolean
       }
       create_organisation_with_admin: {
         Args: {
-          p_nom_organisation: string
           p_adresse_organisation: string
           p_email_admin: string
-          p_prenom_admin: string
           p_nom_admin: string
+          p_nom_organisation: string
+          p_prenom_admin: string
           p_telephone_admin?: string
         }
         Returns: string
@@ -1507,19 +1776,23 @@ export type Database = {
       get_organisation_subscription: {
         Args: { p_organisation_id: string }
         Returns: {
-          subscription_id: string
+          cancel_at_period_end: boolean
+          current_period_end: string
           plan_name: string
           status: string
-          current_period_end: string
-          cancel_at_period_end: boolean
+          subscription_id: string
         }[]
+      }
+      get_plan_limits: {
+        Args: { plan_id: string }
+        Returns: Json
       }
       get_user_organisation_id: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
       invite_user_to_organisation: {
-        Args: { p_organisation_id: string; p_email: string; p_role?: string }
+        Args: { p_email: string; p_organisation_id: string; p_role?: string }
         Returns: string
       }
       is_organisation_admin: {
