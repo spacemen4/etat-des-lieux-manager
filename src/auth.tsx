@@ -305,7 +305,6 @@ export const SignUpForm = ({ onSuccess }) => {
         });
         
         try {
-            // Test 1: Inscription ultra-basique pour isoler le problème
             console.log('[SIGNUP] Calling supabase.auth.signUp...');
             const signUpResult = await supabase.auth.signUp({
                 email: email.trim(),
@@ -323,21 +322,24 @@ export const SignUpForm = ({ onSuccess }) => {
             });
             
             if (signUpResult.error) {
-                console.error('[SIGNUP] SignUp error details:', {
-                    message: signUpResult.error.message,
-                    status: signUpResult.error.status,
-                    name: signUpResult.error.name,
-                    details: signUpResult.error
-                });
+                console.error('[SIGNUP] SignUp error details:', signUpResult.error);
                 
-                if (signUpResult.error.message.includes('Database error')) {
-                    setError("Erreur lors de la création du compte. Veuillez réessayer.");
+                // Solution de contournement pour l'erreur Database
+                if (signUpResult.error.message.includes('Database error saving new user')) {
+                    setError(`Problème technique lors de l'inscription. 
+                    
+En attendant la résolution, veuillez contacter l'administrateur avec vos informations :
+• Email: ${email}
+• Prénom: ${prenom}
+• Nom: ${nom}
+
+L'équipe créera votre compte manuellement.`);
                 } else if (signUpResult.error.message.includes('User already registered')) {
-                    setError("Un compte existe déjà avec cet email.");
+                    setError("Un compte existe déjà avec cet email. Essayez de vous connecter ou de réinitialiser votre mot de passe.");
                 } else {
                     setError(signUpResult.error.message);
                 }
-                throw signUpResult.error;
+                return; // Ne pas throw, on affiche juste le message
             }
             
             const user = signUpResult.data?.user;
@@ -346,9 +348,28 @@ export const SignUpForm = ({ onSuccess }) => {
                 emailConfirmed: user?.email_confirmed_at
             });
             
-            // TEMPORAIREMENT DÉSACTIVÉ: Créer le profil plus tard
+            // Si l'inscription réussit, créer le profil
             if (user) {
-                console.log('[SIGNUP] Skipping profile creation for now...');
+                console.log('[SIGNUP] Creating user profile...');
+                try {
+                    const profileData = {
+                        user_id: user.id,
+                        prenom: prenom.trim(),
+                        nom: nom.trim()
+                    };
+                    
+                    const profileResult = await supabase
+                        .from('user_profiles')
+                        .insert(profileData);
+                    
+                    if (profileResult.error) {
+                        console.warn('[SIGNUP] Profile creation failed:', profileResult.error);
+                    } else {
+                        console.log('[SIGNUP] Profile created successfully');
+                    }
+                } catch (profileErr) {
+                    console.warn('[SIGNUP] Profile creation error:', profileErr);
+                }
                 
                 // Vérifier si confirmation email est requise
                 if (!user.email_confirmed_at) {
@@ -364,16 +385,8 @@ export const SignUpForm = ({ onSuccess }) => {
             }
             
         } catch (error) {
-            console.error('[SIGNUP] Catch block error:', {
-                message: error?.message,
-                name: error?.name,
-                stack: error?.stack,
-                fullError: error
-            });
-            
-            if (!error?.message) {
-                setError("Une erreur inattendue s'est produite. Veuillez réessayer.");
-            }
+            console.error('[SIGNUP] Catch block error:', error);
+            setError("Une erreur technique s'est produite. Veuillez contacter l'administrateur.");
         } finally {
             console.log('[SIGNUP] Signup process completed');
             setLoading(false);
@@ -499,13 +512,22 @@ export const SignUpForm = ({ onSuccess }) => {
                         </div>
                     </div>
                     
-                    <div className="mt-4">
+                    <div className="mt-4 space-y-2">
                         <a href="/login">
                             <Button variant="outline" className="w-full glass border-slate-200/50 hover:glass-heavy transition-all duration-300 h-11 micro-bounce">
                                 <Shield className="w-4 h-4 mr-2" />
                                 Se connecter
                             </Button>
                         </a>
+                        
+                        {error && error.includes('contacter l\'administrateur') && (
+                            <a href="mailto:support@etatdelux.com?subject=Inscription%20-%20Problème%20technique&body=Bonjour,%0A%0AJe%20rencontre%20un%20problème%20lors%20de%20l'inscription%20sur%20État%20des%20Lieux%20Manager.%0A%0AMes%20informations%20:%0A%0AEmail%20:%20%0APrénom%20:%20%0ANom%20:%20%0A%0AMerci%20de%20créer%20mon%20compte.%0A%0ACordialement">
+                                <Button variant="outline" className="w-full glass border-blue-200/50 hover:glass-heavy transition-all duration-300 h-11 micro-bounce">
+                                    <Mail className="w-4 h-4 mr-2" />
+                                    Contacter le support
+                                </Button>
+                            </a>
+                        )}
                     </div>
                 </div>
             </CardContent>
