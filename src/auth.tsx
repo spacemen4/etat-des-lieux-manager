@@ -95,7 +95,11 @@ export const AuthProvider = ({ children }) => {
     },
   };
 
-  console.log("AuthProvider render - state:", { user, loading, error });
+  console.log("AuthProvider render - state:", { 
+    user: user ? { id: user.id, email: user.email } : null, 
+    loading, 
+    error: error ? error.toString() : null 
+  });
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
@@ -293,58 +297,85 @@ export const SignUpForm = ({ onSuccess }) => {
         setLoading(true);
         setError(null);
         
+        console.log('[SIGNUP] Starting signup process', { 
+            email: email, 
+            hasPassword: !!password,
+            prenom: prenom.trim(),
+            nom: nom.trim()
+        });
+        
         try {
-            // Inscription simple sans données utilisateur pour éviter le trigger problématique
-            const { data: { user }, error } = await supabase.auth.signUp({
-                email,
-                password
+            // Test 1: Inscription ultra-basique pour isoler le problème
+            console.log('[SIGNUP] Calling supabase.auth.signUp...');
+            const signUpResult = await supabase.auth.signUp({
+                email: email.trim(),
+                password: password
             });
             
-            if (error) {
-                console.error('SignUp error:', error);
-                if (error.message.includes('Database error')) {
+            console.log('[SIGNUP] SignUp result:', {
+                user: signUpResult.data?.user ? {
+                    id: signUpResult.data.user.id,
+                    email: signUpResult.data.user.email,
+                    email_confirmed_at: signUpResult.data.user.email_confirmed_at
+                } : null,
+                error: signUpResult.error,
+                session: signUpResult.data?.session ? 'present' : 'null'
+            });
+            
+            if (signUpResult.error) {
+                console.error('[SIGNUP] SignUp error details:', {
+                    message: signUpResult.error.message,
+                    status: signUpResult.error.status,
+                    name: signUpResult.error.name,
+                    details: signUpResult.error
+                });
+                
+                if (signUpResult.error.message.includes('Database error')) {
                     setError("Erreur lors de la création du compte. Veuillez réessayer.");
-                } else if (error.message.includes('User already registered')) {
+                } else if (signUpResult.error.message.includes('User already registered')) {
                     setError("Un compte existe déjà avec cet email.");
                 } else {
-                    setError(error.message);
+                    setError(signUpResult.error.message);
                 }
-                throw error;
+                throw signUpResult.error;
             }
             
-            // Si l'inscription réussit, créer le profil manuellement
+            const user = signUpResult.data?.user;
+            console.log('[SIGNUP] User created successfully:', {
+                userId: user?.id,
+                emailConfirmed: user?.email_confirmed_at
+            });
+            
+            // TEMPORAIREMENT DÉSACTIVÉ: Créer le profil plus tard
             if (user) {
-                try {
-                    const { error: profileError } = await supabase
-                        .from('user_profiles')
-                        .insert({
-                            user_id: user.id,
-                            prenom: prenom.trim(),
-                            nom: nom.trim()
-                        });
-                    
-                    if (profileError) {
-                        console.warn('Profile creation failed:', profileError);
-                        // Ne pas bloquer l'inscription si la création du profil échoue
-                    }
-                } catch (profileErr) {
-                    console.warn('Profile creation error:', profileErr);
-                    // Ne pas bloquer l'inscription
+                console.log('[SIGNUP] Skipping profile creation for now...');
+                
+                // Vérifier si confirmation email est requise
+                if (!user.email_confirmed_at) {
+                    console.log('[SIGNUP] Email confirmation required');
+                    setError("Un email de confirmation a été envoyé. Veuillez vérifier votre boîte mail et cliquer sur le lien de confirmation avant de vous connecter.");
+                } else {
+                    console.log('[SIGNUP] No email confirmation required, proceeding...');
+                    onSuccess?.();
                 }
+            } else {
+                console.error('[SIGNUP] No user returned from signUp');
+                setError("Erreur lors de la création du compte (pas d'utilisateur retourné).");
             }
             
-            // Si Supabase est configuré pour demander la confirmation email
-            if (user && !user.email_confirmed_at) {
-                setError("Un email de confirmation a été envoyé. Veuillez vérifier votre boîte mail et cliquer sur le lien de confirmation avant de vous connecter.");
-            } else {
-                onSuccess?.();
-            }
         } catch (error) {
-            console.error('SignUp catch error:', error);
-            if (!error.message) {
+            console.error('[SIGNUP] Catch block error:', {
+                message: error?.message,
+                name: error?.name,
+                stack: error?.stack,
+                fullError: error
+            });
+            
+            if (!error?.message) {
                 setError("Une erreur inattendue s'est produite. Veuillez réessayer.");
             }
         } finally {
+            console.log('[SIGNUP] Signup process completed');
             setLoading(false);
         }
     };
