@@ -349,11 +349,29 @@ export const SignUpForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) 
     if (!validateForm()) return;
 
     setLoading(true);
-    console.log('[SignUp] Starting signup process', formData);
+    console.log('[SignUp] ===== STARTING SIGNUP PROCESS =====');
+    console.log('[SignUp] Form data:', {
+      email: formData.email.trim(),
+      prenom: formData.prenom.trim(),
+      nom: formData.nom.trim(),
+      password: formData.password ? '[PASSWORD SET]' : '[NO PASSWORD]'
+    });
 
     try {
       // Étape 1: Création du compte auth
-      console.log('[SignUp] Creating auth user...');
+      console.log('[SignUp] ===== STEP 1: Creating auth user =====');
+      console.log('[SignUp] Calling supabase.auth.signUp with:', {
+        email: formData.email.trim(),
+        password: '[HIDDEN]',
+        options: {
+          data: {
+            prenom: formData.prenom.trim(),
+            nom: formData.nom.trim()
+          }
+        }
+      });
+
+      const authSignUpStart = Date.now();
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email.trim(),
         password: formData.password,
@@ -364,71 +382,133 @@ export const SignUpForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) 
           }
         }
       });
+      const authSignUpDuration = Date.now() - authSignUpStart;
 
+      console.log('[SignUp] Auth signUp completed in', authSignUpDuration, 'ms');
+      console.log('[SignUp] Auth response data:', authData ? {
+        user: authData.user ? {
+          id: authData.user.id,
+          email: authData.user.email,
+          email_confirmed_at: authData.user.email_confirmed_at,
+          user_metadata: authData.user.user_metadata
+        } : null,
+        session: authData.session ? {
+          access_token: '[TOKEN_PRESENT]',
+          expires_at: authData.session.expires_at
+        } : null
+      } : 'NULL_DATA');
+      
       if (authError) {
-        console.error('[SignUp] Auth error:', authError);
+        console.error('[SignUp] ===== AUTH ERROR DETAILS =====');
+        console.error('[SignUp] Auth error message:', authError.message);
+        console.error('[SignUp] Auth error code:', authError.code || 'NO_CODE');
+        console.error('[SignUp] Auth error status:', authError.status || 'NO_STATUS');
+        console.error('[SignUp] Full auth error object:', authError);
         throw authError;
       }
 
       if (!authData.user) {
-        console.error('[SignUp] No user returned from auth');
-        throw new Error("Erreur lors de la création du compte");
+        console.error('[SignUp] ===== CRITICAL ERROR: No user returned from auth =====');
+        console.error('[SignUp] authData was:', authData);
+        throw new Error("Erreur lors de la création du compte - aucun utilisateur retourné");
       }
 
-      console.log('[SignUp] Auth user created:', authData.user.id);
+      console.log('[SignUp] ===== AUTH USER SUCCESSFULLY CREATED =====');
+      console.log('[SignUp] User ID:', authData.user.id);
+      console.log('[SignUp] User email:', authData.user.email);
+      console.log('[SignUp] Email confirmed:', !!authData.user.email_confirmed_at);
 
       // Étape 2: Création du profil utilisateur
-      console.log('[SignUp] Creating user profile...');
-      const { error: profileError } = await supabase
+      console.log('[SignUp] ===== STEP 2: Creating user profile =====');
+      const profileData = {
+        user_id: authData.user.id,
+        prenom: formData.prenom.trim(),
+        nom: formData.nom.trim(),
+        profil_complet: false
+      };
+      console.log('[SignUp] Profile data to insert:', profileData);
+      console.log('[SignUp] Note: email is stored in auth.users table, not user_profiles');
+
+      const profileInsertStart = Date.now();
+      const { data: profileInsertData, error: profileError } = await supabase
         .from('user_profiles')
-        .insert({
-          user_id: authData.user.id,
-          prenom: formData.prenom.trim(),
-          nom: formData.nom.trim(),
-          email: formData.email.trim(),
-          profil_complet: false
-        });
+        .insert(profileData)
+        .select();
+      const profileInsertDuration = Date.now() - profileInsertStart;
+
+      console.log('[SignUp] Profile insert completed in', profileInsertDuration, 'ms');
+      console.log('[SignUp] Profile insert response data:', profileInsertData);
 
       if (profileError) {
-        console.error('[SignUp] Profile creation error:', profileError);
+        console.error('[SignUp] ===== PROFILE CREATION ERROR DETAILS =====');
+        console.error('[SignUp] Profile error message:', profileError.message);
+        console.error('[SignUp] Profile error code:', profileError.code || 'NO_CODE');
+        console.error('[SignUp] Profile error details:', profileError.details || 'NO_DETAILS');
+        console.error('[SignUp] Profile error hint:', profileError.hint || 'NO_HINT');
+        console.error('[SignUp] Full profile error object:', profileError);
         
         // Tentative de nettoyage
-        console.log('[SignUp] Attempting to delete auth user...');
-        const { error: deleteError } = await supabase.auth.admin.deleteUser(authData.user.id);
-        if (deleteError) {
-          console.error('[SignUp] Failed to delete auth user:', deleteError);
+        console.log('[SignUp] ===== ATTEMPTING CLEANUP: Deleting auth user =====');
+        try {
+          const deleteStart = Date.now();
+          const { error: deleteError } = await supabase.auth.admin.deleteUser(authData.user.id);
+          const deleteDuration = Date.now() - deleteStart;
+          
+          if (deleteError) {
+            console.error('[SignUp] Failed to delete auth user after', deleteDuration, 'ms:', deleteError);
+          } else {
+            console.log('[SignUp] Successfully deleted auth user after', deleteDuration, 'ms');
+          }
+        } catch (cleanupError) {
+          console.error('[SignUp] Exception during cleanup:', cleanupError);
         }
 
         throw profileError;
       }
 
-      console.log('[SignUp] Signup successful!');
+      console.log('[SignUp] ===== PROFILE SUCCESSFULLY CREATED =====');
+      console.log('[SignUp] Profile data returned:', profileInsertData);
+      console.log('[SignUp] ===== SIGNUP PROCESS COMPLETED SUCCESSFULLY =====');
       
       if (!authData.user.email_confirmed_at) {
-        console.log('[SignUp] Email confirmation required');
+        console.log('[SignUp] Email confirmation required - setting success message');
         setError("Un email de confirmation a été envoyé. Veuillez vérifier votre boîte mail.");
       } else {
-        console.log('[SignUp] Email already confirmed');
+        console.log('[SignUp] Email already confirmed - calling onSuccess');
         onSuccess?.();
       }
 
     } catch (error: any) {
-      console.error('[SignUp] Error:', error);
+      console.error('[SignUp] ===== SIGNUP PROCESS FAILED =====');
+      console.error('[SignUp] Error type:', typeof error);
+      console.error('[SignUp] Error message:', error.message || 'NO_MESSAGE');
+      console.error('[SignUp] Error code:', error.code || 'NO_CODE');
+      console.error('[SignUp] Error status:', error.status || 'NO_STATUS');
+      console.error('[SignUp] Error details:', error.details || 'NO_DETAILS');
+      console.error('[SignUp] Error hint:', error.hint || 'NO_HINT');
+      console.error('[SignUp] Full error object:', error);
+      console.error('[SignUp] Error stack:', error.stack || 'NO_STACK');
       
       if (error.message.includes('User already registered')) {
+        console.log('[SignUp] User already exists - setting appropriate error message');
         setError("Un compte existe déjà avec cet email.");
       } else if (error.message.includes('Database error')) {
+        console.log('[SignUp] Database error detected - setting technical error message');
         setError(`
           Problème technique lors de l'inscription. 
           Veuillez contacter le support avec ces informations :
           Email: ${formData.email}
           Prénom: ${formData.prenom}
           Nom: ${formData.nom}
+          Erreur: ${error.message}
+          Code: ${error.code || 'NON_DÉFINI'}
         `);
       } else if (!handleError(error)) {
+        console.log('[SignUp] Generic error - setting fallback error message');
         setError(error.message || "Une erreur inconnue est survenue");
       }
     } finally {
+      console.log('[SignUp] ===== SIGNUP PROCESS FINISHED (cleanup) =====');
       setLoading(false);
     }
   };

@@ -5,15 +5,23 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+console.log('[Supabase] ===== CONFIGURATION DEBUG =====');
+console.log('[Supabase] URL:', supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'NOT_SET');
+console.log('[Supabase] Anon Key:', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'NOT_SET');
+
 if (!supabaseUrl) {
+  console.error('[Supabase] CRITICAL ERROR: VITE_SUPABASE_URL is not set');
   throw new Error("VITE_SUPABASE_URL is not set. Please check your .env file.")
 }
 
 if (!supabaseAnonKey) {
+  console.error('[Supabase] CRITICAL ERROR: VITE_SUPABASE_ANON_KEY is not set');
   throw new Error("VITE_SUPABASE_ANON_KEY is not set. Please check your .env file.")
 }
 
+console.log('[Supabase] Creating client...');
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+console.log('[Supabase] Client created successfully');
 
 /**
  * JWT expiration handling system
