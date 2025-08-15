@@ -223,7 +223,7 @@ export const LoginForm = ({ onSuccess }) => {
               <Checkbox 
                 id="remember" 
                 checked={rememberMe} 
-                onCheckedChange={setRememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked === true)}
                 className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
               />
               <Label htmlFor="remember" className="text-slate-600 cursor-pointer">Se souvenir de moi</Label>
@@ -304,11 +304,22 @@ export const SignUpForm = ({ onSuccess }) => {
                     }
                 }
             });
-            if (error) throw error;
+            if (error) {
+                console.error('SignUp error:', error);
+                if (error.message.includes('Database error')) {
+                    setError("Erreur lors de la création du compte. Veuillez réessayer.");
+                } else {
+                    setError(error.message);
+                }
+                throw error;
+            }
             
             onSuccess?.();
         } catch (error) {
-            setError(error.message);
+            console.error('SignUp catch error:', error);
+            if (!error.message.includes('Database error')) {
+                setError(error.message);
+            }
         } finally {
             setLoading(false);
         }
