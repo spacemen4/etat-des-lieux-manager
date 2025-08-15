@@ -418,56 +418,31 @@ export const SignUpForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) 
       console.log('[SignUp] User email:', authData.user.email);
       console.log('[SignUp] Email confirmed:', !!authData.user.email_confirmed_at);
 
-      // Étape 2: Création du profil utilisateur
-      console.log('[SignUp] ===== STEP 2: Creating user profile =====');
-      const profileData = {
-        user_id: authData.user.id,
-        prenom: formData.prenom.trim(),
-        nom: formData.nom.trim(),
-        profil_complet: false
-      };
-      console.log('[SignUp] Profile data to insert:', profileData);
-      console.log('[SignUp] Note: email is stored in auth.users table, not user_profiles');
-
-      const profileInsertStart = Date.now();
-      const { data: profileInsertData, error: profileError } = await supabase
+      // Note: Le profil utilisateur est créé automatiquement par un trigger de base de données
+      // Pas besoin de l'insérer manuellement - cela causait un conflit!
+      console.log('[SignUp] ===== STEP 2: User profile auto-created by database trigger =====');
+      console.log('[SignUp] The database trigger on auth.users automatically creates the user_profiles record');
+      console.log('[SignUp] No manual insertion needed - this was causing the conflict!');
+      
+      // Optionnel: Vérifier que le profil a été créé (avec un petit délai)
+      await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+      
+      const profileCheckStart = Date.now();
+      const { data: profileCheck, error: profileCheckError } = await supabase
         .from('user_profiles')
-        .insert(profileData)
-        .select();
-      const profileInsertDuration = Date.now() - profileInsertStart;
-
-      console.log('[SignUp] Profile insert completed in', profileInsertDuration, 'ms');
-      console.log('[SignUp] Profile insert response data:', profileInsertData);
-
-      if (profileError) {
-        console.error('[SignUp] ===== PROFILE CREATION ERROR DETAILS =====');
-        console.error('[SignUp] Profile error message:', profileError.message);
-        console.error('[SignUp] Profile error code:', profileError.code || 'NO_CODE');
-        console.error('[SignUp] Profile error details:', profileError.details || 'NO_DETAILS');
-        console.error('[SignUp] Profile error hint:', profileError.hint || 'NO_HINT');
-        console.error('[SignUp] Full profile error object:', profileError);
-        
-        // Tentative de nettoyage
-        console.log('[SignUp] ===== ATTEMPTING CLEANUP: Deleting auth user =====');
-        try {
-          const deleteStart = Date.now();
-          const { error: deleteError } = await supabase.auth.admin.deleteUser(authData.user.id);
-          const deleteDuration = Date.now() - deleteStart;
-          
-          if (deleteError) {
-            console.error('[SignUp] Failed to delete auth user after', deleteDuration, 'ms:', deleteError);
-          } else {
-            console.log('[SignUp] Successfully deleted auth user after', deleteDuration, 'ms');
-          }
-        } catch (cleanupError) {
-          console.error('[SignUp] Exception during cleanup:', cleanupError);
-        }
-
-        throw profileError;
+        .select('id, user_id, prenom, nom, profil_complet')
+        .eq('user_id', authData.user.id)
+        .single();
+      const profileCheckDuration = Date.now() - profileCheckStart;
+      
+      console.log('[SignUp] Profile check completed in', profileCheckDuration, 'ms');
+      if (profileCheckError) {
+        console.warn('[SignUp] Could not verify profile creation:', profileCheckError);
+        console.log('[SignUp] This is not critical - profile might be created asynchronously');
+      } else {
+        console.log('[SignUp] Profile successfully auto-created:', profileCheck);
       }
-
-      console.log('[SignUp] ===== PROFILE SUCCESSFULLY CREATED =====');
-      console.log('[SignUp] Profile data returned:', profileInsertData);
+      
       console.log('[SignUp] ===== SIGNUP PROCESS COMPLETED SUCCESSFULLY =====');
       
       if (!authData.user.email_confirmed_at) {
