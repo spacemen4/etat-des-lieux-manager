@@ -404,7 +404,54 @@ export const SignUpForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) 
         console.error('[SignUp] Auth error code:', authError.code || 'NO_CODE');
         console.error('[SignUp] Auth error status:', authError.status || 'NO_STATUS');
         console.error('[SignUp] Full auth error object:', authError);
-        throw authError;
+        
+        if (authError.message.includes('User already registered')) {
+          console.log('[SignUp] User already exists - setting appropriate error message');
+          setError("Un compte existe déjà avec cet email.");
+        } else if (authError.message.includes('Database error')) {
+          console.log('[SignUp] Database error detected - attempting manual profile creation');
+          
+          if (authData?.user) {
+            try {
+              console.log('[SignUp] Attempting manual profile creation for user:', authData.user.id);
+              const { error: profileError } = await supabase
+                .from('user_profiles')
+                .upsert({
+                  user_id: authData.user.id,
+                  prenom: formData.prenom.trim(),
+                  nom: formData.nom.trim(),
+                  email: formData.email.trim(),
+                  profil_complet: false
+                });
+              
+              if (profileError) {
+                console.error('[SignUp] Manual profile creation failed:', profileError);
+                throw new Error("Échec de la création du profil utilisateur");
+              }
+              
+              console.log('[SignUp] Manual profile creation succeeded');
+              setError("Votre compte a été créé mais une erreur mineure est survenue. Veuillez vous connecter.");
+              onSuccess?.();
+              return;
+            } catch (profileError) {
+              console.error('[SignUp] Error during manual profile creation:', profileError);
+              throw authError; // Re-throw the original auth error
+            }
+          }
+          
+          setError(`
+            Problème technique lors de l'inscription. 
+            Veuillez contacter le support avec ces informations :
+            Email: ${formData.email}
+            Prénom: ${formData.prenom}
+            Nom: ${formData.nom}
+            Erreur: ${authError.message}
+            Code: ${authError.code || 'NON_DÉFINI'}
+          `);
+        } else {
+          throw authError;
+        }
+        return;
       }
 
       if (!authData.user) {
@@ -418,13 +465,8 @@ export const SignUpForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) 
       console.log('[SignUp] User email:', authData.user.email);
       console.log('[SignUp] Email confirmed:', !!authData.user.email_confirmed_at);
 
-      // Note: Le profil utilisateur DEVRAIT être créé automatiquement par un trigger de base de données
-      console.log('[SignUp] ===== STEP 2: Checking for auto-created user profile =====');
-      console.log('[SignUp] Checking if database trigger created the user_profiles record...');
-      
-      // Attendre un peu pour laisser le trigger s'exécuter
-      await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
-      
+      // Vérification du profil utilisateur
+      console.log('[SignUp] ===== STEP 2: Checking user profile =====');
       const profileCheckStart = Date.now();
       const { data: profileCheck, error: profileCheckError } = await supabase
         .from('user_profiles')
@@ -436,50 +478,39 @@ export const SignUpForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) 
       console.log('[SignUp] Profile check completed in', profileCheckDuration, 'ms');
       
       if (profileCheckError) {
-        console.warn('[SignUp] Profile was not auto-created by trigger:', profileCheckError);
-        console.log('[SignUp] ===== FALLBACK: Manual profile creation =====');
+        console.warn('[SignUp] Profile check failed, attempting to create manually:', profileCheckError);
         
-        // Fallback: Créer le profil manuellement
-        try {
-          const profileData = {
+        const manualProfileStart = Date.now();
+        const { error: manualProfileError } = await supabase
+          .from('user_profiles')
+          .upsert({
             user_id: authData.user.id,
             prenom: formData.prenom.trim(),
             nom: formData.nom.trim(),
+            email: authData.user.email,
             profil_complet: false
-          };
-          console.log('[SignUp] Creating profile manually:', profileData);
-          
-          const manualProfileStart = Date.now();
-          const { data: manualProfileData, error: manualProfileError } = await supabase
-            .from('user_profiles')
-            .upsert(profileData, { onConflict: 'user_id' })
-            .select()
-            .single();
-          const manualProfileDuration = Date.now() - manualProfileStart;
-          
-          console.log('[SignUp] Manual profile creation completed in', manualProfileDuration, 'ms');
-          
-          if (manualProfileError) {
-            console.error('[SignUp] Manual profile creation failed:', manualProfileError);
-            console.warn('[SignUp] Continuing anyway - profile can be completed later');
-          } else {
-            console.log('[SignUp] Manual profile creation successful:', manualProfileData);
-          }
-        } catch (fallbackError) {
-          console.error('[SignUp] Exception during manual profile creation:', fallbackError);
-          console.warn('[SignUp] Continuing anyway - profile can be completed later');
+          });
+        const manualProfileDuration = Date.now() - manualProfileStart;
+        
+        console.log('[SignUp] Manual profile creation completed in', manualProfileDuration, 'ms');
+        
+        if (manualProfileError) {
+          console.error('[SignUp] Manual profile creation failed:', manualProfileError);
+          console.warn('[SignUp] Continuing without profile - user can complete it later');
+        } else {
+          console.log('[SignUp] Manual profile creation succeeded');
         }
       } else {
-        console.log('[SignUp] Profile successfully auto-created by trigger:', profileCheck);
+        console.log('[SignUp] Profile exists:', profileCheck);
       }
       
-      console.log('[SignUp] ===== SIGNUP PROCESS COMPLETED SUCCESSFULLY =====');
+      console.log('[SignUp] ===== SIGNUP PROCESS COMPLETED =====');
       
       if (!authData.user.email_confirmed_at) {
-        console.log('[SignUp] Email confirmation required - setting success message');
+        console.log('[SignUp] Email confirmation required');
         setError("Un email de confirmation a été envoyé. Veuillez vérifier votre boîte mail.");
       } else {
-        console.log('[SignUp] Email already confirmed - calling onSuccess');
+        console.log('[SignUp] Email already confirmed - redirecting');
         onSuccess?.();
       }
 
@@ -494,26 +525,11 @@ export const SignUpForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) 
       console.error('[SignUp] Full error object:', error);
       console.error('[SignUp] Error stack:', error.stack || 'NO_STACK');
       
-      if (error.message.includes('User already registered')) {
-        console.log('[SignUp] User already exists - setting appropriate error message');
-        setError("Un compte existe déjà avec cet email.");
-      } else if (error.message.includes('Database error')) {
-        console.log('[SignUp] Database error detected - setting technical error message');
-        setError(`
-          Problème technique lors de l'inscription. 
-          Veuillez contacter le support avec ces informations :
-          Email: ${formData.email}
-          Prénom: ${formData.prenom}
-          Nom: ${formData.nom}
-          Erreur: ${error.message}
-          Code: ${error.code || 'NON_DÉFINI'}
-        `);
-      } else if (!handleError(error)) {
-        console.log('[SignUp] Generic error - setting fallback error message');
+      if (!handleError(error)) {
         setError(error.message || "Une erreur inconnue est survenue");
       }
     } finally {
-      console.log('[SignUp] ===== SIGNUP PROCESS FINISHED (cleanup) =====');
+      console.log('[SignUp] ===== SIGNUP PROCESS FINISHED =====');
       setLoading(false);
     }
   };
@@ -645,8 +661,8 @@ export const SignUpForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) 
               </Button>
             </a>
             
-            {error && error.includes('contacter l\'administrateur') && (
-              <a href="mailto:support@etatdelux.com?subject=Inscription%20-%20Problème%20technique&body=Bonjour,%0A%0AJe%20rencontre%20un%20problème%20lors%20de%20l'inscription%20sur%20État%20des%20Lieux%20Manager.%0A%0AMes%20informations%20:%0A%0AEmail%20:%20%0APrénom%20:%20%0ANom%20:%20%0A%0AMerci%20de%20créer%20mon%20compte.%0A%0ACordialement">
+            {error && error.includes('contacter le support') && (
+              <a href="mailto:support@etatdelux.com?subject=Inscription%20-%20Problème%20technique&body=Bonjour,%0A%0AJe%20rencontre%20un%20problème%20lors%20de%20l'inscription%20sur%20État%20des%20Lieux%20Manager.%0A%0AMes%20informations%20:%0A%0AEmail%20:%20${formData.email}%0APrénom%20:%20${formData.prenom}%0ANom%20:%20${formData.nom}%0A%0AMerci%20de%20m'aider.%0A%0ACordialement">
                 <Button variant="outline" className="w-full glass border-blue-200/50 hover:glass-heavy transition-all duration-300 h-11 micro-bounce">
                   <Mail className="w-4 h-4 mr-2" />
                   Contacter le support
@@ -1189,56 +1205,6 @@ export const TeamManagement = () => {
     }
   }, [currentUserId, loadEmployes]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    if (!prenom.trim() || !nom.trim()) {
-      setError('Prénom et Nom sont requis');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Utilisateur non authentifié');
-
-      const newEmploye: TablesInsert<'employes'> = {
-        prenom: prenom.trim(),
-        nom: nom.trim(),
-        email: email.trim() || null,
-        telephone: telephone.trim() || null,
-        fonction: fonction.trim() || null,
-        password: password.trim() || null,
-        user_id: user.id,
-        actif,
-      };
-
-      const { data, error } = await supabase
-        .from('employes')
-        .insert(newEmploye)
-        .select()
-        .single();
-      if (error) throw error;
-
-      // Reset form and refresh list
-      setPrenom('');
-      setNom('');
-      setEmail('');
-      setTelephone('');
-      setFonction('');
-      setPassword('');
-      setActif(true);
-
-      setEmployes((prev) => [data as Tables<'employes'>, ...prev]);
-      setIsAddOpen(false);
-    } catch (e: any) {
-      if (!handleError(e)) {
-        setError(e.message ?? "Erreur lors de l'ajout de l'employé");
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <Card>
