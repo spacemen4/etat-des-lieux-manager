@@ -420,7 +420,6 @@ export const SignUpForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) 
                   user_id: authData.user.id,
                   prenom: formData.prenom.trim(),
                   nom: formData.nom.trim(),
-                  email: formData.email.trim(),
                   profil_complet: false
                 });
               
@@ -487,7 +486,6 @@ export const SignUpForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) 
             user_id: authData.user.id,
             prenom: formData.prenom.trim(),
             nom: formData.nom.trim(),
-            email: authData.user.email,
             profil_complet: false
           });
         const manualProfileDuration = Date.now() - manualProfileStart;

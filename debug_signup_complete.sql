@@ -46,7 +46,6 @@ BEGIN
     user_id,
     prenom,
     nom,
-    email,
     profil_complet,
     created_at,
     updated_at
@@ -54,7 +53,6 @@ BEGIN
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'prenom', ''),
     COALESCE(NEW.raw_user_meta_data->>'nom', ''),
-    NEW.email,
     false,
     NOW(),
     NOW()
