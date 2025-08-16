@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Users, UserPlus, Shield, Mail, Phone, MapPin, User, Eye, EyeOff, UserCheck, Settings, LogOut, Crown } from 'lucide-react';
+import { Users, UserPlus, Shield, Mail, Phone, MapPin, User, Eye, EyeOff, UserCheck, Settings, LogOut, Crown, Building } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase, setJwtExpirationHandler, handleJwtExpiration } from './lib/supabase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
