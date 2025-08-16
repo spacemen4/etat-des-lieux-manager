@@ -1205,6 +1205,56 @@ export const TeamManagement = () => {
     }
   }, [currentUserId, loadEmployes]);
 
+  const handleAddEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!prenom.trim() || !nom.trim()) {
+      setError('Prénom et Nom sont requis');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Utilisateur non authentifié');
+
+      const newEmploye: TablesInsert<'employes'> = {
+        prenom: prenom.trim(),
+        nom: nom.trim(),
+        email: email.trim() || null,
+        telephone: telephone.trim() || null,
+        fonction: fonction.trim() || null,
+        password: password.trim() || null,
+        user_id: user.id,
+        actif,
+      };
+
+      const { data, error } = await supabase
+        .from('employes')
+        .insert(newEmploye)
+        .select()
+        .single();
+      if (error) throw error;
+
+      // Reset form and refresh list
+      setPrenom('');
+      setNom('');
+      setEmail('');
+      setTelephone('');
+      setFonction('');
+      setPassword('');
+      setActif(true);
+
+      setEmployes((prev) => [data as Tables<'employes'>, ...prev]);
+      setIsAddOpen(false);
+    } catch (e: any) {
+      if (!handleError(e)) {
+        setError(e.message ?? "Erreur lors de l'ajout de l'employé");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <Card>
@@ -1238,7 +1288,7 @@ export const TeamManagement = () => {
                 <DialogTitle>Ajouter un employé</DialogTitle>
               </DialogHeader>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleAddEmployee} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="prenom">Prénom</Label>
