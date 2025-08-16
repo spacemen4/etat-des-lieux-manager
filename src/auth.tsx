@@ -418,14 +418,12 @@ export const SignUpForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) 
       console.log('[SignUp] User email:', authData.user.email);
       console.log('[SignUp] Email confirmed:', !!authData.user.email_confirmed_at);
 
-      // Note: Le profil utilisateur est créé automatiquement par un trigger de base de données
-      // Pas besoin de l'insérer manuellement - cela causait un conflit!
-      console.log('[SignUp] ===== STEP 2: User profile auto-created by database trigger =====');
-      console.log('[SignUp] The database trigger on auth.users automatically creates the user_profiles record');
-      console.log('[SignUp] No manual insertion needed - this was causing the conflict!');
+      // Note: Le profil utilisateur DEVRAIT être créé automatiquement par un trigger de base de données
+      console.log('[SignUp] ===== STEP 2: Checking for auto-created user profile =====');
+      console.log('[SignUp] Checking if database trigger created the user_profiles record...');
       
-      // Optionnel: Vérifier que le profil a été créé (avec un petit délai)
-      await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+      // Attendre un peu pour laisser le trigger s'exécuter
+      await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
       
       const profileCheckStart = Date.now();
       const { data: profileCheck, error: profileCheckError } = await supabase
@@ -436,11 +434,43 @@ export const SignUpForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) 
       const profileCheckDuration = Date.now() - profileCheckStart;
       
       console.log('[SignUp] Profile check completed in', profileCheckDuration, 'ms');
+      
       if (profileCheckError) {
-        console.warn('[SignUp] Could not verify profile creation:', profileCheckError);
-        console.log('[SignUp] This is not critical - profile might be created asynchronously');
+        console.warn('[SignUp] Profile was not auto-created by trigger:', profileCheckError);
+        console.log('[SignUp] ===== FALLBACK: Manual profile creation =====');
+        
+        // Fallback: Créer le profil manuellement
+        try {
+          const profileData = {
+            user_id: authData.user.id,
+            prenom: formData.prenom.trim(),
+            nom: formData.nom.trim(),
+            profil_complet: false
+          };
+          console.log('[SignUp] Creating profile manually:', profileData);
+          
+          const manualProfileStart = Date.now();
+          const { data: manualProfileData, error: manualProfileError } = await supabase
+            .from('user_profiles')
+            .upsert(profileData, { onConflict: 'user_id' })
+            .select()
+            .single();
+          const manualProfileDuration = Date.now() - manualProfileStart;
+          
+          console.log('[SignUp] Manual profile creation completed in', manualProfileDuration, 'ms');
+          
+          if (manualProfileError) {
+            console.error('[SignUp] Manual profile creation failed:', manualProfileError);
+            console.warn('[SignUp] Continuing anyway - profile can be completed later');
+          } else {
+            console.log('[SignUp] Manual profile creation successful:', manualProfileData);
+          }
+        } catch (fallbackError) {
+          console.error('[SignUp] Exception during manual profile creation:', fallbackError);
+          console.warn('[SignUp] Continuing anyway - profile can be completed later');
+        }
       } else {
-        console.log('[SignUp] Profile successfully auto-created:', profileCheck);
+        console.log('[SignUp] Profile successfully auto-created by trigger:', profileCheck);
       }
       
       console.log('[SignUp] ===== SIGNUP PROCESS COMPLETED SUCCESSFULLY =====');
